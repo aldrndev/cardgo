@@ -25,66 +25,76 @@ import { AddLimitIncreaseScreen } from "../screens/AddLimitIncreaseScreen";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+import { NotificationController } from "../components/NotificationController";
+
+// ... existing imports
+
 export const AppNavigator = () => {
   return (
-    <Stack.Navigator
-      initialRouteName="Startup"
-      screenOptions={{
-        headerShown: false,
-        cardStyle: { backgroundColor: theme.colors.background },
-      }}
-    >
-      <Stack.Screen name="Startup" component={StartupScreen} />
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="Main" component={TabNavigator} />
-      <Stack.Screen name="AddEditCard" component={AddEditCardScreen} />
-      <Stack.Screen name="CardDetail" component={CardDetailScreen} />
-      <Stack.Screen name="About" component={AboutScreen} />
-      <Stack.Screen
-        name="TransactionsList"
-        component={TransactionsListScreen}
-      />
-      <Stack.Screen
-        name="AddTransaction"
-        component={AddTransactionScreen}
-        options={{ title: "Tambah Transaksi" }}
-      />
-      <Stack.Screen name="AddSubscription" component={AddSubscriptionScreen} />
-      <Stack.Screen
-        name="SetPin"
-        component={SetPinScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="ArchivedCards"
-        component={ArchivedCardsScreen}
-        options={{ title: "Kartu Diarsipkan" }}
-      />
-      <Stack.Screen
-        name="Search"
-        component={SearchScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="SubscriptionList"
-        component={SubscriptionListScreen}
-        options={{ title: "Langganan Saya" }}
-      />
-      <Stack.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{ title: "Kalender" }}
-      />
-      <Stack.Screen
-        name="LimitIncreaseHistory"
-        component={LimitIncreaseHistoryScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="AddLimitIncrease"
-        component={AddLimitIncreaseScreen}
-        options={{ headerShown: false }}
-      />
-    </Stack.Navigator>
+    <>
+      <NotificationController />
+      <Stack.Navigator
+        initialRouteName="Startup"
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: theme.colors.background },
+        }}
+      >
+        <Stack.Screen name="Startup" component={StartupScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="Main" component={TabNavigator} />
+        <Stack.Screen name="AddEditCard" component={AddEditCardScreen} />
+        <Stack.Screen name="CardDetail" component={CardDetailScreen} />
+        <Stack.Screen name="About" component={AboutScreen} />
+        <Stack.Screen
+          name="TransactionsList"
+          component={TransactionsListScreen}
+        />
+        <Stack.Screen
+          name="AddTransaction"
+          component={AddTransactionScreen}
+          options={{ title: "Tambah Transaksi" }}
+        />
+        <Stack.Screen
+          name="AddSubscription"
+          component={AddSubscriptionScreen}
+        />
+        <Stack.Screen
+          name="SetPin"
+          component={SetPinScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ArchivedCards"
+          component={ArchivedCardsScreen}
+          options={{ title: "Kartu Diarsipkan" }}
+        />
+        <Stack.Screen
+          name="Search"
+          component={SearchScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SubscriptionList"
+          component={SubscriptionListScreen}
+          options={{ title: "Langganan Saya" }}
+        />
+        <Stack.Screen
+          name="Calendar"
+          component={CalendarScreen}
+          options={{ title: "Kalender" }}
+        />
+        <Stack.Screen
+          name="LimitIncreaseHistory"
+          component={LimitIncreaseHistoryScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddLimitIncrease"
+          component={AddLimitIncreaseScreen}
+          options={{ headerShown: false }}
+        />
+      </Stack.Navigator>
+    </>
   );
 };

@@ -18,6 +18,7 @@ import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { EmptyState } from "../components/EmptyState";
 import { CreditCard } from "../components/CreditCard";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+
 import { storage } from "../utils/storage";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -57,6 +58,7 @@ export const HomeScreen = () => {
     nickname: string;
     joinDate: string;
   } | null>(null);
+  const [isTotalBillVisible, setIsTotalBillVisible] = React.useState(true);
 
   React.useEffect(() => {
     loadUserProfile();
@@ -300,9 +302,29 @@ export const HomeScreen = () => {
             style={styles.summaryCard}
           >
             <View>
-              <Text style={styles.summaryLabel}>Total Tagihan</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Text style={[styles.summaryLabel, { marginBottom: 0 }]}>
+                  Total Tagihan
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setIsTotalBillVisible(!isTotalBillVisible)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={
+                      isTotalBillVisible ? "eye-outline" : "eye-off-outline"
+                    }
+                    size={16}
+                    color="rgba(255,255,255,0.7)"
+                  />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.summaryAmount}>
-                {formatCurrency(totalBill, 1_000_000_000)}
+                {isTotalBillVisible
+                  ? formatCurrency(totalBill, 1_000_000_000)
+                  : "Rp *******"}
               </Text>
             </View>
             <View style={styles.summaryFooter}>
@@ -450,9 +472,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("AddEditCard", {})}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#EEF2FF" }]}>
-                <Ionicons name="add" size={24} color={theme.colors.primary} />
-              </View>
+              <LinearGradient
+                colors={["#4F46E5", "#4338CA"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="add" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Tambah</Text>
             </TouchableOpacity>
 
@@ -460,13 +487,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("LimitIncreaseHistory", {})}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#F0FDF4" }]}>
-                <Ionicons
-                  name="trending-up"
-                  size={24}
-                  color={theme.colors.status.success}
-                />
-              </View>
+              <LinearGradient
+                colors={["#10B981", "#059669"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="trending-up" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Naik Limit</Text>
             </TouchableOpacity>
 
@@ -474,13 +502,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("Calendar")}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#FFF7ED" }]}>
-                <Ionicons
-                  name="calendar"
-                  size={24}
-                  color={theme.colors.status.warning}
-                />
-              </View>
+              <LinearGradient
+                colors={["#F59E0B", "#D97706"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="calendar" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Kalender</Text>
             </TouchableOpacity>
 
@@ -488,13 +517,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("TransactionsList", {})}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#ECFDF5" }]}>
-                <Ionicons
-                  name="receipt"
-                  size={24}
-                  color={theme.colors.secondary}
-                />
-              </View>
+              <LinearGradient
+                colors={["#14B8A6", "#0D9488"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="receipt" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Transaksi</Text>
             </TouchableOpacity>
 
@@ -502,13 +532,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("SubscriptionList", {})}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#F3E8FF" }]}>
-                <Ionicons
-                  name="repeat"
-                  size={24}
-                  color={theme.colors.primary}
-                />
-              </View>
+              <LinearGradient
+                colors={["#8B5CF6", "#7C3AED"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="repeat" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Langganan</Text>
             </TouchableOpacity>
 
@@ -516,13 +547,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("InsightsTab")}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#F0F9FF" }]}>
-                <Ionicons
-                  name="stats-chart"
-                  size={24}
-                  color={theme.colors.text.secondary}
-                />
-              </View>
+              <LinearGradient
+                colors={["#3B82F6", "#2563EB"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Statistik</Text>
             </TouchableOpacity>
 
@@ -530,13 +562,14 @@ export const HomeScreen = () => {
               style={styles.actionButton}
               onPress={() => navigation.navigate("ArchivedCards")}
             >
-              <View style={[styles.actionIcon, { backgroundColor: "#F1F5F9" }]}>
-                <Ionicons
-                  name="archive-outline"
-                  size={24}
-                  color={theme.colors.text.secondary}
-                />
-              </View>
+              <LinearGradient
+                colors={["#64748B", "#475569"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="archive-outline" size={24} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.actionLabel}>Arsip</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -831,12 +864,9 @@ export const HomeScreen = () => {
         </View>
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.fab}
+      <FloatingActionButton
         onPress={() => navigation.navigate("AddEditCard", {})}
-      >
-        <Ionicons name="add" size={32} color={theme.colors.text.inverse} />
-      </TouchableOpacity>
+      />
       <MonthlyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
     </SafeAreaView>
   );
@@ -1354,18 +1384,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
-  fab: {
-    position: "absolute",
-    right: theme.spacing.l,
-    bottom: theme.spacing.l,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    ...theme.shadows.large,
-  },
+
   greeting: {
     ...theme.typography.h1,
     color: theme.colors.text.primary,

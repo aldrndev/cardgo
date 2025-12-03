@@ -17,11 +17,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { theme } from "../constants/theme";
 import { storage } from "../utils/storage";
+import { useLimitIncrease } from "../context/LimitIncreaseContext";
+
 import { useCards } from "../context/CardsContext";
 import { createBackup, restoreBackup } from "../utils/backup";
 import { useAuth } from "../context/AuthContext";
 import { BiometricService } from "../services/BiometricService";
 import { ExportService } from "../services/ExportService";
+import { NotificationService } from "../services/NotificationService";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
 
@@ -93,9 +96,17 @@ const SettingsItem = ({
 
 export const SettingsScreen = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { cards, transactions, restoreData, refreshCards } = useCards();
+  const {
+    cards,
+    transactions,
+    subscriptions,
+    installmentPlans,
+    restoreData,
+    refreshCards,
+  } = useCards();
+  const { getRecordsByCardId } = useLimitIncrease();
   const { hasPin, removePin } = useAuth();
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
+
   const [biometricEnabled, setBiometricEnabled] = React.useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = React.useState(false);
   const [userProfile, setUserProfile] = React.useState<{
@@ -103,10 +114,17 @@ export const SettingsScreen = () => {
     joinDate: string;
   } | null>(null);
 
+  const [notificationPrefs, setNotificationPrefs] = React.useState({
+    payment: true,
+    limitIncrease: true,
+    annualFee: true,
+    applicationStatus: true,
+  });
+
   React.useEffect(() => {
-    checkNotificationStatus();
     checkBiometricStatus();
     loadUserProfile();
+    loadNotificationPrefs();
   }, []);
 
   const loadUserProfile = async () => {
@@ -136,60 +154,105 @@ export const SettingsScreen = () => {
     }
   };
 
-  const checkNotificationStatus = async () => {
-    // In a real app, we would check actual permission status
-    // For now, we'll assume true if we can get permissions
-    // const { status } = await Notifications.getPermissionsAsync();
-    // setNotificationsEnabled(status === 'granted');
-    setNotificationsEnabled(true); // Default to true for UI demo
+  const loadNotificationPrefs = async () => {
+    const prefs = await storage.getNotificationPreferences();
+    setNotificationPrefs(prefs);
   };
 
-  const toggleNotifications = async (value: boolean) => {
+  const toggleNotificationPref = async (
+    key: keyof typeof notificationPrefs,
+    value: boolean
+  ) => {
+    const newPrefs = { ...notificationPrefs, [key]: value };
+    setNotificationPrefs(newPrefs);
+    await storage.saveNotificationPreferences(newPrefs);
+
+    // Reschedule or cancel notifications based on preference change
+    // We need to wait for storage save because NotificationService reads from storage
+    // But since we pass newPrefs to storage, it should be fine.
+    // However, NotificationService reads from storage asynchronously.
+    // To be safe, we rely on the fact that we just saved it.
+
     if (value) {
-      // Request permissions
-      // await registerForPushNotificationsAsync();
-      setNotificationsEnabled(true);
+      // Enabled: Reschedule
+      if (key === "payment") {
+        for (const card of cards) {
+          await NotificationService.schedulePaymentReminder(card);
+        }
+      } else if (key === "limitIncrease") {
+        for (const card of cards) {
+          await NotificationService.scheduleLimitIncreaseReminder(card);
+        }
+      } else if (key === "annualFee") {
+        for (const card of cards) {
+          await NotificationService.scheduleAnnualFeeReminder(card);
+        }
+      }
     } else {
-      // Open settings to disable
-      Alert.alert(
-        "Matikan Notifikasi",
-        "Untuk mematikan notifikasi, silakan pergi ke Pengaturan perangkat Anda.",
-        [
-          { text: "Batal", style: "cancel" },
-          {
-            text: "Buka Pengaturan",
-            onPress: () => {
-              if (Platform.OS === "ios") {
-                Linking.openURL("app-settings:");
-              } else {
-                Linking.openSettings();
-              }
-            },
-          },
-        ]
-      );
-      // We don't set false here because we can't force it without system change
+      // Disabled: Cancel
+      if (key === "payment") {
+        for (const card of cards) {
+          await NotificationService.cancelPaymentReminders(card.id);
+        }
+      } else if (key === "limitIncrease") {
+        for (const card of cards) {
+          await NotificationService.cancelLimitReminders(card.id);
+        }
+      } else if (key === "annualFee") {
+        for (const card of cards) {
+          await NotificationService.cancelAnnualFeeReminders(card.id);
+        }
+      }
     }
   };
 
   const handleRestore = async () => {
     await restoreBackup(async (data) => {
-      await restoreData(data.cards, data.transactions);
+      // Restore Cards, Transactions, Subscriptions, Installment Plans
+      await restoreData(
+        data.cards,
+        data.transactions,
+        data.subscriptions || [],
+        data.installmentPlans || []
+      );
+
+      // Restore Limit Increase Records
+      if (data.limitIncreaseRecords && data.limitIncreaseRecords.length > 0) {
+        await storage.saveLimitIncreaseRecords(data.limitIncreaseRecords);
+        // We might need to refresh limit increase context too, but a simple app reload or context refresh would do.
+        // Since LimitIncreaseContext loads on mount, we might need to force reload or just rely on next app start.
+        // Ideally, we should expose a 'refreshRecords' method in LimitIncreaseContext.
+      }
+
       // Restore settings if needed
       if (data.settings) {
-        // We might want to restore theme and notifications here
-        // For now, let's just restore notifications preference
-        // Theme is already static light mode, so no theme to restore
-        // setNotificationsEnabled(data.settings.notificationsEnabled);
+        if (data.settings.notificationPrefs) {
+          setNotificationPrefs(data.settings.notificationPrefs);
+          await storage.saveNotificationPreferences(
+            data.settings.notificationPrefs
+          );
+        }
       }
     });
   };
 
   const handleBackup = async () => {
-    await createBackup(cards, transactions, {
-      themeMode: "light", // Static for now
-      notificationsEnabled,
-    });
+    // We need to fetch all limit increase records.
+    // Since we can't easily get them from hook if not exposed, let's fetch from storage directly for backup to be safe.
+    const limitIncreaseRecords = await storage.getLimitIncreaseRecords();
+
+    await createBackup(
+      cards,
+      transactions,
+      subscriptions,
+      limitIncreaseRecords,
+      installmentPlans,
+      {
+        themeMode: "light",
+        notificationsEnabled: notificationPrefs.payment, // Backward compatibility
+        notificationPrefs,
+      }
+    );
   };
 
   const handleClearData = () => {
@@ -353,18 +416,70 @@ export const SettingsScreen = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferensi</Text>
+          <Text style={styles.sectionTitle}>Preferensi Notifikasi</Text>
           <SettingsItem
             icon="notifications-outline"
-            label="Notifikasi"
-            sublabel="Ingatkan tagihan jatuh tempo"
+            label="Tagihan Jatuh Tempo"
+            sublabel="Ingatkan sebelum tanggal jatuh tempo"
             showChevron={false}
             rightElement={
               <Switch
-                value={notificationsEnabled}
-                onValueChange={toggleNotifications}
+                value={notificationPrefs.payment}
+                onValueChange={(val) => toggleNotificationPref("payment", val)}
                 trackColor={{ false: "#767577", true: theme.colors.primary }}
-                thumbColor={notificationsEnabled ? "#fff" : "#f4f3f4"}
+                thumbColor={notificationPrefs.payment ? "#fff" : "#f4f3f4"}
+              />
+            }
+          />
+          <SettingsItem
+            icon="trending-up-outline"
+            label="Kenaikan Limit"
+            sublabel="Ingatkan jadwal kenaikan limit"
+            showChevron={false}
+            rightElement={
+              <Switch
+                value={notificationPrefs.limitIncrease}
+                onValueChange={(val) =>
+                  toggleNotificationPref("limitIncrease", val)
+                }
+                trackColor={{ false: "#767577", true: theme.colors.primary }}
+                thumbColor={
+                  notificationPrefs.limitIncrease ? "#fff" : "#f4f3f4"
+                }
+              />
+            }
+          />
+          <SettingsItem
+            icon="calendar-outline"
+            label="Annual Fee"
+            sublabel="Ingatkan biaya tahunan kartu"
+            showChevron={false}
+            rightElement={
+              <Switch
+                value={notificationPrefs.annualFee}
+                onValueChange={(val) =>
+                  toggleNotificationPref("annualFee", val)
+                }
+                trackColor={{ false: "#767577", true: theme.colors.primary }}
+                thumbColor={notificationPrefs.annualFee ? "#fff" : "#f4f3f4"}
+              />
+            }
+          />
+          <SettingsItem
+            icon="document-text-outline"
+            label="Status Pengajuan"
+            sublabel="Update status pengajuan limit"
+            showChevron={false}
+            rightElement={
+              <Switch
+                value={notificationPrefs.applicationStatus}
+                onValueChange={(val) =>
+                  toggleNotificationPref("applicationStatus", val)
+                }
+                trackColor={{ false: "#767577", true: theme.colors.primary }}
+                thumbColor={
+                  notificationPrefs.applicationStatus ? "#fff" : "#f4f3f4"
+                }
               />
             }
           />

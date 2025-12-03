@@ -343,6 +343,45 @@ export const CalendarScreen = () => {
           })}
         </Text>
 
+        <View style={styles.legendContainer}>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: theme.colors.status.error },
+              ]}
+            />
+            <Text style={styles.legendText}>Jatuh Tempo</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: theme.colors.status.info },
+              ]}
+            />
+            <Text style={styles.legendText}>Cetak Tagihan</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: theme.colors.status.warning },
+              ]}
+            />
+            <Text style={styles.legendText}>Annual Fee</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: theme.colors.status.success },
+              ]}
+            />
+            <Text style={styles.legendText}>Naik Limit</Text>
+          </View>
+        </View>
+
         {eventsOnSelectedDate.dueCards.length === 0 &&
         eventsOnSelectedDate.billingCards.length === 0 ? (
           <View style={styles.emptyState}>
@@ -372,26 +411,6 @@ export const CalendarScreen = () => {
           </>
         )}
 
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: theme.colors.status.error },
-              ]}
-            />
-            <Text style={styles.legendText}>Jatuh Tempo</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: theme.colors.status.info },
-              ]}
-            />
-            <Text style={styles.legendText}>Cetak Tagihan</Text>
-          </View>
-        </View>
         {eventsOnSelectedDate.feeCards.length > 0 && (
           <View style={styles.eventSection}>
             <Text style={styles.sectionTitle}>Annual Fee</Text>
@@ -550,10 +569,11 @@ const styles = StyleSheet.create({
   },
   legendContainer: {
     flexDirection: "row",
-    marginTop: theme.spacing.l,
-    gap: theme.spacing.l,
+    flexWrap: "wrap",
+    marginBottom: theme.spacing.l,
+    gap: theme.spacing.m,
     justifyContent: "center",
-    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.m,
   },
   legendItem: {
     flexDirection: "row",
@@ -571,5 +591,51 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: theme.spacing.s,
+  },
+  dayWrapper: {
+    alignItems: "center",
+    justifyContent: "flex-start",
+    height: 48,
+    width: 32,
+  },
+  dayNumberContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  selectedDayNumberContainer: {
+    backgroundColor: theme.colors.primary,
+  },
+  dayText: {
+    ...theme.typography.body,
+    fontSize: 14,
+    color: theme.colors.text.primary,
+    fontWeight: "500",
+  },
+  selectedDayText: {
+    color: theme.colors.text.inverse,
+    fontWeight: "600",
+  },
+  todayText: {
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  disabledText: {
+    color: theme.colors.text.tertiary + "40",
+  },
+  dotsRow: {
+    flexDirection: "row",
+    gap: 2,
+    justifyContent: "center",
+    flexWrap: "wrap",
+    width: "100%",
+  },
+  customDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
 });

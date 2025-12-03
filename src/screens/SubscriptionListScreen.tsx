@@ -16,6 +16,7 @@ import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import { Subscription } from "../types/subscription";
 import { LinearGradient } from "expo-linear-gradient";
+import { FloatingActionButton } from "../components/FloatingActionButton";
 
 export const SubscriptionListScreen = () => {
   const navigation = useNavigation();
@@ -197,12 +198,9 @@ export const SubscriptionListScreen = () => {
         />
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
+      <FloatingActionButton
         onPress={() => navigation.navigate("AddSubscription", {})}
-      >
-        <Ionicons name="add" size={32} color="#FFF" />
-      </TouchableOpacity>
+      />
     </SafeAreaView>
   );
 };
@@ -292,9 +290,9 @@ const styles = StyleSheet.create({
     marginVertical: theme.spacing.s,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
     marginRight: theme.spacing.m,
@@ -373,17 +371,5 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     textAlign: "center",
     marginBottom: theme.spacing.xl,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    ...theme.shadows.medium,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { NotificationService } from "./src/services/NotificationService";
 import { BiometricService } from "./src/services/BiometricService";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -9,7 +9,11 @@ import { registerForPushNotificationsAsync } from "./src/utils/notifications";
 import { NavigationContainer } from "@react-navigation/native";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { LockScreen } from "./src/screens/LockScreen";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Text } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 const AppContent = () => {
   const { isLocked, isAuthenticated } = useAuth();
@@ -29,22 +33,32 @@ const AppContent = () => {
 };
 
 export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
+
   useEffect(() => {
     const initApp = async () => {
-      // Check biometric
-      const biometricEnabled = await BiometricService.isEnabled();
-      if (biometricEnabled) {
-        const success = await BiometricService.authenticate();
-        if (!success) {
-          // If failed or cancelled, maybe exit or show lock screen?
-          // For now, we'll just let them in, but in a real app we'd block.
-          // Or better, we can use the LockScreen mechanism if we had one that supports biometric.
-          // Since we don't have a global lock state for biometric yet, we'll just prompt.
+      try {
+        // Check biometric
+        const biometricEnabled = await BiometricService.isEnabled();
+        if (biometricEnabled) {
+          const success = await BiometricService.authenticate();
+          if (!success) {
+            // Handle biometric failure if needed
+          }
         }
+      } catch (e) {
+        console.warn("Error initializing app:", e);
+      } finally {
+        setAppIsReady(true);
+        await SplashScreen.hideAsync();
       }
     };
     initApp();
   }, []);
+
+  if (!appIsReady) {
+    return null;
+  }
 
   return (
     <CardsProvider>

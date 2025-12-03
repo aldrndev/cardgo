@@ -169,4 +169,47 @@ export const storage = {
       return [];
     }
   },
+
+  async saveNotificationPreferences(prefs: {
+    payment: boolean;
+    limitIncrease: boolean;
+    annualFee: boolean;
+    applicationStatus: boolean;
+  }): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(prefs);
+      await AsyncStorage.setItem("@card_go_notification_prefs", jsonValue);
+    } catch (e) {
+      console.error("Failed to save notification prefs", e);
+    }
+  },
+
+  async getNotificationPreferences(): Promise<{
+    payment: boolean;
+    limitIncrease: boolean;
+    annualFee: boolean;
+    applicationStatus: boolean;
+  }> {
+    try {
+      const jsonValue = await AsyncStorage.getItem(
+        "@card_go_notification_prefs"
+      );
+      return jsonValue != null
+        ? JSON.parse(jsonValue)
+        : {
+            payment: true,
+            limitIncrease: true,
+            annualFee: true,
+            applicationStatus: true,
+          };
+    } catch (e) {
+      console.error("Failed to fetch notification prefs", e);
+      return {
+        payment: true,
+        limitIncrease: true,
+        annualFee: true,
+        applicationStatus: true,
+      };
+    }
+  },
 };

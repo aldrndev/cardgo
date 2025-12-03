@@ -4,6 +4,7 @@ export interface Subscription {
   name: string;
   amount: number;
   originalAmount?: number;
+  exchangeRate?: number;
   currency: string; // Default "IDR"
   billingCycle: "monthly" | "yearly";
   billingDay: number; // 1-31

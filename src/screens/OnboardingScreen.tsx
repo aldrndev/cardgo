@@ -56,8 +56,18 @@ export const OnboardingScreen = () => {
   const [nickname, setNickname] = useState("");
   const flatListRef = useRef<FlatList>(null);
 
+  const allSlides = [
+    ...SLIDES,
+    {
+      id: "input",
+      title: "Satu Langkah Lagi",
+      description: "Siapa nama panggilanmu?",
+      image: require("../assets/generated/onboarding_nickname.png"),
+    },
+  ];
+
   const handleNext = async () => {
-    if (activeIndex < SLIDES.length) {
+    if (activeIndex < allSlides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: activeIndex + 1 });
     } else {
       if (!nickname.trim()) {
@@ -83,15 +93,7 @@ export const OnboardingScreen = () => {
     <SafeAreaView style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={[
-          ...SLIDES,
-          {
-            id: "input",
-            title: "Satu Langkah Lagi",
-            description: "Siapa nama panggilanmu?",
-            image: require("../assets/generated/onboarding_nickname.png"),
-          },
-        ]}
+        data={allSlides}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -144,7 +146,7 @@ export const OnboardingScreen = () => {
 
       <View style={styles.footer}>
         <View style={styles.pagination}>
-          {SLIDES.map((_, index) => (
+          {allSlides.map((_, index) => (
             <View
               key={index}
               style={[styles.dot, activeIndex === index && styles.activeDot]}
@@ -155,7 +157,9 @@ export const OnboardingScreen = () => {
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button} onPress={handleNext}>
             <Text style={styles.buttonText}>
-              {activeIndex === SLIDES.length ? "Mulai Sekarang" : "Lanjut"}
+              {activeIndex === allSlides.length - 1
+                ? "Mulai Sekarang"
+                : "Lanjut"}
             </Text>
           </TouchableOpacity>
         </View>

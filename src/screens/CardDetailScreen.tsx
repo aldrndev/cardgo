@@ -404,7 +404,9 @@ export const CardDetailScreen = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Langganan Terhubung</Text>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+              Langganan Terhubung
+            </Text>
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate("SubscriptionList", { cardId: card.id })
@@ -477,7 +479,9 @@ export const CardDetailScreen = () => {
 
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { alignItems: "center" }]}>
-            <Text style={styles.sectionTitle}>Transaksi Terakhir</Text>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+              Transaksi Terakhir
+            </Text>
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate("TransactionsList", { cardId: card.id })

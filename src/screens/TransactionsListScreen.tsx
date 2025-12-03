@@ -25,6 +25,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { getBillingCycleRange } from "../utils/billingCycle";
 import { getCategoryIcon } from "../utils/categoryIcons";
+import { FloatingActionButton } from "../components/FloatingActionButton";
 
 type TransactionsListScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -341,22 +342,6 @@ export const TransactionsListScreen = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color={theme.colors.text.tertiary}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari transaksi..."
-          placeholderTextColor={theme.colors.text.tertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
       <View style={styles.summaryWrapper}>
         <LinearGradient
           colors={[theme.colors.primary, theme.colors.secondary]}
@@ -382,6 +367,22 @@ export const TransactionsListScreen = () => {
             <Text style={styles.summaryPeriod}>{getPeriodText()}</Text>
           </View>
         </LinearGradient>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Ionicons
+          name="search-outline"
+          size={20}
+          color={theme.colors.text.tertiary}
+          style={styles.searchIcon}
+        />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Cari transaksi..."
+          placeholderTextColor={theme.colors.text.tertiary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
       <View style={styles.filtersContainer}>
@@ -585,14 +586,11 @@ export const TransactionsListScreen = () => {
           </View>
         </View>
       </Modal>
-      <TouchableOpacity
-        style={styles.fab}
+      <FloatingActionButton
         onPress={() =>
           navigation.navigate("AddTransaction", { cardId: cardId || "" })
         }
-      >
-        <Ionicons name="add" size={32} color={theme.colors.text.inverse} />
-      </TouchableOpacity>
+      />
     </SafeAreaView>
   );
 };
@@ -953,18 +951,6 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
     fontSize: 10,
-  },
-  fab: {
-    position: "absolute",
-    right: theme.spacing.l,
-    bottom: theme.spacing.l,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    ...theme.shadows.large,
   },
 
   deleteAction: {

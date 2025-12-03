@@ -9,6 +9,7 @@ import { LimitIncreaseRecord } from "../types/limitIncrease";
 import { storage } from "../utils/storage";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
+import { NotificationService } from "../services/NotificationService";
 
 interface LimitIncreaseContextType {
   records: LimitIncreaseRecord[];
@@ -65,6 +66,20 @@ export const LimitIncreaseProvider = ({
     const updatedRecords = [newRecord, ...records];
     setRecords(updatedRecords);
     await storage.saveLimitIncreaseRecords(updatedRecords);
+
+    // Schedule reminder to check status
+    if (newRecord.status === "pending") {
+      // We need card name for the notification
+      const cards = await storage.getCards();
+      const card = cards.find((c) => c.id === newRecord.cardId);
+      const cardName = card ? card.alias : "Kartu Anda";
+
+      await NotificationService.scheduleLimitIncreaseStatusReminder(
+        newRecord.id,
+        cardName,
+        newRecord.cardId
+      );
+    }
   };
 
   const updateRecord = async (
@@ -76,6 +91,11 @@ export const LimitIncreaseProvider = ({
     );
     setRecords(updatedRecords);
     await storage.saveLimitIncreaseRecords(updatedRecords);
+
+    // If status changed to approved or rejected, cancel reminder
+    if (data.status === "approved" || data.status === "rejected") {
+      await NotificationService.cancelLimitIncreaseStatusReminder(id);
+    }
   };
 
   const deleteRecord = async (id: string) => {

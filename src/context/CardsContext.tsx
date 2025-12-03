@@ -33,7 +33,12 @@ interface CardsContextType {
   transactions: Transaction[];
   addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  restoreData: (cards: Card[], transactions: Transaction[]) => Promise<void>;
+  restoreData: (
+    cards: Card[],
+    transactions: Transaction[],
+    subscriptions?: Subscription[],
+    installmentPlans?: InstallmentPlan[]
+  ) => Promise<void>;
   addInstallmentPlan: (
     planData: Omit<InstallmentPlan, "id" | "createdAt">,
     adminFee?: number
@@ -213,6 +218,8 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
 
     // Schedule reminders
     NotificationService.schedulePaymentReminder(newCard);
+    NotificationService.scheduleLimitIncreaseReminder(newCard);
+    NotificationService.scheduleAnnualFeeReminder(newCard);
     await scheduleCardReminder(newCard);
   };
 
@@ -244,6 +251,8 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     if (updatedCard) {
       // Reschedule reminders
       NotificationService.schedulePaymentReminder(updatedCard);
+      NotificationService.scheduleLimitIncreaseReminder(updatedCard);
+      NotificationService.scheduleAnnualFeeReminder(updatedCard);
       await scheduleCardReminder(updatedCard);
     }
   };
@@ -424,7 +433,9 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
 
   const restoreData = async (
     newCards: Card[],
-    newTransactions: Transaction[]
+    newTransactions: Transaction[],
+    newSubscriptions: Subscription[] = [],
+    newInstallmentPlans: InstallmentPlan[] = []
   ) => {
     setIsLoading(true);
     // Recalculate usage for restored data
@@ -438,8 +449,14 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
 
     setCards(updatedCards);
     setTransactions(newTransactions);
+    setSubscriptions(newSubscriptions);
+    setInstallmentPlans(newInstallmentPlans);
+
     await storage.saveCards(updatedCards);
     await storage.saveTransactions(newTransactions);
+    await storage.saveSubscriptions(newSubscriptions);
+    await storage.saveInstallmentPlans(newInstallmentPlans);
+
     setIsLoading(false);
   };
 

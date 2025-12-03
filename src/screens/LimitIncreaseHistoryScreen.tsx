@@ -17,6 +17,7 @@ import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
 import { LimitIncreaseRecord } from "../types/limitIncrease";
+import { FloatingActionButton } from "../components/FloatingActionButton";
 
 type NavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -41,8 +42,8 @@ export const LimitIncreaseHistoryScreen = () => {
 
   const handleApprove = (record: LimitIncreaseRecord) => {
     Alert.alert(
-      "Setujui Kenaikan Limit",
-      "Apakah Anda yakin ingin menyetujui pengajuan ini?",
+      "Kenaikan Limit Disetujui",
+      "Apakah pengajuan kenaikan limit ini disetujui?",
       [
         { text: "Batal", style: "cancel" },
         {
@@ -60,8 +61,8 @@ export const LimitIncreaseHistoryScreen = () => {
 
   const handleReject = (record: LimitIncreaseRecord) => {
     Alert.alert(
-      "Tolak Kenaikan Limit",
-      "Apakah Anda yakin ingin menolak pengajuan ini?",
+      "Kenaikan Limit Ditolak",
+      "Apakah pengajuan kenaikan limit di ditolak?",
       [
         { text: "Batal", style: "cancel" },
         {
@@ -118,7 +119,7 @@ export const LimitIncreaseHistoryScreen = () => {
                 { backgroundColor: card?.colorTheme || theme.colors.primary },
               ]}
             >
-              <Ionicons name="card" size={20} color="#FFF" />
+              <Ionicons name="card" size={28} color="#FFF" />
             </View>
             <View>
               <Text style={styles.cardName}>
@@ -233,12 +234,9 @@ export const LimitIncreaseHistoryScreen = () => {
         }
       />
 
-      <TouchableOpacity
-        style={styles.fab}
+      <FloatingActionButton
         onPress={() => navigation.navigate("AddLimitIncrease", {})}
-      >
-        <Ionicons name="add" size={30} color="#FFF" />
-      </TouchableOpacity>
+      />
     </SafeAreaView>
   );
 };
@@ -290,9 +288,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.s,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -375,18 +373,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.status.success,
   },
-  fab: {
-    position: "absolute",
-    right: theme.spacing.l,
-    bottom: theme.spacing.l,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    ...theme.shadows.large,
-  },
+
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",

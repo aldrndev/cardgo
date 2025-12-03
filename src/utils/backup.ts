@@ -5,22 +5,37 @@ import { Alert } from "react-native";
 import { Card, Transaction } from "../types/card";
 import { storage } from "./storage";
 
+import { Subscription } from "../types/subscription";
+import { LimitIncreaseRecord } from "../types/limitIncrease";
+
 interface BackupData {
   version: number;
   timestamp: string;
   cards: Card[];
   transactions: Transaction[];
+  subscriptions: Subscription[];
+  limitIncreaseRecords: LimitIncreaseRecord[];
+  installmentPlans: any[]; // Replace with proper type if available
   settings: {
     themeMode: "light" | "dark" | "system";
     notificationsEnabled: boolean;
+    notificationPrefs?: {
+      payment: boolean;
+      limitIncrease: boolean;
+      annualFee: boolean;
+      applicationStatus: boolean;
+    };
   };
 }
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2; // Incremented version
 
 export const createBackup = async (
   cards: Card[],
   transactions: Transaction[],
+  subscriptions: Subscription[],
+  limitIncreaseRecords: LimitIncreaseRecord[],
+  installmentPlans: any[],
   settings: BackupData["settings"]
 ) => {
   try {
@@ -29,6 +44,9 @@ export const createBackup = async (
       timestamp: new Date().toISOString(),
       cards,
       transactions,
+      subscriptions,
+      limitIncreaseRecords,
+      installmentPlans,
       settings,
     };
 
@@ -112,6 +130,11 @@ const isValidBackup = (data: any): data is BackupData => {
     typeof data.version === "number" &&
     Array.isArray(data.cards) &&
     Array.isArray(data.transactions) &&
+    (data.subscriptions === undefined || Array.isArray(data.subscriptions)) &&
+    (data.limitIncreaseRecords === undefined ||
+      Array.isArray(data.limitIncreaseRecords)) &&
+    (data.installmentPlans === undefined ||
+      Array.isArray(data.installmentPlans)) &&
     typeof data.settings === "object"
   );
 };

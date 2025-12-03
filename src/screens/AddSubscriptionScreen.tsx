@@ -324,7 +324,33 @@ export const AddSubscriptionScreen = () => {
             </>
           )}
 
-          <Text style={styles.sectionLabel}>Kategori</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginTop: theme.spacing.s,
+              marginBottom: theme.spacing.s,
+            }}
+          >
+            <Text
+              style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}
+            >
+              Kategori
+            </Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              <Text style={{ fontSize: 10, color: theme.colors.text.tertiary }}>
+                Geser kiri
+              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={10}
+                color={theme.colors.text.tertiary}
+              />
+            </View>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

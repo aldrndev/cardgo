@@ -43,6 +43,16 @@ Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensiti
 
 - **Visualisasi Tanggal**: Lihat tanggal cetak tagihan, jatuh tempo, dan jadwal kenaikan limit dalam tampilan kalender.
 
+### 7. Notifikasi & Pengingat (Local Push) 🔔
+
+- **Offline Notifications**: Aplikasi menggunakan sistem notifikasi lokal (tanpa internet).
+- **Jadwal Otomatis**:
+  - **Tagihan**: 7 hari, 3 hari, 1 hari sebelum, dan pada hari H jatuh tempo.
+  - **Kenaikan Limit**: 7 hari, 3 hari, dan 1 hari sebelum tanggal bisa naik limit.
+  - **Annual Fee**: 7 hari, 3 hari, dan 1 hari sebelum bulan annual fee.
+  - **Status Pengajuan**: Pengingat untuk cek status pengajuan kenaikan limit (7 hari setelah pengajuan).
+- **Tap to Navigate**: Klik notifikasi untuk langsung membuka halaman detail kartu atau riwayat kenaikan limit yang relevan.
+
 ---
 
 ## 🛠️ Teknologi yang Digunakan
@@ -99,6 +109,66 @@ Card Go didesain dengan prinsip **Privacy First**:
 - **Icon Aplikasi**: Tersedia di folder `./assets/icon.png`
 - **Splash Screen**: Tersedia di folder `./assets/splash.png`
 - **Adaptive Icon**: Tersedia di folder `./assets/adaptive-icon.png` (untuk Android 8+)
+
+---
+
+## 📦 Build & Deployment
+
+### Android (APK & AAB)
+
+1.  **Install EAS CLI**:
+
+    ```bash
+    npm install -g eas-cli
+    eas login
+    ```
+
+2.  **Build APK (untuk testing di HP)**:
+
+    ```bash
+    eas build -p android --profile apk
+    ```
+
+    - Download file `.apk` dari link yang muncul dan install di HP Android.
+
+3.  **Build AAB (untuk upload ke Play Store)**:
+    ```bash
+    eas build -p android --profile production
+    ```
+    - File `.aab` ini yang diupload ke Google Play Console.
+
+### iOS (IPA)
+
+1.  **Build untuk Simulator**:
+
+    ```bash
+    eas build -p ios --profile development
+    ```
+
+2.  **Build untuk App Store (Perlu Apple Developer Account)**:
+    ```bash
+    eas build -p ios --profile production
+    ```
+
+### 📍 Dimana Hasil Build-nya?
+
+Karena proses build dilakukan di **Cloud (Server Expo)**:
+
+1.  Anda **tidak perlu menunggu** di terminal. Boleh di-close (Ctrl + C).
+2.  Cek status dan download file di dashboard: **[expo.dev](https://expo.dev)**.
+3.  Link download juga akan dikirimkan ke **email** akun Expo Anda setelah selesai.
+
+### 🔄 Cara Update Aplikasi
+
+Setiap kali Anda melakukan perubahan kode dan ingin merilis versi baru:
+
+1.  **Naikkan Versi** di `app.json`:
+    - `version`: Naikkan angka (contoh: `1.0.0` -> `1.0.1`).
+    - `android.versionCode`: Naikkan angka integer (contoh: `1` -> `2`).
+2.  **Lakukan Build Ulang** dengan perintah `eas build` yang sama.
+3.  **Install APK Baru**:
+    - Jika diinstall di HP yang sudah ada aplikasi sebelumnya, ini akan otomatis melakukan **Update**.
+    - Data lokal **TIDAK AKAN HILANG** selama Anda tidak meng-uninstall aplikasi lama.
 
 ---
 
