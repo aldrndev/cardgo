@@ -1,0 +1,1418 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+  StatusBar,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { theme } from "../constants/theme";
+import { Card } from "../types/card";
+import { MonthlyRecap } from "../components/MonthlyRecap";
+import { useCards } from "../context/CardsContext";
+import { useLimitIncrease } from "../context/LimitIncreaseContext";
+import { EmptyState } from "../components/EmptyState";
+import { CreditCard } from "../components/CreditCard";
+import { FloatingActionButton } from "../components/FloatingActionButton";
+import { storage } from "../utils/storage";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { CompositeNavigationProp } from "@react-navigation/native";
+import { RootStackParamList, TabParamList } from "../navigation/types";
+import * as Haptics from "expo-haptics";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
+import { getCategoryIcon } from "../utils/categoryIcons";
+import { scale } from "../utils/responsive";
+
+type HomeScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<TabParamList, "HomeTab">,
+  StackNavigationProp<RootStackParamList>
+>;
+
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = width * 0.85;
+
+const TIPS = [
+  "Bayar tagihan penuh setiap bulan untuk menghindari bunga.",
+  "Jaga penggunaan limit di bawah 30% untuk skor kredit yang baik.",
+  "Manfaatkan promo dan poin reward kartu kreditmu.",
+  "Hindari tarik tunai dengan kartu kredit karena bunganya tinggi.",
+  "Cek tagihan secara rutin untuk mendeteksi transaksi mencurigakan.",
+];
+
+export const HomeScreen = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { cards, transactions, isLoading } = useCards();
+  const { getRecordsByCardId } = useLimitIncrease();
+  const [selectedTag, setSelectedTag] = React.useState<string | null>(null);
+  const [showRecap, setShowRecap] = React.useState(false);
+  const [tip] = React.useState(TIPS[Math.floor(Math.random() * TIPS.length)]);
+  const [userProfile, setUserProfile] = React.useState<{
+    nickname: string;
+    joinDate: string;
+  } | null>(null);
+
+  React.useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    const profile = await storage.getUserProfile();
+    setUserProfile(profile);
+  };
+
+  const unarchivedCards = React.useMemo(() => {
+    return cards.filter((c) => !c.isArchived);
+  }, [cards]);
+
+  const activeCards = React.useMemo(() => {
+    return unarchivedCards.filter((card) => {
+      if (selectedTag && selectedTag !== "Semua") {
+        return card.tags?.includes(selectedTag);
+      }
+      return true;
+    });
+  }, [unarchivedCards, selectedTag]);
+
+  const allTags = React.useMemo(() => {
+    return [
+      "Semua",
+      ...Array.from(new Set(unarchivedCards.flatMap((c) => c.tags || []))),
+    ];
+  }, [unarchivedCards]);
+
+  const { totalBill, totalLimit, totalUsage } = React.useMemo(() => {
+    const bill = activeCards.reduce(
+      (sum, card) => sum + (card.currentUsage || 0),
+      0
+    );
+    const limit = activeCards.reduce(
+      (sum, card) => sum + (card.creditLimit || 0),
+      0
+    );
+    return { totalBill: bill, totalLimit: limit, totalUsage: bill };
+  }, [activeCards]);
+
+  const recentTransactions = React.useMemo(() => {
+    return transactions
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [transactions]);
+
+  const upcomingReminders = React.useMemo(() => {
+    const reminders: {
+      id: string;
+      cardId: string;
+      cardName: string;
+      date: Date;
+      daysLeft: number;
+    }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const next30Days = new Date(today);
+    next30Days.setDate(today.getDate() + 30);
+
+    unarchivedCards.forEach((card) => {
+      // Annual Fee
+      if (card.isAnnualFeeReminderEnabled && card.expiryMonth) {
+        const currentYear = today.getFullYear();
+        let feeDate = new Date(currentYear, card.expiryMonth, 1);
+        if (feeDate < today) {
+          feeDate.setFullYear(currentYear + 1);
+        }
+
+        if (feeDate <= next30Days && feeDate >= today) {
+          const diffTime = feeDate.getTime() - today.getTime();
+          const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          reminders.push({
+            id: `fee-${card.id}`,
+            cardId: card.id,
+            cardName: card.alias,
+            date: feeDate,
+            daysLeft,
+          });
+        }
+      }
+    });
+
+    return reminders.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [unarchivedCards]);
+
+  const limitIncreaseReminders = React.useMemo(() => {
+    const reminders: {
+      id: string;
+      cardId: string;
+      cardName: string;
+      date: Date;
+      daysLeft: number;
+    }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const next30Days = new Date(today);
+    next30Days.setDate(today.getDate() + 30);
+
+    unarchivedCards.forEach((card) => {
+      if (card.isLimitIncreaseReminderEnabled) {
+        let limitDate: Date | null = null;
+        const records = getRecordsByCardId(card.id);
+
+        if (records.length > 0) {
+          const sortedRecords = records.sort((a, b) => {
+            const dateA = a.actionDate || a.requestDate;
+            const dateB = b.actionDate || b.requestDate;
+            return new Date(dateB).getTime() - new Date(dateA).getTime();
+          });
+
+          const latestRecord = sortedRecords[0];
+          const baseDateStr =
+            latestRecord.actionDate || latestRecord.requestDate;
+          const baseDate = new Date(baseDateStr);
+
+          baseDate.setMonth(baseDate.getMonth() + latestRecord.frequency);
+          limitDate = baseDate;
+        } else if (card.nextLimitIncreaseDate) {
+          limitDate = new Date(card.nextLimitIncreaseDate);
+        }
+
+        if (limitDate) {
+          limitDate.setHours(0, 0, 0, 0);
+          if (limitDate <= next30Days && limitDate >= today) {
+            const diffTime = limitDate.getTime() - today.getTime();
+            const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            reminders.push({
+              id: `limit-${card.id}`,
+              cardId: card.id,
+              cardName: card.alias,
+              date: limitDate,
+              daysLeft,
+            });
+          }
+        }
+      }
+    });
+
+    return reminders.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [unarchivedCards, getRecordsByCardId]);
+
+  const overLimitCards = React.useMemo(() => {
+    return activeCards.filter(
+      (card) =>
+        card.creditLimit > 0 && card.currentUsage / card.creditLimit > 0.8
+    );
+  }, [activeCards]);
+
+  const handleTagSelect = (tag: string) => {
+    Haptics.selectionAsync();
+    setSelectedTag(tag === "Semua" ? null : tag);
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Selamat Pagi";
+    if (hour < 15) return "Selamat Siang";
+    if (hour < 18) return "Selamat Sore";
+    return "Selamat Malam";
+  };
+
+  const today = new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Memuat...</Text>
+      </View>
+    );
+  }
+
+  if (unarchivedCards.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={theme.colors.background}
+        />
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greetingText}>{getGreeting()},</Text>
+            <Text style={styles.headerTitle}>
+              {userProfile?.nickname || "Pengguna"}
+            </Text>
+            <Text style={styles.dateText}>{today}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate("SettingsTab")}
+          >
+            <View style={styles.avatarContainer}>
+              <Ionicons name="person" size={24} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+        </View>
+        <EmptyState />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={theme.colors.background}
+      />
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greetingText}>{getGreeting()},</Text>
+          <Text style={styles.headerTitle}>
+            {userProfile?.nickname || "Pengguna"}
+          </Text>
+          <Text style={styles.dateText}>{today}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => navigation.navigate("SettingsTab")}
+        >
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person" size={24} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Summary Card */}
+        <View style={styles.summaryContainer}>
+          <LinearGradient
+            colors={["#4F46E5", "#3730A3"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.summaryCard}
+          >
+            <View>
+              <Text style={styles.summaryLabel}>Total Tagihan</Text>
+              <Text style={styles.summaryAmount}>
+                {formatCurrency(totalBill, 1_000_000_000)}
+              </Text>
+            </View>
+            <View style={styles.summaryFooter}>
+              <View>
+                <Text style={styles.summarySubLabel}>Total Limit</Text>
+                <Text style={styles.summarySubValue}>
+                  {formatCurrency(totalLimit)}
+                </Text>
+              </View>
+              <View style={styles.verticalDivider} />
+              <View>
+                <Text style={styles.summarySubLabel}>Sisa Limit</Text>
+                <Text style={styles.summarySubValue}>
+                  {formatCurrency(totalLimit - totalUsage)}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Upcoming Reminders */}
+        {(upcomingReminders.length > 0 ||
+          limitIncreaseReminders.length > 0) && (
+          <View style={styles.remindersSection}>
+            <View style={styles.remindersCard}>
+              <View style={styles.remindersHeader}>
+                <Text style={styles.sectionTitle}>Pengingat Mendatang</Text>
+                <View style={styles.tooltipContainer}>
+                  <Text style={styles.tooltipText}>
+                    Geser kiri untuk lainnya
+                  </Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={12}
+                    color={theme.colors.text.tertiary}
+                  />
+                </View>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.remindersContent}
+              >
+                {/* Limit Increase Reminders */}
+                {limitIncreaseReminders.map((reminder) => (
+                  <TouchableOpacity
+                    key={reminder.id}
+                    style={styles.reminderItem}
+                    onPress={() =>
+                      navigation.navigate("LimitIncreaseHistory", {
+                        cardId: reminder.cardId,
+                      })
+                    }
+                  >
+                    <LinearGradient
+                      colors={["#8B5CF6", "#6D28D9"]} // Violet gradient
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.reminderGradient}
+                    >
+                      <View style={styles.reminderHeader}>
+                        <View style={styles.reminderIconContainer}>
+                          <Ionicons
+                            name="trending-up"
+                            size={20}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                        <View style={styles.daysLeftBadge}>
+                          <Text
+                            style={[styles.daysLeftText, { color: "#000000" }]}
+                          >
+                            {reminder.daysLeft} Hari Lagi
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.reminderTitle}>Kenaikan Limit</Text>
+                      <Text style={styles.reminderSubtitle}>
+                        {reminder.cardName}
+                      </Text>
+                      <Text style={styles.reminderDate}>
+                        {new Date(reminder.date).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                        })}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Annual Fee Reminders */}
+                {upcomingReminders.map((reminder) => (
+                  <TouchableOpacity
+                    key={reminder.id}
+                    style={styles.reminderItem}
+                    onPress={() =>
+                      navigation.navigate("CardDetail", {
+                        cardId: reminder.cardId,
+                      })
+                    }
+                  >
+                    <LinearGradient
+                      colors={["#F59E0B", "#D97706"]} // Amber gradient
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.reminderGradient}
+                    >
+                      <View style={styles.reminderHeader}>
+                        <View style={styles.reminderIconContainer}>
+                          <Ionicons name="calendar" size={20} color="#FFFFFF" />
+                        </View>
+                        <View style={styles.daysLeftBadge}>
+                          <Text
+                            style={[styles.daysLeftText, { color: "#000000" }]}
+                          >
+                            {reminder.daysLeft} Hari Lagi
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.reminderTitle}>Annual Fee</Text>
+                      <Text style={styles.reminderSubtitle}>
+                        {reminder.cardName}
+                      </Text>
+                      <Text style={styles.reminderDate}>
+                        {new Date(reminder.date).toLocaleDateString("id-ID", {
+                          month: "long",
+                        })}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickActionsContent}
+          >
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("AddEditCard", {})}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#EEF2FF" }]}>
+                <Ionicons name="add" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.actionLabel}>Tambah</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("LimitIncreaseHistory", {})}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#F0FDF4" }]}>
+                <Ionicons
+                  name="trending-up"
+                  size={24}
+                  color={theme.colors.status.success}
+                />
+              </View>
+              <Text style={styles.actionLabel}>Naik Limit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("Calendar")}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#FFF7ED" }]}>
+                <Ionicons
+                  name="calendar"
+                  size={24}
+                  color={theme.colors.status.warning}
+                />
+              </View>
+              <Text style={styles.actionLabel}>Kalender</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("TransactionsList", {})}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#ECFDF5" }]}>
+                <Ionicons
+                  name="receipt"
+                  size={24}
+                  color={theme.colors.secondary}
+                />
+              </View>
+              <Text style={styles.actionLabel}>Transaksi</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("SubscriptionList", {})}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#F3E8FF" }]}>
+                <Ionicons
+                  name="repeat"
+                  size={24}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={styles.actionLabel}>Langganan</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("InsightsTab")}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#F0F9FF" }]}>
+                <Ionicons
+                  name="stats-chart"
+                  size={24}
+                  color={theme.colors.text.secondary}
+                />
+              </View>
+              <Text style={styles.actionLabel}>Statistik</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("ArchivedCards")}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: "#F1F5F9" }]}>
+                <Ionicons
+                  name="archive-outline"
+                  size={24}
+                  color={theme.colors.text.secondary}
+                />
+              </View>
+              <Text style={styles.actionLabel}>Arsip</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* Tags Filter */}
+        <View style={styles.tagsSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagsFilterContainer}
+          >
+            {allTags.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                style={[
+                  styles.filterChip,
+                  (selectedTag === tag || (!selectedTag && tag === "Semua")) &&
+                    styles.activeFilterChip,
+                ]}
+                onPress={() => handleTagSelect(tag)}
+              >
+                <Text
+                  style={[
+                    styles.filterText,
+                    (selectedTag === tag ||
+                      (!selectedTag && tag === "Semua")) &&
+                      styles.activeFilterText,
+                  ]}
+                >
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Cards Carousel */}
+        <View style={styles.carouselSection}>
+          {activeCards.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carouselContent}
+              decelerationRate="fast"
+              snapToInterval={
+                Dimensions.get("window").width -
+                theme.spacing.xl * 2 +
+                theme.spacing.m
+              }
+            >
+              {activeCards.map((card) => (
+                <CreditCard
+                  key={card.id}
+                  card={card}
+                  onPress={() =>
+                    navigation.navigate("CardDetail", { cardId: card.id })
+                  }
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.noResultContainer}>
+              <Ionicons
+                name="search-outline"
+                size={48}
+                color={theme.colors.text.tertiary}
+              />
+              <Text style={styles.noResultText}>
+                Tidak ada kartu dengan tag "{selectedTag}"
+              </Text>
+              <TouchableOpacity
+                style={styles.resetFilterButton}
+                onPress={() => setSelectedTag("Semua")}
+              >
+                <Text style={styles.resetFilterText}>Reset Filter</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View
+          style={[styles.sectionDivider, { marginBottom: theme.spacing.s }]}
+        />
+
+        {/* Limit Warnings */}
+        <View style={[styles.warningSection, { marginTop: 0 }]}>
+          {cards.some((card) => {
+            const today = new Date();
+            const currentDay = today.getDate();
+            const dueDay = card.dueDay;
+            let daysUntilDue = dueDay - currentDay;
+            if (daysUntilDue < 0) daysUntilDue += 30;
+            return daysUntilDue <= 7;
+          }) && (
+            <View style={styles.alertBlock}>
+              <View style={styles.alertHeader}>
+                <Ionicons
+                  name="time-outline"
+                  size={20}
+                  color={theme.colors.status.warning}
+                />
+                <Text style={styles.alertTitle}>Jatuh Tempo Dekat</Text>
+              </View>
+              {cards
+                .filter((card) => {
+                  const today = new Date();
+                  const currentDay = today.getDate();
+                  const dueDay = card.dueDay;
+                  let daysUntilDue = dueDay - currentDay;
+                  if (daysUntilDue < 0) daysUntilDue += 30;
+                  return daysUntilDue <= 7;
+                })
+                .map((card) => (
+                  <View key={card.id} style={styles.alertItem}>
+                    <Text style={styles.alertCardName}>{card.alias}</Text>
+                    <Text style={styles.alertDate}>Tgl {card.dueDay}</Text>
+                  </View>
+                ))}
+            </View>
+          )}
+
+          {overLimitCards.length > 0 && (
+            <LinearGradient
+              colors={["#B91C1C", "#EF4444"]} // Darker red gradient
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.overLimitCard}
+            >
+              <View style={styles.alertHeader}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <View style={styles.warningIconContainer}>
+                    <Ionicons name="warning" size={20} color="#B91C1C" />
+                  </View>
+                  <Text style={styles.overLimitTitle}>Peringatan Limit</Text>
+                </View>
+              </View>
+
+              {overLimitCards.map((card) => {
+                const percentage = Math.min(
+                  (card.currentUsage / card.creditLimit) * 100,
+                  100
+                );
+                const remaining = card.creditLimit - card.currentUsage;
+
+                return (
+                  <View key={card.id} style={styles.overLimitItem}>
+                    <View style={styles.overLimitRow}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Ionicons name="card" size={16} color="#FFFFFF" />
+                        <Text style={styles.overLimitCardName}>
+                          {card.alias}
+                        </Text>
+                      </View>
+                      <Text style={styles.overLimitPercentage}>
+                        {percentage.toFixed(0)}% Terpakai
+                      </Text>
+                    </View>
+
+                    <View style={styles.overLimitProgressBg}>
+                      <View
+                        style={[
+                          styles.overLimitProgressBar,
+                          { width: `${percentage}%` },
+                        ]}
+                      />
+                    </View>
+
+                    <View style={styles.overLimitDetails}>
+                      <View>
+                        <Text style={styles.overLimitLabel}>Sisa Limit</Text>
+                        <Text style={styles.overLimitValue}>
+                          {formatCurrency(remaining)}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.overLimitButton}
+                        onPress={() =>
+                          navigation.navigate("CardDetail", {
+                            cardId: card.id,
+                          })
+                        }
+                      >
+                        <Text style={styles.overLimitButtonText}>
+                          Lihat Detail
+                        </Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={14}
+                          color="#B91C1C"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </LinearGradient>
+          )}
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Aktivitas Terakhir</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("TransactionsList", {})}
+            >
+              <Text style={styles.seeAllText}>Lihat Semua</Text>
+            </TouchableOpacity>
+          </View>
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((tx) => {
+              const card = cards.find((c) => c.id === tx.cardId);
+              const { iconName, iconColor } = getCategoryIcon(tx.category);
+
+              return (
+                <View key={tx.id} style={styles.transactionItem}>
+                  <View style={styles.transactionLeft}>
+                    <View
+                      style={[
+                        styles.transactionIconContainer,
+                        { backgroundColor: iconColor + "20" },
+                      ]}
+                    >
+                      <Ionicons name={iconName} size={28} color={iconColor} />
+                    </View>
+                    <View style={styles.transactionTextContainer}>
+                      <Text
+                        style={styles.transactionDesc}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                      >
+                        {tx.description}
+                      </Text>
+                      <Text style={styles.transactionSub}>
+                        {new Date(tx.date).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    {tx.currency &&
+                    tx.currency !== "IDR" &&
+                    tx.originalAmount ? (
+                      <>
+                        <Text style={styles.transactionAmount}>
+                          {formatForeignCurrency(
+                            tx.originalAmount,
+                            tx.currency
+                          )}
+                        </Text>
+                        <Text style={styles.convertedAmount}>
+                          ≈ {formatCurrency(tx.amount)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.transactionAmount}>
+                        {formatCurrency(tx.amount)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })
+          ) : (
+            <Text style={styles.emptyText}>Belum ada transaksi</Text>
+          )}
+        </View>
+
+        {/* Financial Tip */}
+        <View style={styles.tipContainer}>
+          <View style={styles.tipHeader}>
+            <Ionicons
+              name="bulb-outline"
+              size={20}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.tipTitle}>Tips Keuangan</Text>
+          </View>
+          <Text style={styles.tipText}>{tip}</Text>
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate("AddEditCard", {})}
+      >
+        <Ionicons name="add" size={32} color={theme.colors.text.inverse} />
+      </TouchableOpacity>
+      <MonthlyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.l,
+    paddingVertical: theme.spacing.m,
+    backgroundColor: theme.colors.background,
+  },
+  greetingText: {
+    ...theme.typography.h2,
+    color: theme.colors.text.primary,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  logo: {
+    ...theme.typography.h2,
+    color: theme.colors.text.primary,
+    fontWeight: "800",
+  },
+
+  headerTitle: {
+    ...theme.typography.body,
+    fontSize: 18,
+    fontWeight: "400",
+    color: theme.colors.text.primary,
+    marginBottom: 2,
+  },
+  dateText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    fontSize: 12,
+  },
+  profileButton: {
+    padding: 4,
+  },
+  avatarContainer: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    backgroundColor: theme.colors.primary, // Solid purple
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.small,
+  },
+  content: {
+    paddingBottom: 100,
+  },
+  summaryContainer: {
+    paddingHorizontal: theme.spacing.m,
+    marginBottom: theme.spacing.l,
+  },
+  summaryCard: {
+    padding: theme.spacing.l,
+    borderRadius: theme.borderRadius.xl,
+    ...theme.shadows.medium,
+  },
+  summaryLabel: {
+    ...theme.typography.caption,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 4,
+  },
+  summaryAmount: {
+    ...theme.typography.h1,
+    color: "#FFFFFF",
+    fontSize: 32,
+    marginBottom: theme.spacing.l,
+  },
+  summaryFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+  },
+  verticalDivider: {
+    width: 1,
+    height: "100%",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    marginHorizontal: theme.spacing.l,
+  },
+  summarySubLabel: {
+    ...theme.typography.caption,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 10,
+  },
+  summarySubValue: {
+    ...theme.typography.body,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  quickActionsSection: {
+    marginBottom: theme.spacing.l,
+  },
+  quickActionsContent: {
+    paddingHorizontal: theme.spacing.l,
+    gap: theme.spacing.l,
+    paddingBottom: theme.spacing.s,
+  },
+
+  actionButton: {
+    alignItems: "center",
+    gap: 8,
+  },
+  actionIcon: {
+    width: scale(56),
+    height: scale(56),
+    borderRadius: 999, // Circle
+    justifyContent: "center",
+    alignItems: "center",
+    ...theme.shadows.small,
+  },
+  actionLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.primary,
+    fontWeight: "600",
+  },
+  tagsSection: {
+    marginTop: theme.spacing.s,
+    marginBottom: theme.spacing.m,
+  },
+  tagsFilterContainer: {
+    paddingHorizontal: theme.spacing.l,
+    gap: theme.spacing.s,
+  },
+  filterChip: {
+    paddingHorizontal: theme.spacing.l,
+    paddingVertical: 10,
+    borderRadius: 100,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  activeFilterChip: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    ...theme.shadows.small,
+  },
+  filterText: {
+    ...theme.typography.body,
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    fontWeight: "600",
+  },
+  activeFilterText: {
+    color: theme.colors.text.inverse,
+  },
+  carouselSection: {
+    marginBottom: theme.spacing.m,
+  },
+  carouselContent: {
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.m,
+  },
+  alertsSection: {
+    gap: theme.spacing.m,
+    marginBottom: theme.spacing.xl,
+  },
+  alertBlock: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.m,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.status.warning,
+    marginHorizontal: theme.spacing.m,
+    ...theme.shadows.small,
+  },
+  alertBlockError: {
+    borderLeftColor: theme.colors.status.error,
+  },
+  alertHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: theme.spacing.s,
+    gap: theme.spacing.s,
+  },
+  alertTitle: {
+    ...theme.typography.body,
+    fontWeight: "700",
+    color: theme.colors.status.warning,
+  },
+  alertTitleError: {
+    color: theme.colors.status.error,
+  },
+  alertItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  alertCardName: {
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+  },
+  alertDate: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    fontWeight: "500",
+  },
+  alertDateError: {
+    color: theme.colors.status.error,
+  },
+  section: {
+    paddingHorizontal: theme.spacing.l,
+    paddingVertical: theme.spacing.l,
+    marginBottom: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.m,
+    borderRadius: theme.borderRadius.xl,
+    ...theme.shadows.small,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.m,
+  },
+  sectionTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text.primary,
+    borderBottomColor: theme.colors.border,
+  },
+  seeAllText: {
+    ...theme.typography.button,
+    color: theme.colors.primary,
+    fontSize: 14,
+  },
+  transactionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  transactionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  transactionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  transactionIcon: {
+    fontSize: 24,
+  },
+  transactionTextContainer: {
+    flex: 1,
+    marginRight: theme.spacing.s,
+  },
+  transactionDesc: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+    fontSize: 16, // Increased from 15
+  },
+  transactionSub: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    fontSize: 12,
+  },
+  transactionAmount: {
+    ...theme.typography.body,
+    fontWeight: "700",
+    color: theme.colors.text.primary,
+    fontSize: 14,
+  },
+  convertedAmount: {
+    ...theme.typography.caption,
+    fontSize: 10,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
+  },
+  emptyText: {
+    ...theme.typography.body,
+    color: theme.colors.text.secondary,
+    textAlign: "center",
+    marginVertical: theme.spacing.m,
+  },
+  remindersSection: {
+    marginBottom: theme.spacing.l,
+  },
+  remindersHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.m,
+    paddingHorizontal: theme.spacing.m,
+  },
+  remindersCard: {
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.m,
+    borderRadius: theme.borderRadius.l,
+    marginHorizontal: theme.spacing.m,
+    ...theme.shadows.small,
+  },
+  tooltipContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  tooltipText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    fontSize: 10,
+  },
+  remindersContent: {
+    paddingHorizontal: theme.spacing.m,
+    gap: theme.spacing.m,
+  },
+  reminderCard: {
+    width: 160,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.l,
+    ...theme.shadows.small,
+    marginRight: theme.spacing.s,
+    overflow: "hidden",
+  },
+  reminderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: theme.spacing.s,
+  },
+  reminderIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  daysLeftBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+  },
+  daysLeftText: {
+    ...theme.typography.caption,
+    fontWeight: "700",
+    fontSize: 10,
+  },
+  reminderBody: {
+    gap: 2,
+  },
+  reminderCardTitle: {
+    ...theme.typography.body,
+    fontWeight: "700",
+    color: theme.colors.text.primary,
+  },
+  reminderCardSubtitle: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: 4,
+  },
+  reminderCardDate: {
+    ...theme.typography.caption,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  tipContainer: {
+    marginHorizontal: theme.spacing.l,
+    marginBottom: theme.spacing.xl,
+    padding: theme.spacing.m,
+    backgroundColor: "#F0F9FF",
+    borderRadius: theme.borderRadius.l,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  tipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.s,
+    marginBottom: theme.spacing.s,
+  },
+  tipTitle: {
+    ...theme.typography.body,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  tipText: {
+    ...theme.typography.body,
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+  },
+  overLimitCard: {
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.m,
+    ...theme.shadows.medium,
+    marginTop: theme.spacing.m,
+    marginHorizontal: theme.spacing.m,
+  },
+  warningIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  overLimitTitle: {
+    ...theme.typography.h3,
+    color: "#FFFFFF",
+    fontSize: 16,
+  },
+  overLimitItem: {
+    marginTop: theme.spacing.m,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 12,
+    borderRadius: 12,
+  },
+  overLimitRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    alignItems: "center",
+  },
+  overLimitCardName: {
+    ...theme.typography.body,
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  overLimitPercentage: {
+    ...theme.typography.caption,
+    color: "#FFFFFF",
+    fontWeight: "600",
+    opacity: 0.9,
+  },
+  overLimitProgressBg: {
+    height: 6,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    borderRadius: 3,
+    marginBottom: 12,
+  },
+  overLimitProgressBar: {
+    height: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 3,
+  },
+  overLimitDetails: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  overLimitLabel: {
+    ...theme.typography.caption,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  overLimitValue: {
+    ...theme.typography.body,
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  overLimitButton: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  overLimitButtonText: {
+    ...theme.typography.caption,
+    color: "#B91C1C",
+    fontWeight: "700",
+  },
+  warningSection: {
+    marginBottom: theme.spacing.xl,
+  },
+  reminderItem: {
+    width: 160,
+    borderRadius: theme.borderRadius.l,
+    ...theme.shadows.small,
+    marginRight: theme.spacing.s,
+    overflow: "hidden",
+  },
+  reminderGradient: {
+    padding: theme.spacing.m,
+  },
+  reminderTitle: {
+    ...theme.typography.body,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  reminderSubtitle: {
+    ...theme.typography.caption,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 4,
+  },
+  reminderDate: {
+    ...theme.typography.caption,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  fab: {
+    position: "absolute",
+    right: theme.spacing.l,
+    bottom: theme.spacing.l,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    ...theme.shadows.large,
+  },
+  greeting: {
+    ...theme.typography.h1,
+    color: theme.colors.text.primary,
+    marginBottom: 4,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    ...theme.shadows.small,
+  },
+  noResultContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.l,
+    borderRadius: theme.borderRadius.l,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  noResultText: {
+    ...theme.typography.body,
+    color: theme.colors.text.secondary,
+    textAlign: "center",
+    marginTop: theme.spacing.m,
+    marginBottom: theme.spacing.m,
+  },
+  resetFilterButton: {
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.primary + "10",
+    borderRadius: theme.borderRadius.m,
+  },
+  resetFilterText: {
+    ...theme.typography.button,
+    color: theme.colors.primary,
+    fontSize: 14,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginHorizontal: theme.spacing.l,
+    marginBottom: theme.spacing.xl,
+  },
+});
