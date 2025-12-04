@@ -55,6 +55,7 @@ export const OnboardingScreen = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [nickname, setNickname] = useState("");
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const allSlides = [
     ...SLIDES,
@@ -65,6 +66,15 @@ export const OnboardingScreen = () => {
       image: require("../assets/generated/onboarding_nickname.png"),
     },
   ];
+
+  React.useEffect(() => {
+    if (activeIndex === allSlides.length - 1) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeIndex]);
 
   const handleNext = async () => {
     if (activeIndex < allSlides.length - 1) {
@@ -116,12 +126,12 @@ export const OnboardingScreen = () => {
                     Boleh kami tahu nama panggilanmu?
                   </Text>
                   <TextInput
+                    ref={inputRef}
                     style={styles.input}
                     placeholder="Masukkan nama panggilan"
                     value={nickname}
                     onChangeText={setNickname}
                     maxLength={20}
-                    autoFocus
                     placeholderTextColor={theme.colors.text.tertiary}
                   />
                 </View>

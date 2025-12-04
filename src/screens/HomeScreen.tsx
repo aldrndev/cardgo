@@ -892,9 +892,9 @@ const styles = StyleSheet.create({
   },
   greetingText: {
     ...theme.typography.h2,
+    fontSize: 18,
     color: theme.colors.text.primary,
-    fontWeight: "bold",
-    marginBottom: 4,
+    fontWeight: "800",
   },
   logo: {
     ...theme.typography.h2,
@@ -904,10 +904,11 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     ...theme.typography.body,
-    fontSize: 18,
-    fontWeight: "400",
+    fontSize: 16,
+    fontWeight: "500",
     color: theme.colors.text.primary,
-    marginBottom: 2,
+    // marginTop: 2,
+    // marginBottom: 2,
   },
   dateText: {
     ...theme.typography.caption,
@@ -918,9 +919,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   avatarContainer: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
     backgroundColor: theme.colors.primary, // Solid purple
     alignItems: "center",
     justifyContent: "center",
