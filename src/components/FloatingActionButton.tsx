@@ -2,6 +2,7 @@ import React from "react";
 import { TouchableOpacity, StyleSheet, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
+import { moderateScale, scale } from "../utils/responsive";
 
 interface FloatingActionButtonProps {
   onPress: () => void;
@@ -18,7 +19,11 @@ export const FloatingActionButton = ({
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Ionicons name="add" size={32} color={theme.colors.text.inverse} />
+      <Ionicons
+        name="add"
+        size={moderateScale(28)}
+        color={theme.colors.text.inverse}
+      />
     </TouchableOpacity>
   );
 };
@@ -26,11 +31,11 @@ export const FloatingActionButton = ({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 110, // Above tab bar (approx 90 height + 20 padding)
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: scale(110), // Above tab bar (approx 90 height + 20 padding)
+    right: scale(20),
+    width: moderateScale(56),
+    height: moderateScale(56),
+    borderRadius: moderateScale(28),
     backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",

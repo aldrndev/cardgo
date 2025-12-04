@@ -5,6 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -15,12 +17,19 @@ import { RootStackParamList } from "../navigation/types";
 import { CreditCard } from "../components/CreditCard";
 import { calculateHealthScore, getHealthColor } from "../utils/healthScore";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
+import {
+  formatCurrency,
+  formatForeignCurrency,
+  formatNumberInput,
+  parseAmount,
+} from "../utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { getBillingCycleRange, formatDateRange } from "../utils/billingCycle";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { scale, moderateScale } from "../utils/responsive";
+import { PaymentHistorySection } from "../components/PaymentHistorySection";
+import React, { useState } from "react";
 
 type CardDetailScreenRouteProp = RouteProp<RootStackParamList, "CardDetail">;
 type CardDetailScreenNavigationProp = StackNavigationProp<
@@ -32,15 +41,30 @@ export const CardDetailScreen = () => {
   const navigation = useNavigation<CardDetailScreenNavigationProp>();
   const route = useRoute<CardDetailScreenRouteProp>();
   const { cardId } = route.params;
-  const { cards, deleteCard, archiveCard, transactions, subscriptions } =
-    useCards();
+  const {
+    cards,
+    deleteCard,
+    archiveCard,
+    transactions,
+    subscriptions,
+    markCardAsPaid,
+    getPaymentHistory,
+  } = useCards();
   const { getRecordsByCardId } = useLimitIncrease();
   const card = cards.find((c) => c.id === cardId);
+
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentType, setPaymentType] = useState<"full" | "minimal">("full");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
+  const [validationError, setValidationError] = useState("");
+
+  const paymentHistory = card ? getPaymentHistory(card.id) : [];
 
   const recentTransactions = transactions
     .filter((t) => t.cardId === cardId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 3);
+    .slice(0, 5);
 
   if (!card) {
     return (
@@ -85,6 +109,60 @@ export const CardDetailScreen = () => {
     );
   };
 
+  const handleMarkAsPaid = () => {
+    setPaymentType("full");
+    setPaymentAmount("");
+    setPaymentNotes("");
+    setValidationError("");
+    setShowPaymentForm(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!card) return;
+
+    // Validation
+    if (paymentType === "minimal") {
+      if (!paymentAmount || paymentAmount.trim() === "") {
+        setValidationError("Jumlah pembayaran harus diisi");
+        return;
+      }
+      const amount = parseAmount(paymentAmount);
+      if (isNaN(amount) || amount <= 0) {
+        setValidationError("Jumlah pembayaran tidak valid");
+        return;
+      }
+    }
+
+    setValidationError("");
+
+    // Determine amount
+    let finalAmount: number;
+    if (paymentType === "full") {
+      finalAmount = card.statementAmount || card.currentUsage || 0;
+    } else {
+      finalAmount = parseAmount(paymentAmount);
+    }
+
+    try {
+      await markCardAsPaid(
+        card.id,
+        finalAmount,
+        paymentNotes || undefined,
+        paymentType
+      );
+
+      setShowPaymentForm(false);
+      setPaymentType("full");
+      setPaymentAmount("");
+      setPaymentNotes("");
+      setValidationError("");
+      Alert.alert("Berhasil", "Pembayaran berhasil dicatat");
+    } catch (error) {
+      console.error("Error marking as paid:", error);
+      Alert.alert("Error", "Gagal mencatat pembayaran");
+    }
+  };
+
   const currentUsage = card.currentUsage || 0;
   let usagePercentage =
     card.creditLimit > 0 ? (currentUsage / card.creditLimit) * 100 : 0;
@@ -127,19 +205,31 @@ export const CardDetailScreen = () => {
                     navigation.navigate("AddEditCard", { cardId: card.id })
                   }
                 >
-                  <Ionicons name="create-outline" size={22} color="#FFFFFF" />
+                  <Ionicons
+                    name="create-outline"
+                    size={moderateScale(22)}
+                    color="#FFFFFF"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.swipeButton, styles.archiveButton]}
                   onPress={handleArchive}
                 >
-                  <Ionicons name="archive-outline" size={22} color="#FFFFFF" />
+                  <Ionicons
+                    name="archive-outline"
+                    size={moderateScale(22)}
+                    color="#FFFFFF"
+                  />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.swipeButton, styles.deleteButton]}
                   onPress={handleDelete}
                 >
-                  <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
+                  <Ionicons
+                    name="trash-outline"
+                    size={moderateScale(22)}
+                    color="#FFFFFF"
+                  />
                 </TouchableOpacity>
               </View>
             )}
@@ -157,14 +247,16 @@ export const CardDetailScreen = () => {
             </Text>
             <Ionicons
               name="arrow-forward"
-              size={14}
+              size={moderateScale(14)}
               color={theme.colors.text.tertiary}
             />
           </View>
         </View>
-
+        {/* === RINGKASAN PENGGUNAAN === */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ringkasan Tagihan</Text>
+          <Text style={styles.sectionTitle}>Ringkasan Penggunaan</Text>
+
+          {/* Usage Info */}
           <View style={styles.row}>
             <View>
               <Text style={styles.label}>Pemakaian Saat Ini</Text>
@@ -195,8 +287,9 @@ export const CardDetailScreen = () => {
             {usagePercentage.toFixed(1)}% Terpakai
           </Text>
 
+          {/* Monthly Budget */}
           {card.monthlyBudget && card.monthlyBudget > 0 && (
-            <View style={{ marginTop: theme.spacing.l }}>
+            <View style={styles.budgetSection}>
               <View style={styles.row}>
                 <View>
                   <Text style={styles.label}>Budget Bulanan</Text>
@@ -229,11 +322,11 @@ export const CardDetailScreen = () => {
                   style={[
                     styles.progressBarFill,
                     {
-                      width: `${Math.min(usagePercentage, 100)}%`,
+                      width: `${Math.min(budgetPercentage, 100)}%`,
                       backgroundColor:
-                        usagePercentage > 90
+                        budgetPercentage > 90
                           ? theme.colors.status.error
-                          : usagePercentage > 75
+                          : budgetPercentage > 75
                           ? theme.colors.status.warning
                           : theme.colors.primary,
                     },
@@ -241,168 +334,218 @@ export const CardDetailScreen = () => {
                 />
               </View>
               <Text style={styles.progressText}>
-                {usagePercentage.toFixed(1)}% Terpakai
+                {budgetPercentage.toFixed(1)}% Terpakai
               </Text>
             </View>
           )}
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Skor Kesehatan Kartu</Text>
-          <View style={styles.healthScoreContainer}>
-            <View
-              style={[
-                styles.healthScoreCircle,
-                { borderColor: getHealthColor(healthData.score) },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.healthScoreValue,
-                  { color: getHealthColor(healthData.score) },
-                ]}
-              >
-                {healthData.score}
+          {/* Divider */}
+          <View style={styles.sectionDivider} />
+
+          {/* Billing Info */}
+          <View style={styles.billingInfoRow}>
+            <View style={styles.billingInfoItem}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={theme.colors.text.tertiary}
+              />
+              <Text style={styles.billingInfoLabel}>Siklus Tagihan</Text>
+              <Text style={styles.billingInfoValue}>
+                Tgl {card.billingCycleDay}
               </Text>
             </View>
-            <View style={styles.healthFactors}>
-              {healthData.factors.map((factor, index) => (
-                <Text key={index} style={styles.healthFactorText}>
-                  • {factor}
+            <View style={styles.billingInfoItem}>
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={theme.colors.text.tertiary}
+              />
+              <Text style={styles.billingInfoLabel}>Jatuh Tempo</Text>
+              <Text style={styles.billingInfoValue}>Tgl {card.dueDay}</Text>
+            </View>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.sectionDivider} />
+
+          {/* Payment Status */}
+          <View style={styles.paymentStatusSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.subSectionTitle}>Status Pembayaran</Text>
+              {card.lastPaymentDate && (
+                <Text style={styles.lastPaidText}>
+                  Terakhir:{" "}
+                  {new Date(card.lastPaymentDate).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </Text>
-              ))}
+              )}
             </View>
-          </View>
-        </View>
 
-        {/* Reminders Section */}
-        {(card.isAnnualFeeReminderEnabled ||
-          card.isLimitIncreaseReminderEnabled) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pengingat</Text>
+            {!card.isPaid && !showPaymentForm && (
+              <TouchableOpacity
+                style={styles.markPaidButton}
+                onPress={() => setShowPaymentForm(true)}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={moderateScale(20)}
+                  color="#FFF"
+                />
+                <Text style={styles.markPaidButtonText}>
+                  Tandai Sudah Dibayar
+                </Text>
+              </TouchableOpacity>
+            )}
 
-            {card.isAnnualFeeReminderEnabled && card.expiryMonth && (
-              <View style={styles.reminderItem}>
-                <View
-                  style={[
-                    styles.reminderIcon,
-                    { backgroundColor: theme.colors.status.warning + "20" },
-                  ]}
-                >
-                  <Ionicons
-                    name="alert-circle"
-                    size={24}
-                    color={theme.colors.status.warning}
-                  />
+            {!card.isPaid && showPaymentForm && (
+              <View style={styles.paymentForm}>
+                {/* Payment Type Selection */}
+                <View style={styles.paymentTypeContainer}>
+                  <Text style={styles.paymentTypeLabel}>Jenis Pembayaran</Text>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.radioOption,
+                      paymentType === "full" && styles.radioOptionSelected,
+                    ]}
+                    onPress={() => setPaymentType("full")}
+                  >
+                    <View style={styles.radioCircle}>
+                      {paymentType === "full" && (
+                        <View style={styles.radioCircleSelected} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.radioLabel}>Full Payment</Text>
+                      <Text style={styles.radioSubtext}>
+                        {formatCurrency(
+                          card.statementAmount || card.currentUsage || 0
+                        )}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.radioOption,
+                      paymentType === "minimal" && styles.radioOptionSelected,
+                    ]}
+                    onPress={() => setPaymentType("minimal")}
+                  >
+                    <View style={styles.radioCircle}>
+                      {paymentType === "minimal" && (
+                        <View style={styles.radioCircleSelected} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.radioLabel}>Minimal Payment</Text>
+                      <Text style={styles.radioSubtext}>
+                        Input jumlah custom
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reminderTitle}>Annual Fee</Text>
-                  <Text style={styles.reminderSubtitle}>
-                    Bulan{" "}
-                    {new Date(0, card.expiryMonth).toLocaleDateString("id-ID", {
-                      month: "long",
-                    })}
-                  </Text>
-                </View>
-                {card.annualFeeAmount && (
-                  <Text style={styles.reminderValue}>
-                    {formatCurrency(card.annualFeeAmount)}
-                  </Text>
+
+                {/* Amount Input (only for minimal payment) */}
+                {paymentType === "minimal" && (
+                  <View>
+                    <Text style={styles.inputLabel}>
+                      Jumlah Pembayaran <Text style={styles.required}>*</Text>
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.modalInput,
+                        validationError && styles.modalInputError,
+                      ]}
+                      placeholder="Masukkan jumlah"
+                      placeholderTextColor={theme.colors.text.tertiary}
+                      keyboardType="numeric"
+                      value={paymentAmount}
+                      onChangeText={(text) => {
+                        setPaymentAmount(formatNumberInput(text));
+                        setValidationError("");
+                      }}
+                    />
+                    {validationError && (
+                      <Text style={styles.errorText}>{validationError}</Text>
+                    )}
+                  </View>
                 )}
+
+                {/* Notes Input (optional) */}
+                <View>
+                  <Text style={styles.inputLabel}>Catatan (Opsional)</Text>
+                  <TextInput
+                    style={[styles.modalInput, styles.modalTextArea]}
+                    placeholder="Tambahkan catatan..."
+                    placeholderTextColor={theme.colors.text.tertiary}
+                    multiline
+                    numberOfLines={3}
+                    value={paymentNotes}
+                    onChangeText={setPaymentNotes}
+                  />
+                </View>
+
+                {/* Buttons */}
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={[styles.formButton, styles.formCancelButton]}
+                    onPress={() => {
+                      setShowPaymentForm(false);
+                      setPaymentType("full");
+                      setPaymentAmount("");
+                      setPaymentNotes("");
+                      setValidationError("");
+                    }}
+                  >
+                    <Text style={styles.formCancelText}>Batal</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.formButton, styles.formConfirmButton]}
+                    onPress={handleConfirmPayment}
+                  >
+                    <Text style={styles.formConfirmText}>Simpan</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
-            {card.isLimitIncreaseReminderEnabled && (
-              <View style={[styles.reminderItem, { marginTop: 12 }]}>
-                <View
-                  style={[
-                    styles.reminderIcon,
-                    { backgroundColor: theme.colors.status.success + "20" },
-                  ]}
-                >
-                  <Ionicons
-                    name="trending-up"
-                    size={24}
-                    color={theme.colors.status.success}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reminderTitle}>Kenaikan Limit</Text>
-                  <Text style={styles.reminderSubtitle}>
-                    {(() => {
-                      const records = getRecordsByCardId(card.id);
-                      let limitDate: Date | null = null;
-
-                      if (records.length > 0) {
-                        const sortedRecords = records.sort((a, b) => {
-                          const dateA = a.actionDate || a.requestDate;
-                          const dateB = b.actionDate || b.requestDate;
-                          return (
-                            new Date(dateB).getTime() -
-                            new Date(dateA).getTime()
-                          );
-                        });
-                        const latestRecord = sortedRecords[0];
-                        const baseDateStr =
-                          latestRecord.actionDate || latestRecord.requestDate;
-                        const baseDate = new Date(baseDateStr);
-                        baseDate.setMonth(
-                          baseDate.getMonth() + latestRecord.frequency
-                        );
-                        limitDate = baseDate;
-                      } else if (card.nextLimitIncreaseDate) {
-                        limitDate = new Date(card.nextLimitIncreaseDate);
-                      }
-
-                      return limitDate
-                        ? `Eligible pada ${limitDate.toLocaleDateString(
-                            "id-ID",
-                            { dateStyle: "medium" }
-                          )}`
-                        : "Belum ada jadwal";
-                    })()}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.historyButton}
-                  onPress={() =>
-                    navigation.navigate("LimitIncreaseHistory", {
-                      cardId: card.id,
-                    })
-                  }
-                >
-                  <Text style={styles.historyButtonText}>Riwayat</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={theme.colors.primary}
-                  />
-                </TouchableOpacity>
+            {card.isPaid && (
+              <View style={styles.paidIndicator}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={moderateScale(24)}
+                  color={theme.colors.status.success}
+                />
+                <Text style={styles.paidText}>Tagihan Sudah Dibayar</Text>
               </View>
             )}
           </View>
-        )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Detail</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Siklus Tagihan</Text>
-            <Text style={styles.detailValue}>
-              Setiap tgl {card.billingCycleDay}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Jatuh Tempo</Text>
-            <Text style={styles.detailValue}>Setiap tgl {card.dueDay}</Text>
-          </View>
+          {/* Notes */}
           {card.notes ? (
-            <View style={styles.noteContainer}>
-              <Text style={styles.label}>Catatan</Text>
-              <Text style={styles.noteText}>{card.notes}</Text>
-            </View>
+            <>
+              <View style={styles.sectionDivider} />
+              <View style={styles.noteContainer}>
+                <Text style={styles.label}>Catatan</Text>
+                <Text style={styles.noteText}>{card.notes}</Text>
+              </View>
+            </>
           ) : null}
         </View>
 
+        {/* === RIWAYAT PEMBAYARAN === */}
+        {paymentHistory.length > 0 && (
+          <View style={{ paddingHorizontal: theme.spacing.m }}>
+            <PaymentHistorySection history={paymentHistory} cardId={card.id} />
+          </View>
+        )}
+
+        {/* === LANGGANAN TERHUBUNG === */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
@@ -431,7 +574,11 @@ export const CardDetailScreen = () => {
                           { backgroundColor: iconColor + "15" },
                         ]}
                       >
-                        <Ionicons name={iconName} size={28} color={iconColor} />
+                        <Ionicons
+                          name={iconName}
+                          size={moderateScale(28)}
+                          color={iconColor}
+                        />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.transactionDesc}>{sub.name}</Text>
@@ -473,7 +620,7 @@ export const CardDetailScreen = () => {
               navigation.navigate("AddSubscription", { cardId: card.id })
             }
           >
-            <Ionicons name="add-circle" size={24} color="#FFF" />
+            <Ionicons name="add-circle" size={moderateScale(24)} color="#FFF" />
             <Text style={styles.addSubscriptionText}>Tambah Langganan</Text>
           </TouchableOpacity>
         </View>
@@ -506,7 +653,11 @@ export const CardDetailScreen = () => {
                         { backgroundColor: iconColor + "20" },
                       ]}
                     >
-                      <Ionicons name={iconName} size={28} color={iconColor} />
+                      <Ionicons
+                        name={iconName}
+                        size={moderateScale(28)}
+                        color={iconColor}
+                      />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text
@@ -554,7 +705,11 @@ export const CardDetailScreen = () => {
                 navigation.navigate("AddTransaction", { cardId: card.id })
               }
             >
-              <Ionicons name="add-circle" size={24} color="#FFF" />
+              <Ionicons
+                name="add-circle"
+                size={moderateScale(24)}
+                color="#FFF"
+              />
               <Text style={styles.actionButtonText}>Tambah Transaksi</Text>
             </TouchableOpacity>
           </View>
@@ -629,7 +784,42 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...theme.typography.h3,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m, // Added margin
+    marginBottom: theme.spacing.m,
+  },
+  subSectionTitle: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: theme.spacing.m,
+  },
+  budgetSection: {
+    marginTop: theme.spacing.l,
+  },
+  billingInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  billingInfoItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  billingInfoLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  billingInfoValue: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  paymentStatusSection: {
+    // Container for payment status within the grouped section
   },
   row: {
     flexDirection: "row",
@@ -806,8 +996,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.m,
   },
   reminderIcon: {
-    width: 40,
-    height: 40,
+    width: scale(40),
+    height: scale(40),
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
@@ -854,7 +1044,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   progressBarContainer: {
-    height: 8,
+    height: scale(8),
     backgroundColor: theme.colors.border,
     borderRadius: 4,
     overflow: "hidden",
@@ -900,8 +1090,8 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   swipeButton: {
-    width: 48,
-    height: 48,
+    width: scale(48),
+    height: scale(48),
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 12,
@@ -920,7 +1110,7 @@ const styles = StyleSheet.create({
   swipeHintText: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
   addSubscriptionButton: {
     backgroundColor: theme.colors.primary,
@@ -936,6 +1126,219 @@ const styles = StyleSheet.create({
   addSubscriptionText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
-    fontSize: 16,
+    fontSize: moderateScale(16),
+  },
+  // Payment Status Styles
+  lastPaidText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+  },
+  markPaidButton: {
+    backgroundColor: theme.colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    gap: 8,
+    ...theme.shadows.small,
+  },
+  markPaidButtonText: {
+    ...theme.typography.button,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  paidIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: theme.spacing.m,
+    backgroundColor: theme.colors.status.success + "10",
+    borderRadius: theme.borderRadius.m,
+    borderWidth: 1,
+    borderColor: theme.colors.status.success + "30",
+    gap: 12,
+  },
+  paidText: {
+    ...theme.typography.body,
+    color: theme.colors.status.success,
+    fontWeight: "600",
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.l,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.l,
+    width: "100%",
+    maxWidth: 400,
+    ...theme.shadows.medium,
+  },
+  modalTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.s,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    ...theme.typography.body,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.l,
+    textAlign: "center",
+  },
+  modalInput: {
+    ...theme.typography.body,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+    marginBottom: theme.spacing.m,
+    color: theme.colors.text.primary,
+  },
+  modalTextArea: {
+    height: scale(80),
+    textAlignVertical: "top",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: theme.spacing.m,
+    marginTop: theme.spacing.s,
+  },
+  modalButton: {
+    flex: 1,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    alignItems: "center",
+  },
+  modalCancelButton: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalConfirmButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  modalCancelText: {
+    ...theme.typography.button,
+    color: theme.colors.text.secondary,
+  },
+  modalConfirmText: {
+    ...theme.typography.button,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  // Payment Type Selection Styles
+  paymentTypeContainer: {
+    marginBottom: theme.spacing.m,
+  },
+  paymentTypeLabel: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.s,
+  },
+  radioOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+    marginBottom: theme.spacing.s,
+    gap: 12,
+  },
+  radioOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + "08",
+  },
+  radioCircle: {
+    width: scale(20),
+    height: scale(20),
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioCircleSelected: {
+    width: scale(10),
+    height: scale(10),
+    borderRadius: 5,
+    backgroundColor: theme.colors.primary,
+  },
+  radioLabel: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  radioSubtext: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
+  },
+  // Input Label Styles
+  inputLabel: {
+    ...theme.typography.body,
+    fontWeight: "500",
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+  },
+  required: {
+    color: theme.colors.status.error,
+  },
+  modalInputError: {
+    borderColor: theme.colors.status.error,
+    borderWidth: 1.5,
+  },
+  errorText: {
+    ...theme.typography.caption,
+    color: theme.colors.status.error,
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.s,
+  },
+  // Inline Payment Form Styles
+  paymentForm: {
+    marginTop: theme.spacing.m,
+    padding: theme.spacing.m,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.m,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  formButtons: {
+    flexDirection: "row",
+    gap: theme.spacing.s,
+    marginTop: theme.spacing.m,
+  },
+  formButton: {
+    flex: 1,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  formCancelButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  formConfirmButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  formCancelText: {
+    ...theme.typography.button,
+    color: theme.colors.text.primary,
+  },
+  formConfirmText: {
+    ...theme.typography.button,
+    color: theme.colors.text.inverse,
+    fontWeight: "600",
   },
 });

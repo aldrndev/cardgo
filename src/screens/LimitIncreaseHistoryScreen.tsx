@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
+import { moderateScale } from "../utils/responsive";
 import { LimitIncreaseRecord } from "../types/limitIncrease";
 import { FloatingActionButton } from "../components/FloatingActionButton";
 
@@ -119,11 +120,11 @@ export const LimitIncreaseHistoryScreen = () => {
                 { backgroundColor: card?.colorTheme || theme.colors.primary },
               ]}
             >
-              <Ionicons name="card" size={28} color="#FFF" />
+              <Ionicons name="card" size={moderateScale(28)} color="#FFF" />
             </View>
             <View>
               <Text style={styles.cardName}>
-                {card?.alias || "Unknown Card"}
+                {(card?.alias || "Unknown Card").toUpperCase()}
               </Text>
               <Text style={styles.dateText}>{requestDate}</Text>
             </View>
@@ -173,7 +174,7 @@ export const LimitIncreaseHistoryScreen = () => {
               >
                 <Ionicons
                   name="close-circle"
-                  size={20}
+                  size={moderateScale(20)}
                   color={theme.colors.status.error}
                 />
                 <Text style={styles.rejectText}>Ditolak</Text>
@@ -184,7 +185,7 @@ export const LimitIncreaseHistoryScreen = () => {
               >
                 <Ionicons
                   name="checkmark-circle"
-                  size={20}
+                  size={moderateScale(20)}
                   color={theme.colors.status.success}
                 />
                 <Text style={styles.approveText}>Disetujui</Text>
@@ -205,7 +206,7 @@ export const LimitIncreaseHistoryScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -222,7 +223,7 @@ export const LimitIncreaseHistoryScreen = () => {
           <View style={styles.emptyContainer}>
             <Ionicons
               name="trending-up-outline"
-              size={64}
+              size={moderateScale(64)}
               color={theme.colors.text.tertiary}
             />
             <Text style={styles.emptyText}>

@@ -15,6 +15,7 @@ import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
 import { colors } from "../constants/colors";
 import { formatCurrency } from "../utils/formatters";
+import { moderateScale } from "../utils/responsive";
 
 const { width } = Dimensions.get("window");
 
@@ -178,7 +179,7 @@ export const InsightsScreen = () => {
         >
           <Ionicons
             name="chevron-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -196,7 +197,7 @@ export const InsightsScreen = () => {
         >
           <Ionicons
             name="chevron-forward"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -262,7 +263,7 @@ export const InsightsScreen = () => {
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons
                       name="card"
-                      size={16}
+                      size={moderateScale(16)}
                       color={theme.colors.text.secondary}
                       style={{ marginRight: 8 }}
                     />
@@ -297,7 +298,7 @@ export const InsightsScreen = () => {
             <View style={styles.emptyIconContainer}>
               <Ionicons
                 name="pie-chart-outline"
-                size={48}
+                size={moderateScale(48)}
                 color={theme.colors.text.tertiary}
               />
             </View>

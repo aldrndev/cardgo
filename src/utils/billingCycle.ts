@@ -54,3 +54,34 @@ export const formatDateRange = (startDate: Date, endDate: Date) => {
   const endStr = endDate.toLocaleDateString("id-ID", options);
   return `${startStr} - ${endStr}`;
 };
+
+/**
+ * Get the current billing cycle identifier (YYYY-MM format).
+ * This represents which billing cycle we are currently in.
+ *
+ * Example: If billing day is 10 and today is Dec 15:
+ * - We are in the Dec cycle (cycle started Dec 10)
+ * - Returns "2024-12"
+ *
+ * If billing day is 10 and today is Dec 5:
+ * - We are still in the Nov cycle (cycle started Nov 10, ends Dec 9)
+ * - Returns "2024-11"
+ */
+export const getCurrentBillingCycle = (billingDay: number): string => {
+  const today = new Date();
+  const currentDay = today.getDate();
+
+  let year = today.getFullYear();
+  let month = today.getMonth(); // 0-indexed
+
+  // If today < billing day, we're still in the previous month's cycle
+  if (currentDay < billingDay) {
+    month -= 1;
+    if (month < 0) {
+      month = 11;
+      year -= 1;
+    }
+  }
+
+  return `${year}-${String(month + 1).padStart(2, "0")}`;
+};

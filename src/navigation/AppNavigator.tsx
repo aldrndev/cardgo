@@ -21,7 +21,11 @@ import { StartupScreen } from "../screens/StartupScreen";
 import { AddSubscriptionScreen } from "../screens/AddSubscriptionScreen";
 import { SubscriptionListScreen } from "../screens/SubscriptionListScreen";
 import { LimitIncreaseHistoryScreen } from "../screens/LimitIncreaseHistoryScreen";
+import { PaymentHistoryScreen } from "../screens/PaymentHistoryScreen";
 import { AddLimitIncreaseScreen } from "../screens/AddLimitIncreaseScreen";
+import { PrivacyPolicyScreen } from "../screens/PrivacyPolicyScreen";
+import { TermsScreen } from "../screens/TermsScreen";
+import { BackupExportScreen } from "../screens/BackupExportScreen";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -92,6 +96,26 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="AddLimitIncrease"
           component={AddLimitIncreaseScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PaymentHistory"
+          component={PaymentHistoryScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Terms"
+          component={TermsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="BackupExport"
+          component={BackupExportScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

@@ -122,7 +122,7 @@ export const AddSubscriptionScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -186,7 +186,7 @@ export const AddSubscriptionScreen = () => {
           <View style={styles.inputContainer}>
             <Ionicons
               name="cash-outline"
-              size={20}
+              size={moderateScale(20)}
               color={theme.colors.text.secondary}
               style={styles.inputIcon}
             />
@@ -218,7 +218,7 @@ export const AddSubscriptionScreen = () => {
           <View style={styles.inputContainer}>
             <Ionicons
               name="create-outline"
-              size={20}
+              size={moderateScale(20)}
               color={theme.colors.text.secondary}
               style={styles.inputIcon}
             />
@@ -307,7 +307,7 @@ export const AddSubscriptionScreen = () => {
                   >
                     <Ionicons
                       name="card"
-                      size={20}
+                      size={moderateScale(20)}
                       color={card.colorTheme || theme.colors.primary}
                       style={{ marginRight: 8 }}
                     />
@@ -352,7 +352,7 @@ export const AddSubscriptionScreen = () => {
               </Text>
               <Ionicons
                 name="arrow-forward"
-                size={10}
+                size={moderateScale(10)}
                 color={theme.colors.text.tertiary}
               />
             </View>
@@ -387,7 +387,7 @@ export const AddSubscriptionScreen = () => {
                   >
                     <Ionicons
                       name={iconName}
-                      size={18}
+                      size={moderateScale(18)}
                       color={isSelected ? theme.colors.text.inverse : iconColor}
                     />
                   </View>

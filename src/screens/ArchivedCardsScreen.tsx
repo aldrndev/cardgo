@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
 import { CreditCard } from "../components/CreditCard";
+import { moderateScale } from "../utils/responsive";
 import { Card } from "../types/card";
 
 export const ArchivedCardsScreen = () => {
@@ -93,7 +94,7 @@ export const ArchivedCardsScreen = () => {
         >
           <Ionicons
             name="refresh-circle"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.primary}
           />
           <Text style={[styles.actionText, { color: theme.colors.primary }]}>
@@ -107,7 +108,11 @@ export const ArchivedCardsScreen = () => {
           style={[styles.actionButton, styles.deleteButton]}
           onPress={() => handleDelete(item)}
         >
-          <Ionicons name="trash" size={20} color={theme.colors.status.error} />
+          <Ionicons
+            name="trash"
+            size={moderateScale(20)}
+            color={theme.colors.status.error}
+          />
           <Text
             style={[styles.actionText, { color: theme.colors.status.error }]}
           >
@@ -127,7 +132,7 @@ export const ArchivedCardsScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -139,7 +144,7 @@ export const ArchivedCardsScreen = () => {
         <View style={styles.emptyState}>
           <Ionicons
             name="archive-outline"
-            size={64}
+            size={moderateScale(64)}
             color={theme.colors.text.tertiary}
           />
           <Text style={styles.emptyText}>Tidak ada kartu yang diarsipkan</Text>

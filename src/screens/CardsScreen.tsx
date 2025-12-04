@@ -11,6 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { theme } from "../constants/theme";
+import { formatCurrency } from "../utils/formatters";
+import { moderateScale } from "../utils/responsive";
 import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
 import { CreditCard } from "../components/CreditCard";
@@ -59,7 +61,7 @@ export const CardsScreen = () => {
           <TouchableOpacity onPress={() => setIsExpanded(false)}>
             <Ionicons
               name="close-circle"
-              size={32}
+              size={moderateScale(32)}
               color={theme.colors.text.primary}
             />
           </TouchableOpacity>
@@ -76,7 +78,11 @@ export const CardsScreen = () => {
             >
               <View style={styles.ghostContent}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="add" size={32} color={theme.colors.primary} />
+                  <Ionicons
+                    name="add"
+                    size={moderateScale(32)}
+                    color={theme.colors.primary}
+                  />
                 </View>
                 <Text style={styles.ghostTitle}>Tambah Kartu</Text>
               </View>
@@ -175,10 +181,8 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.s,
   },
   emptyWrapper: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    marginTop: theme.spacing.xl,
+    paddingTop: theme.spacing.l,
     paddingHorizontal: theme.spacing.l,
   },
   ghostCard: {

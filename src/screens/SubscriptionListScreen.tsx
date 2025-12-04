@@ -64,7 +64,11 @@ export const SubscriptionListScreen = () => {
               { backgroundColor: iconColor + "15" },
             ]}
           >
-            <Ionicons name={iconName} size={24} color={iconColor} />
+            <Ionicons
+              name={iconName}
+              size={moderateScale(24)}
+              color={iconColor}
+            />
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -75,10 +79,10 @@ export const SubscriptionListScreen = () => {
                   { backgroundColor: card?.colorTheme || theme.colors.primary },
                 ]}
               >
-                <Ionicons name="card" size={12} color="#FFF" />
+                <Ionicons name="card" size={moderateScale(12)} color="#FFF" />
               </View>
               <Text style={styles.cardBadgeText}>
-                {card?.alias || "Kartu Dihapus"}
+                {(card?.alias || "Kartu Dihapus").toUpperCase()}
               </Text>
             </View>
           </View>
@@ -88,7 +92,7 @@ export const SubscriptionListScreen = () => {
           >
             <Ionicons
               name="trash-outline"
-              size={18}
+              size={moderateScale(18)}
               color={theme.colors.status.error}
             />
           </TouchableOpacity>
@@ -100,7 +104,7 @@ export const SubscriptionListScreen = () => {
           <View style={styles.dateContainer}>
             <Ionicons
               name="calendar-outline"
-              size={14}
+              size={moderateScale(14)}
               color={theme.colors.text.tertiary}
               style={{ marginRight: 4 }}
             />
@@ -137,7 +141,7 @@ export const SubscriptionListScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -181,7 +185,7 @@ export const SubscriptionListScreen = () => {
         <View style={styles.emptyState}>
           <Ionicons
             name="repeat-outline"
-            size={64}
+            size={moderateScale(64)}
             color={theme.colors.text.tertiary}
           />
           <Text style={styles.emptyTitle}>Belum Ada Langganan</Text>

@@ -15,6 +15,10 @@ export type RootStackParamList = {
   Calendar: undefined;
   LimitIncreaseHistory: { cardId?: string };
   AddLimitIncrease: { cardId?: string };
+  PaymentHistory: { cardId?: string };
+  PrivacyPolicy: undefined;
+  Terms: undefined;
+  BackupExport: undefined;
 };
 
 export type TabParamList = {

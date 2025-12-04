@@ -17,7 +17,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { theme } from "../constants/theme";
 import { storage } from "../utils/storage";
+import { moderateScale } from "../utils/responsive";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
+import { isWeb, platformCapabilities } from "../utils/platform";
 
 import { useCards } from "../context/CardsContext";
 import { createBackup, restoreBackup } from "../utils/backup";
@@ -70,7 +72,7 @@ const SettingsItem = ({
       >
         <Ionicons
           name={icon}
-          size={22}
+          size={moderateScale(22)}
           color={
             isDanger ? theme.colors.status.error : color || theme.colors.primary
           }
@@ -86,7 +88,7 @@ const SettingsItem = ({
       {showChevron && !rightElement && (
         <Ionicons
           name="chevron-forward"
-          size={20}
+          size={moderateScale(20)}
           color={theme.colors.text.tertiary}
         />
       )}
@@ -133,6 +135,12 @@ export const SettingsScreen = () => {
   };
 
   const checkBiometricStatus = async () => {
+    // Biometrics not supported on web
+    if (!platformCapabilities.biometrics) {
+      setIsBiometricSupported(false);
+      return;
+    }
+
     const supported = await BiometricService.isSupported();
     setIsBiometricSupported(supported);
     if (supported) {
@@ -326,7 +334,11 @@ export const SettingsScreen = () => {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={40} color={theme.colors.primary} />
+            <Ionicons
+              name="person"
+              size={moderateScale(40)}
+              color={theme.colors.primary}
+            />
           </View>
           <View>
             <Text style={styles.profileName}>
@@ -380,31 +392,10 @@ export const SettingsScreen = () => {
           <Text style={styles.sectionTitle}>Data & Backup</Text>
 
           <SettingsItem
-            icon="cloud-upload-outline"
-            label="Backup Data"
-            sublabel="Simpan data ke file JSON"
-            onPress={handleBackup}
-          />
-
-          <SettingsItem
-            icon="cloud-download-outline"
-            label="Restore Data"
-            sublabel="Kembalikan data dari file JSON"
-            onPress={handleRestore}
-          />
-
-          <SettingsItem
-            icon="document-text-outline"
-            label="Ekspor Laporan"
-            sublabel="Unduh laporan PDF"
-            onPress={handleExportPDF}
-          />
-
-          <SettingsItem
-            icon="grid-outline"
-            label="Ekspor Transaksi"
-            sublabel="Unduh data CSV untuk Excel"
-            onPress={handleExportCSV}
+            icon="cloud-outline"
+            label="Backup & Export"
+            sublabel="Backup, restore, dan export data"
+            onPress={() => navigation.navigate("BackupExport")}
           />
 
           <SettingsItem
@@ -415,75 +406,136 @@ export const SettingsScreen = () => {
           />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferensi Notifikasi</Text>
-          <SettingsItem
-            icon="notifications-outline"
-            label="Tagihan Jatuh Tempo"
-            sublabel="Ingatkan sebelum tanggal jatuh tempo"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={notificationPrefs.payment}
-                onValueChange={(val) => toggleNotificationPref("payment", val)}
-                trackColor={{ false: "#767577", true: theme.colors.primary }}
-                thumbColor={notificationPrefs.payment ? "#fff" : "#f4f3f4"}
+        {/* PWA Warning - only on web */}
+        {isWeb && (
+          <View style={styles.pwaWarningSection}>
+            <View style={styles.pwaWarningHeader}>
+              <Ionicons
+                name="warning-outline"
+                size={moderateScale(20)}
+                color={theme.colors.status.warning}
               />
-            }
-          />
-          <SettingsItem
-            icon="trending-up-outline"
-            label="Kenaikan Limit"
-            sublabel="Ingatkan jadwal kenaikan limit"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={notificationPrefs.limitIncrease}
-                onValueChange={(val) =>
-                  toggleNotificationPref("limitIncrease", val)
-                }
-                trackColor={{ false: "#767577", true: theme.colors.primary }}
-                thumbColor={
-                  notificationPrefs.limitIncrease ? "#fff" : "#f4f3f4"
-                }
-              />
-            }
-          />
-          <SettingsItem
-            icon="calendar-outline"
-            label="Annual Fee"
-            sublabel="Ingatkan biaya tahunan kartu"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={notificationPrefs.annualFee}
-                onValueChange={(val) =>
-                  toggleNotificationPref("annualFee", val)
-                }
-                trackColor={{ false: "#767577", true: theme.colors.primary }}
-                thumbColor={notificationPrefs.annualFee ? "#fff" : "#f4f3f4"}
-              />
-            }
-          />
-          <SettingsItem
-            icon="document-text-outline"
-            label="Status Pengajuan"
-            sublabel="Update status pengajuan limit"
-            showChevron={false}
-            rightElement={
-              <Switch
-                value={notificationPrefs.applicationStatus}
-                onValueChange={(val) =>
-                  toggleNotificationPref("applicationStatus", val)
-                }
-                trackColor={{ false: "#767577", true: theme.colors.primary }}
-                thumbColor={
-                  notificationPrefs.applicationStatus ? "#fff" : "#f4f3f4"
-                }
-              />
-            }
-          />
-        </View>
+              <Text style={styles.pwaWarningTitle}>Versi Web (PWA)</Text>
+            </View>
+            <Text style={styles.pwaWarningText}>
+              Data disimpan di browser. Jika browser data di-clear atau storage
+              penuh, data bisa hilang. Backup rutin sangat disarankan.
+            </Text>
+            <View style={styles.pwaWarningFeatures}>
+              <View style={styles.pwaFeatureRow}>
+                <Ionicons
+                  name="alert-circle"
+                  size={16}
+                  color={theme.colors.status.warning}
+                />
+                <Text style={styles.pwaFeatureText}>
+                  Notifikasi manual via Home Screen
+                </Text>
+              </View>
+              <View style={styles.pwaFeatureRow}>
+                <Ionicons
+                  name="close-circle"
+                  size={16}
+                  color={theme.colors.status.error}
+                />
+                <Text style={styles.pwaFeatureText}>
+                  Biometrik tidak tersedia
+                </Text>
+              </View>
+              <View style={styles.pwaFeatureRow}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={theme.colors.status.success}
+                />
+                <Text style={styles.pwaFeatureText}>
+                  Backup & Restore tersedia
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.pwaBackupButton}
+              onPress={() => navigation.navigate("BackupExport")}
+            >
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+              <Text style={styles.pwaBackupButtonText}>Backup Sekarang</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {/* Notifications - only on native platforms */}
+        {platformCapabilities.localNotifications && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Preferensi Notifikasi</Text>
+            <SettingsItem
+              icon="notifications-outline"
+              label="Tagihan Jatuh Tempo"
+              sublabel="Ingatkan sebelum tanggal jatuh tempo"
+              showChevron={false}
+              rightElement={
+                <Switch
+                  value={notificationPrefs.payment}
+                  onValueChange={(val) =>
+                    toggleNotificationPref("payment", val)
+                  }
+                  trackColor={{ false: "#767577", true: theme.colors.primary }}
+                  thumbColor={notificationPrefs.payment ? "#fff" : "#f4f3f4"}
+                />
+              }
+            />
+            <SettingsItem
+              icon="trending-up-outline"
+              label="Kenaikan Limit"
+              sublabel="Ingatkan jadwal kenaikan limit"
+              showChevron={false}
+              rightElement={
+                <Switch
+                  value={notificationPrefs.limitIncrease}
+                  onValueChange={(val) =>
+                    toggleNotificationPref("limitIncrease", val)
+                  }
+                  trackColor={{ false: "#767577", true: theme.colors.primary }}
+                  thumbColor={
+                    notificationPrefs.limitIncrease ? "#fff" : "#f4f3f4"
+                  }
+                />
+              }
+            />
+            <SettingsItem
+              icon="calendar-outline"
+              label="Annual Fee"
+              sublabel="Ingatkan biaya tahunan kartu"
+              showChevron={false}
+              rightElement={
+                <Switch
+                  value={notificationPrefs.annualFee}
+                  onValueChange={(val) =>
+                    toggleNotificationPref("annualFee", val)
+                  }
+                  trackColor={{ false: "#767577", true: theme.colors.primary }}
+                  thumbColor={notificationPrefs.annualFee ? "#fff" : "#f4f3f4"}
+                />
+              }
+            />
+            <SettingsItem
+              icon="document-text-outline"
+              label="Status Pengajuan"
+              sublabel="Update status pengajuan limit"
+              showChevron={false}
+              rightElement={
+                <Switch
+                  value={notificationPrefs.applicationStatus}
+                  onValueChange={(val) =>
+                    toggleNotificationPref("applicationStatus", val)
+                  }
+                  trackColor={{ false: "#767577", true: theme.colors.primary }}
+                  thumbColor={
+                    notificationPrefs.applicationStatus ? "#fff" : "#f4f3f4"
+                  }
+                />
+              }
+            />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Zona Bahaya</Text>
@@ -500,6 +552,28 @@ export const SettingsScreen = () => {
             sublabel="Tindakan ini tidak dapat dibatalkan"
             onPress={handleClearData}
             isDanger
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Informasi & Legal</Text>
+          <SettingsItem
+            icon="shield-checkmark-outline"
+            label="Kebijakan Privasi"
+            sublabel="Bagaimana kami melindungi data Anda"
+            onPress={() => navigation.navigate("PrivacyPolicy")}
+          />
+          <SettingsItem
+            icon="document-text-outline"
+            label="Syarat & Ketentuan"
+            sublabel="Ketentuan penggunaan aplikasi"
+            onPress={() => navigation.navigate("Terms")}
+          />
+          <SettingsItem
+            icon="information-circle-outline"
+            label="Tentang Card Go"
+            sublabel="Informasi aplikasi dan developer"
+            onPress={() => navigation.navigate("About")}
           />
         </View>
 
@@ -616,5 +690,59 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.m,
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
+  },
+  pwaWarningSection: {
+    backgroundColor: theme.colors.status.warning + "15",
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+    marginHorizontal: theme.spacing.m,
+    marginBottom: theme.spacing.m,
+    borderWidth: 1,
+    borderColor: theme.colors.status.warning + "30",
+  },
+  pwaWarningHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: theme.spacing.s,
+    gap: theme.spacing.s,
+  },
+  pwaWarningTitle: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.status.warning,
+  },
+  pwaWarningText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    lineHeight: 18,
+    marginBottom: theme.spacing.m,
+  },
+  pwaWarningFeatures: {
+    marginBottom: theme.spacing.m,
+    gap: theme.spacing.xs,
+  },
+  pwaFeatureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.s,
+  },
+  pwaFeatureText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+  },
+  pwaBackupButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.s,
+    paddingVertical: theme.spacing.s,
+    paddingHorizontal: theme.spacing.m,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.s,
+  },
+  pwaBackupButtonText: {
+    ...theme.typography.body,
+    color: "#fff",
+    fontWeight: "600",
   },
 });

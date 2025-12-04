@@ -16,6 +16,7 @@ import { Card } from "../types/card";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { formatCurrency } from "../utils/formatters";
+import { moderateScale } from "../utils/responsive";
 import { CARD_THEMES } from "../types/card";
 
 export const CalendarScreen = () => {
@@ -248,7 +249,7 @@ export const CalendarScreen = () => {
                       ? "wallet"
                       : "trending-up"
                   }
-                  size={20}
+                  size={moderateScale(20)}
                   color="#FFFFFF"
                 />
               </View>
@@ -295,7 +296,7 @@ export const CalendarScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -387,7 +388,7 @@ export const CalendarScreen = () => {
           <View style={styles.emptyState}>
             <Ionicons
               name="calendar-outline"
-              size={48}
+              size={moderateScale(48)}
               color={theme.colors.text.tertiary}
             />
             <Text style={styles.noEventsText}>Tidak ada agenda hari ini</Text>

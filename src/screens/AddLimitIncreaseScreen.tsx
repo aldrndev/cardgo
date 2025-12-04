@@ -24,6 +24,7 @@ import {
   parseAmount,
   formatCurrency,
 } from "../utils/formatters";
+import { moderateScale } from "../utils/responsive";
 import { Calendar, DateData } from "react-native-calendars";
 
 type AddLimitIncreaseScreenRouteProp = RouteProp<
@@ -91,7 +92,11 @@ export const AddLimitIncreaseScreen = () => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="close" size={24} color={theme.colors.text.primary} />
+          <Ionicons
+            name="close"
+            size={moderateScale(24)}
+            color={theme.colors.text.primary}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Tambah Pengajuan</Text>
         <View style={{ width: 40 }} />
@@ -118,7 +123,7 @@ export const AddLimitIncreaseScreen = () => {
               >
                 <Ionicons
                   name="information-circle-outline"
-                  size={20}
+                  size={moderateScale(20)}
                   color={theme.colors.text.tertiary}
                 />
               </TouchableOpacity>
@@ -140,7 +145,7 @@ export const AddLimitIncreaseScreen = () => {
                 >
                   <Ionicons
                     name="card"
-                    size={20}
+                    size={moderateScale(20)}
                     color={card.colorTheme || theme.colors.primary}
                     style={{ marginRight: 8 }}
                   />
@@ -173,7 +178,7 @@ export const AddLimitIncreaseScreen = () => {
               </Text>
               <Ionicons
                 name="calendar-outline"
-                size={20}
+                size={moderateScale(20)}
                 color={theme.colors.text.tertiary}
               />
             </TouchableOpacity>

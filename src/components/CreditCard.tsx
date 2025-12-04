@@ -12,6 +12,7 @@ import { Card, CARD_THEMES } from "../types/card";
 import { colors } from "../constants/colors";
 import { formatCurrency } from "../utils/formatters";
 import { scale, verticalScale } from "../utils/responsive";
+import { PaymentStatusBadge } from "./PaymentStatusBadge";
 
 const { width } = Dimensions.get("window");
 
@@ -45,6 +46,12 @@ export const CreditCard = React.memo(
         gradientColors = [card.colorTheme, card.colorTheme];
       }
     }
+
+    // Calculate days until due for badge
+    const today = new Date();
+    const currentDay = today.getDate();
+    let daysUntilDue = card.dueDay - currentDay;
+    if (daysUntilDue < 0) daysUntilDue += 30; // Rough estimate
 
     return (
       <TouchableOpacity
@@ -124,6 +131,14 @@ export const CreditCard = React.memo(
               </View>
             )}
           </View>
+
+          {/* Payment Status Badge */}
+          {!compact && (
+            <PaymentStatusBadge
+              isPaid={card.isPaid || false}
+              daysUntilDue={daysUntilDue}
+            />
+          )}
         </LinearGradient>
       </TouchableOpacity>
     );

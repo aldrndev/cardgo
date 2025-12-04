@@ -9,11 +9,13 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, AppStateStatus } from "react-native";
+import { platformCapabilities, isWeb } from "../utils/platform";
 
 interface AuthContextType {
   isLocked: boolean;
   isAuthenticated: boolean;
   hasPin: boolean;
+  hasBiometrics: boolean;
   setPin: (pin: string) => Promise<void>;
   unlock: (pin: string) => Promise<boolean>;
   authenticateWithBiometrics: () => Promise<boolean>;
@@ -29,25 +31,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLocked, setIsLocked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPin, setHasPin] = useState(false);
+  const [hasBiometrics, setHasBiometrics] = useState(false);
   const [storedPin, setStoredPin] = useState<string | null>(null);
 
   useEffect(() => {
     checkPinStatus();
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
-    return () => {
-      subscription.remove();
-    };
+    checkBiometrics();
+
+    // Only add app state listener on native (web doesn't need it)
+    if (!isWeb) {
+      const subscription = AppState.addEventListener(
+        "change",
+        handleAppStateChange
+      );
+      return () => {
+        subscription.remove();
+      };
+    }
   }, []);
+
+  const checkBiometrics = async () => {
+    if (!platformCapabilities.biometrics) {
+      setHasBiometrics(false);
+      return;
+    }
+
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      setHasBiometrics(hasHardware && isEnrolled);
+    } catch {
+      setHasBiometrics(false);
+    }
+  };
 
   const checkPinStatus = async () => {
     const pin = await AsyncStorage.getItem(PIN_STORAGE_KEY);
     if (pin) {
       setHasPin(true);
       setStoredPin(pin);
-      setIsLocked(true);
+      // On web, don't lock by default (less secure but better UX)
+      if (isWeb) {
+        setIsAuthenticated(true);
+        setIsLocked(false);
+      } else {
+        setIsLocked(true);
+      }
     } else {
       setHasPin(false);
       setIsAuthenticated(true);
@@ -59,6 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (hasPin) {
         setIsLocked(true);
         setIsAuthenticated(false);
+      }
+    }
+  };
+
+  const triggerHaptic = async (type: Haptics.NotificationFeedbackType) => {
+    if (platformCapabilities.haptics) {
+      try {
+        await Haptics.notificationAsync(type);
+      } catch {
+        // Ignore haptic errors
       }
     }
   };
@@ -82,31 +121,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (pin === storedPin) {
       setIsLocked(false);
       setIsAuthenticated(true);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await triggerHaptic(Haptics.NotificationFeedbackType.Success);
       return true;
     }
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    await triggerHaptic(Haptics.NotificationFeedbackType.Error);
     return false;
   };
 
   const authenticateWithBiometrics = async () => {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+    // Skip biometric auth on web
+    if (!platformCapabilities.biometrics) {
+      return false;
+    }
 
-    if (hasHardware && isEnrolled) {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Unlock Card Go",
-        fallbackLabel: "Use PIN",
-      });
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
-      if (result.success) {
-        setIsLocked(false);
-        setIsAuthenticated(true);
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        );
-        return true;
+      if (hasHardware && isEnrolled) {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Unlock Card Go",
+          fallbackLabel: "Use PIN",
+        });
+
+        if (result.success) {
+          setIsLocked(false);
+          setIsAuthenticated(true);
+          await triggerHaptic(Haptics.NotificationFeedbackType.Success);
+          return true;
+        }
       }
+    } catch {
+      // Biometric auth failed
     }
     return false;
   };
@@ -124,6 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLocked,
         isAuthenticated,
         hasPin,
+        hasBiometrics,
         setPin,
         unlock,
         authenticateWithBiometrics,

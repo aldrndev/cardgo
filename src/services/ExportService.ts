@@ -83,28 +83,36 @@ export const ExportService = {
   },
 
   async exportToCSV(cards: Card[], transactions: Transaction[]) {
-    let csv = "Tanggal,Kartu,Deskripsi,Kategori,Jumlah\n";
+    try {
+      let csv = "Tanggal,Kartu,Deskripsi,Kategori,Jumlah\n";
 
-    transactions.forEach((tx) => {
-      const card = cards.find((c) => c.id === tx.cardId);
-      const row = [
-        new Date(tx.date).toISOString().split("T")[0],
-        `"${card?.alias || "-"}"`,
-        `"${tx.description.replace(/"/g, '""')}"`,
-        `"${tx.category}"`,
-        tx.amount,
-      ].join(",");
-      csv += row + "\n";
-    });
+      transactions.forEach((tx) => {
+        const card = cards.find((c) => c.id === tx.cardId);
+        const row = [
+          new Date(tx.date).toISOString().split("T")[0],
+          `"${card?.alias || "-"}"`,
+          `"${tx.description.replace(/"/g, '""')}"`,
+          `"${tx.category}"`,
+          tx.amount,
+        ].join(",");
+        csv += row + "\n";
+      });
 
-    const fileName = `card_go_export_${new Date().getTime()}.csv`;
-    const fileUri = (FileSystem as any).documentDirectory + fileName;
+      const fileName = `card_go_export_${new Date().getTime()}.csv`;
 
-    await FileSystem.writeAsStringAsync(fileUri, csv, {
-      encoding: (FileSystem as any).EncodingType.UTF8,
-    });
+      // Use new expo-file-system API
+      const file = new FileSystem.File(FileSystem.Paths.cache, fileName);
+      await file.write(csv);
 
-    await Sharing.shareAsync(fileUri, { UTI: ".csv", mimeType: "text/csv" });
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "text/csv",
+        dialogTitle: "Export CSV",
+        UTI: "public.comma-separated-values-text",
+      });
+    } catch (error) {
+      console.error("CSV Export Error:", error);
+      throw error;
+    }
   },
 };
 

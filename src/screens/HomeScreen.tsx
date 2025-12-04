@@ -29,7 +29,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
 import { getCategoryIcon } from "../utils/categoryIcons";
-import { scale } from "../utils/responsive";
+import { scale, moderateScale } from "../utils/responsive";
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, "HomeTab">,
@@ -117,8 +117,8 @@ export const HomeScreen = () => {
     }[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const next30Days = new Date(today);
-    next30Days.setDate(today.getDate() + 30);
+    const next7Days = new Date(today); // CHANGED: was next30Days
+    next7Days.setDate(today.getDate() + 7); // CHANGED: now 7 days instead of 30
 
     unarchivedCards.forEach((card) => {
       // Annual Fee
@@ -129,13 +129,14 @@ export const HomeScreen = () => {
           feeDate.setFullYear(currentYear + 1);
         }
 
-        if (feeDate <= next30Days && feeDate >= today) {
+        if (feeDate <= next7Days && feeDate >= today) {
+          // CHANGED: was next30Days
           const diffTime = feeDate.getTime() - today.getTime();
           const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           reminders.push({
             id: `fee-${card.id}`,
             cardId: card.id,
-            cardName: card.alias,
+            cardName: card.alias.toUpperCase(),
             date: feeDate,
             daysLeft,
           });
@@ -156,8 +157,8 @@ export const HomeScreen = () => {
     }[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const next30Days = new Date(today);
-    next30Days.setDate(today.getDate() + 30);
+    const next7Days = new Date(today); // CHANGED: was next30Days
+    next7Days.setDate(today.getDate() + 7); // CHANGED: now 7 days instead of 30
 
     unarchivedCards.forEach((card) => {
       if (card.isLimitIncreaseReminderEnabled) {
@@ -184,13 +185,14 @@ export const HomeScreen = () => {
 
         if (limitDate) {
           limitDate.setHours(0, 0, 0, 0);
-          if (limitDate <= next30Days && limitDate >= today) {
+          if (limitDate <= next7Days && limitDate >= today) {
+            // CHANGED: was next30Days
             const diffTime = limitDate.getTime() - today.getTime();
             const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             reminders.push({
               id: `limit-${card.id}`,
               cardId: card.id,
-              cardName: card.alias,
+              cardName: card.alias.toUpperCase(),
               date: limitDate,
               daysLeft,
             });
@@ -201,6 +203,52 @@ export const HomeScreen = () => {
 
     return reminders.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [unarchivedCards, getRecordsByCardId]);
+
+  const paymentReminders = React.useMemo(() => {
+    const reminders: {
+      id: string;
+      cardId: string;
+      cardName: string;
+      date: Date;
+      daysLeft: number;
+      amount: number;
+    }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const next7Days = new Date(today); // CHANGED: was next30Days
+    next7Days.setDate(today.getDate() + 7); // CHANGED: now 7 days instead of 30
+
+    unarchivedCards.forEach((card) => {
+      if (card.isPaid || card.isArchived) return;
+
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth();
+
+      // Calculate due date for this month
+      let dueDate = new Date(currentYear, currentMonth, card.dueDay);
+
+      // If due date has passed for this month, use next month
+      if (dueDate < today) {
+        dueDate = new Date(currentYear, currentMonth + 1, card.dueDay);
+      }
+
+      if (dueDate <= next7Days && dueDate >= today) {
+        // CHANGED: was next30Days
+        const diffTime = dueDate.getTime() - today.getTime();
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        reminders.push({
+          id: `payment-${card.id}`,
+          cardId: card.id,
+          cardName: card.alias.toUpperCase(),
+          date: dueDate,
+          daysLeft,
+          amount: card.currentUsage || 0,
+        });
+      }
+    });
+
+    return reminders.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [unarchivedCards]);
 
   const overLimitCards = React.useMemo(() => {
     return activeCards.filter(
@@ -256,7 +304,11 @@ export const HomeScreen = () => {
             onPress={() => navigation.navigate("SettingsTab")}
           >
             <View style={styles.avatarContainer}>
-              <Ionicons name="person" size={24} color="#FFFFFF" />
+              <Ionicons
+                name="person"
+                size={moderateScale(24)}
+                color="#FFFFFF"
+              />
             </View>
           </TouchableOpacity>
         </View>
@@ -316,7 +368,7 @@ export const HomeScreen = () => {
                     name={
                       isTotalBillVisible ? "eye-outline" : "eye-off-outline"
                     }
-                    size={16}
+                    size={moderateScale(16)}
                     color="rgba(255,255,255,0.7)"
                   />
                 </TouchableOpacity>
@@ -345,8 +397,153 @@ export const HomeScreen = () => {
           </LinearGradient>
         </View>
 
+        {/* Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickActionsContent}
+          >
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("Search")}
+            >
+              <LinearGradient
+                colors={["#06B6D4", "#0891B2"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="search" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Cari</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("AddEditCard", {})}
+            >
+              <LinearGradient
+                colors={["#4F46E5", "#4338CA"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="add" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Tambah</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("LimitIncreaseHistory", {})}
+            >
+              <LinearGradient
+                colors={["#10B981", "#059669"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="trending-up" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Naik Limit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("Calendar")}
+            >
+              <LinearGradient
+                colors={["#F59E0B", "#D97706"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="calendar" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Kalender</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("TransactionsList", {})}
+            >
+              <LinearGradient
+                colors={["#14B8A6", "#0D9488"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="receipt" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Transaksi</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("SubscriptionList", {})}
+            >
+              <LinearGradient
+                colors={["#8B5CF6", "#7C3AED"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="repeat" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Langganan</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("PaymentHistory", {})}
+            >
+              <LinearGradient
+                colors={["#10B981", "#059669"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="wallet" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Pembayaran</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("InsightsTab")}
+            >
+              <LinearGradient
+                colors={["#3B82F6", "#2563EB"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Statistik</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("ArchivedCards")}
+            >
+              <LinearGradient
+                colors={["#64748B", "#475569"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <Ionicons name="archive-outline" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Arsip</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
         {/* Upcoming Reminders */}
-        {(upcomingReminders.length > 0 ||
+        {(paymentReminders.length > 0 ||
+          upcomingReminders.length > 0 ||
           limitIncreaseReminders.length > 0) && (
           <View style={styles.remindersSection}>
             <View style={styles.remindersCard}>
@@ -358,7 +555,7 @@ export const HomeScreen = () => {
                   </Text>
                   <Ionicons
                     name="arrow-forward"
-                    size={12}
+                    size={moderateScale(12)}
                     color={theme.colors.text.tertiary}
                   />
                 </View>
@@ -368,6 +565,53 @@ export const HomeScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.remindersContent}
               >
+                {/* Payment Reminders */}
+                {paymentReminders.map((reminder) => (
+                  <TouchableOpacity
+                    key={reminder.id}
+                    style={styles.reminderItem}
+                    onPress={() =>
+                      navigation.navigate("CardDetail", {
+                        cardId: reminder.cardId,
+                      })
+                    }
+                  >
+                    <LinearGradient
+                      colors={["#3B82F6", "#2563EB"]} // Blue gradient
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.reminderGradient}
+                    >
+                      <View style={styles.reminderHeader}>
+                        <View style={styles.reminderIconContainer}>
+                          <Ionicons
+                            name="card-outline"
+                            size={20}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                        <View style={styles.daysLeftBadge}>
+                          <Text
+                            style={[styles.daysLeftText, { color: "#000000" }]}
+                          >
+                            {reminder.daysLeft} Hari Lagi
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.reminderTitle}>Jatuh Tempo</Text>
+                      <Text style={styles.reminderSubtitle}>
+                        {reminder.cardName}
+                      </Text>
+                      <Text style={styles.reminderDate}>
+                        {new Date(reminder.date).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                        })}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+
                 {/* Limit Increase Reminders */}
                 {limitIncreaseReminders.map((reminder) => (
                   <TouchableOpacity
@@ -461,155 +705,110 @@ export const HomeScreen = () => {
           </View>
         )}
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickActionsContent}
-          >
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("AddEditCard", {})}
+        {/* Tags Filter - Only show if there are cards */}
+        {unarchivedCards.length > 0 && (
+          <View style={styles.tagsSection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsFilterContainer}
             >
-              <LinearGradient
-                colors={["#4F46E5", "#4338CA"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="add" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Tambah</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("LimitIncreaseHistory", {})}
-            >
-              <LinearGradient
-                colors={["#10B981", "#059669"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="trending-up" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Naik Limit</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("Calendar")}
-            >
-              <LinearGradient
-                colors={["#F59E0B", "#D97706"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="calendar" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Kalender</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("TransactionsList", {})}
-            >
-              <LinearGradient
-                colors={["#14B8A6", "#0D9488"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="receipt" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Transaksi</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("SubscriptionList", {})}
-            >
-              <LinearGradient
-                colors={["#8B5CF6", "#7C3AED"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="repeat" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Langganan</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("InsightsTab")}
-            >
-              <LinearGradient
-                colors={["#3B82F6", "#2563EB"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Statistik</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("ArchivedCards")}
-            >
-              <LinearGradient
-                colors={["#64748B", "#475569"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="archive-outline" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Arsip</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        {/* Tags Filter */}
-        <View style={styles.tagsSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tagsFilterContainer}
-          >
-            {allTags.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={[
-                  styles.filterChip,
-                  (selectedTag === tag || (!selectedTag && tag === "Semua")) &&
-                    styles.activeFilterChip,
-                ]}
-                onPress={() => handleTagSelect(tag)}
-              >
-                <Text
+              {allTags.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
                   style={[
-                    styles.filterText,
+                    styles.filterChip,
                     (selectedTag === tag ||
                       (!selectedTag && tag === "Semua")) &&
-                      styles.activeFilterText,
+                      styles.activeFilterChip,
                   ]}
+                  onPress={() => handleTagSelect(tag)}
                 >
-                  {tag}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                  <Text
+                    style={[
+                      styles.filterText,
+                      (selectedTag === tag ||
+                        (!selectedTag && tag === "Semua")) &&
+                        styles.activeFilterText,
+                    ]}
+                  >
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Cards Carousel */}
         <View style={styles.carouselSection}>
-          {activeCards.length > 0 ? (
+          {unarchivedCards.length === 0 ? (
+            <View
+              style={[
+                styles.noResultContainer,
+                { marginTop: 0, borderStyle: "solid", borderWidth: 0 },
+              ]}
+            >
+              <View
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  backgroundColor: theme.colors.primary + "15",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: theme.spacing.m,
+                }}
+              >
+                <Ionicons
+                  name="card-outline"
+                  size={moderateScale(32)}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.noResultText,
+                  {
+                    marginTop: 0,
+                    color: theme.colors.text.primary,
+                    fontWeight: "600",
+                  },
+                ]}
+              >
+                Belum ada kartu
+              </Text>
+              <Text
+                style={{
+                  ...theme.typography.caption,
+                  color: theme.colors.text.secondary,
+                  textAlign: "center",
+                  marginBottom: theme.spacing.l,
+                  maxWidth: "80%",
+                }}
+              >
+                Tambahkan kartu kredit pertamamu untuk mulai memantau
+                pengeluaran
+              </Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  paddingHorizontal: theme.spacing.l,
+                  paddingVertical: theme.spacing.s,
+                  borderRadius: theme.borderRadius.m,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: theme.spacing.s,
+                }}
+                onPress={() => navigation.navigate("AddEditCard", {})}
+              >
+                <Ionicons name="add" size={20} color="#FFF" />
+                <Text style={{ color: "#FFF", fontWeight: "600" }}>
+                  Tambah Kartu
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : activeCards.length > 0 ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -635,7 +834,7 @@ export const HomeScreen = () => {
             <View style={styles.noResultContainer}>
               <Ionicons
                 name="search-outline"
-                size={48}
+                size={moderateScale(48)}
                 color={theme.colors.text.tertiary}
               />
               <Text style={styles.noResultText}>
@@ -657,41 +856,6 @@ export const HomeScreen = () => {
 
         {/* Limit Warnings */}
         <View style={[styles.warningSection, { marginTop: 0 }]}>
-          {cards.some((card) => {
-            const today = new Date();
-            const currentDay = today.getDate();
-            const dueDay = card.dueDay;
-            let daysUntilDue = dueDay - currentDay;
-            if (daysUntilDue < 0) daysUntilDue += 30;
-            return daysUntilDue <= 7;
-          }) && (
-            <View style={styles.alertBlock}>
-              <View style={styles.alertHeader}>
-                <Ionicons
-                  name="time-outline"
-                  size={20}
-                  color={theme.colors.status.warning}
-                />
-                <Text style={styles.alertTitle}>Jatuh Tempo Dekat</Text>
-              </View>
-              {cards
-                .filter((card) => {
-                  const today = new Date();
-                  const currentDay = today.getDate();
-                  const dueDay = card.dueDay;
-                  let daysUntilDue = dueDay - currentDay;
-                  if (daysUntilDue < 0) daysUntilDue += 30;
-                  return daysUntilDue <= 7;
-                })
-                .map((card) => (
-                  <View key={card.id} style={styles.alertItem}>
-                    <Text style={styles.alertCardName}>{card.alias}</Text>
-                    <Text style={styles.alertDate}>Tgl {card.dueDay}</Text>
-                  </View>
-                ))}
-            </View>
-          )}
-
           {overLimitCards.length > 0 && (
             <LinearGradient
               colors={["#B91C1C", "#EF4444"]} // Darker red gradient
@@ -729,7 +893,7 @@ export const HomeScreen = () => {
                       >
                         <Ionicons name="card" size={16} color="#FFFFFF" />
                         <Text style={styles.overLimitCardName}>
-                          {card.alias}
+                          {card.alias.toUpperCase()}
                         </Text>
                       </View>
                       <Text style={styles.overLimitPercentage}>
@@ -766,7 +930,7 @@ export const HomeScreen = () => {
                         </Text>
                         <Ionicons
                           name="arrow-forward"
-                          size={14}
+                          size={moderateScale(14)}
                           color="#B91C1C"
                         />
                       </TouchableOpacity>
@@ -802,7 +966,11 @@ export const HomeScreen = () => {
                         { backgroundColor: iconColor + "20" },
                       ]}
                     >
-                      <Ionicons name={iconName} size={28} color={iconColor} />
+                      <Ionicons
+                        name={iconName}
+                        size={moderateScale(28)}
+                        color={iconColor}
+                      />
                     </View>
                     <View style={styles.transactionTextContainer}>
                       <Text
@@ -855,7 +1023,7 @@ export const HomeScreen = () => {
           <View style={styles.tipHeader}>
             <Ionicons
               name="bulb-outline"
-              size={20}
+              size={moderateScale(20)}
               color={theme.colors.primary}
             />
             <Text style={styles.tipTitle}>Tips Keuangan</Text>
@@ -1369,6 +1537,8 @@ const styles = StyleSheet.create({
   },
   reminderGradient: {
     padding: theme.spacing.m,
+    minHeight: 140,
+    justifyContent: "space-between",
   },
   reminderTitle: {
     ...theme.typography.body,
@@ -1382,8 +1552,15 @@ const styles = StyleSheet.create({
   },
   reminderDate: {
     ...theme.typography.caption,
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.8)",
+    marginTop: scale(4),
+  },
+  reminderAmount: {
+    ...theme.typography.body,
     color: "#FFFFFF",
+    fontWeight: "700",
+    marginTop: scale(6),
+    fontSize: scale(13),
   },
 
   greeting: {

@@ -241,13 +241,32 @@ export const TransactionsListScreen = () => {
           <View
             style={[styles.iconSquircle, { backgroundColor: iconColor + "15" }]}
           >
-            <Ionicons name={iconName} size={28} color={iconColor} />
+            <Ionicons
+              name={iconName}
+              size={moderateScale(28)}
+              color={iconColor}
+            />
           </View>
 
           {/* Content */}
           <View style={styles.rowContent}>
             <View style={styles.rowTop}>
-              <Text style={styles.rowTitle}>{item.description}</Text>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={styles.rowTitle}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {item.description}
+                </Text>
+                <Text style={styles.rowSubtitle}>
+                  {new Date(item.date).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </Text>
+              </View>
               <View style={{ alignItems: "flex-end" }}>
                 {item.currency &&
                 item.currency !== "IDR" &&
@@ -262,7 +281,11 @@ export const TransactionsListScreen = () => {
                     <Text
                       style={[
                         styles.rowSubtitle,
-                        { fontSize: moderateScale(11) },
+                        {
+                          fontSize: moderateScale(11),
+                          color: theme.colors.text.tertiary,
+                          textAlign: "right",
+                        },
                       ]}
                     >
                       ≈ {formatCurrency(item.amount)}
@@ -275,21 +298,11 @@ export const TransactionsListScreen = () => {
                 )}
               </View>
             </View>
-
-            <View style={styles.rowBottom}>
-              <Text style={styles.rowSubtitle}>
-                {new Date(item.date).toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </Text>
-              {item.installmentId && (
-                <View style={styles.miniBadge}>
-                  <Text style={styles.miniBadgeText}>Cicilan</Text>
-                </View>
-              )}
-            </View>
+            {item.installmentId && (
+              <View style={styles.miniBadge}>
+                <Text style={styles.miniBadgeText}>Cicilan</Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
       </Swipeable>
@@ -343,7 +356,7 @@ export const TransactionsListScreen = () => {
           />
         </TouchableOpacity>
         <Text style={styles.title}>
-          {card ? `Transaksi ${card.alias}` : "Semua Transaksi"}
+          {card ? `Transaksi ${card.alias.toUpperCase()}` : "Semua Transaksi"}
         </Text>
         <View style={{ width: theme.containerSizes.iconMedium }} />
       </View>
@@ -745,6 +758,7 @@ const styles = StyleSheet.create({
   },
   summaryWrapper: {
     paddingHorizontal: theme.spacing.m,
+    marginTop: theme.spacing.m, // ADDED: spacing from header
     marginBottom: theme.spacing.m,
   },
   summaryCard: {
@@ -898,7 +912,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: "600",
     color: theme.colors.text.primary,
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(16), // UPDATED: was 15, now matches CardDetail
     flex: 1,
     marginRight: 8,
   },
@@ -906,7 +920,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: "700",
     color: theme.colors.text.primary,
-    fontSize: 14,
+    fontSize: moderateScale(14), // UPDATED: now uses moderateScale like CardDetail
   },
   rowBottom: {
     flexDirection: "row",
@@ -915,7 +929,7 @@ const styles = StyleSheet.create({
   rowSubtitle: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12), // UPDATED: was 14, now matches CardDetail
     flex: 1,
     marginRight: 8,
   },

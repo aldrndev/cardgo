@@ -160,7 +160,11 @@ export const AddTransactionScreen = () => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="close" size={24} color={theme.colors.text.primary} />
+          <Ionicons
+            name="close"
+            size={moderateScale(24)}
+            color={theme.colors.text.primary}
+          />
         </TouchableOpacity>
         <Text style={styles.title}>Tambah Transaksi</Text>
         <View style={{ width: scale(24) }} />
@@ -192,7 +196,7 @@ export const AddTransactionScreen = () => {
                   >
                     <Ionicons
                       name="card"
-                      size={20}
+                      size={moderateScale(20)}
                       color={card.colorTheme || theme.colors.primary}
                       style={{ marginRight: 8 }}
                     />
@@ -259,7 +263,7 @@ export const AddTransactionScreen = () => {
             <View style={styles.inputContainer}>
               <Ionicons
                 name="cash-outline"
-                size={20}
+                size={moderateScale(20)}
                 color={theme.colors.text.secondary}
                 style={styles.inputIcon}
               />
@@ -357,7 +361,7 @@ export const AddTransactionScreen = () => {
                 <View style={styles.inputContainer}>
                   <Ionicons
                     name="calendar-outline"
-                    size={20}
+                    size={moderateScale(20)}
                     color={theme.colors.text.secondary}
                     style={styles.inputIcon}
                   />
@@ -389,7 +393,7 @@ export const AddTransactionScreen = () => {
                 >
                   <Ionicons
                     name="receipt-outline"
-                    size={20}
+                    size={moderateScale(20)}
                     color={theme.colors.text.secondary}
                     style={styles.inputIcon}
                   />
@@ -419,7 +423,7 @@ export const AddTransactionScreen = () => {
             >
               <Ionicons
                 name="create-outline"
-                size={20}
+                size={moderateScale(20)}
                 color={theme.colors.text.secondary}
                 style={styles.inputIcon}
               />
@@ -504,7 +508,7 @@ export const AddTransactionScreen = () => {
                     >
                       <Ionicons
                         name={iconName}
-                        size={18}
+                        size={moderateScale(18)}
                         color={
                           isSelected ? theme.colors.text.inverse : iconColor
                         }

@@ -104,6 +104,7 @@ export const TabNavigator = () => {
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="card" label="Kartu" focused={focused} />
           ),
+          unmountOnBlur: true,
         }}
       />
       <Tab.Screen

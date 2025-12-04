@@ -9,19 +9,23 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
+import { moderateScale } from "../utils/responsive";
 import { useAuth } from "../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 const PIN_LENGTH = 4;
 
 export const LockScreen = () => {
-  const { unlock, authenticateWithBiometrics } = useAuth();
+  const { unlock, authenticateWithBiometrics, hasBiometrics } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    authenticateWithBiometrics();
-  }, []);
+    // Only attempt biometric auth if available
+    if (hasBiometrics) {
+      authenticateWithBiometrics();
+    }
+  }, [hasBiometrics]);
 
   const handlePress = async (number: string) => {
     if (pin.length < PIN_LENGTH) {
@@ -51,7 +55,11 @@ export const LockScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="lock-closed" size={48} color={theme.colors.primary} />
+          <Ionicons
+            name="lock-closed"
+            size={moderateScale(48)}
+            color={theme.colors.primary}
+          />
         </View>
         <Text style={styles.title}>Card Go Terkunci</Text>
         <Text style={styles.subtitle}>Masukkan PIN untuk membuka</Text>
@@ -79,20 +87,24 @@ export const LockScreen = () => {
               <Text style={styles.keyText}>{number}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.key} onPress={handleBiometric}>
-            <Ionicons
-              name="finger-print"
-              size={32}
-              color={theme.colors.primary}
-            />
-          </TouchableOpacity>
+          {hasBiometrics ? (
+            <TouchableOpacity style={styles.key} onPress={handleBiometric}>
+              <Ionicons
+                name="finger-print"
+                size={moderateScale(32)}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.key, { opacity: 0 }]} />
+          )}
           <TouchableOpacity style={styles.key} onPress={() => handlePress("0")}>
             <Text style={styles.keyText}>0</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.key} onPress={handleDelete}>
             <Ionicons
               name="backspace-outline"
-              size={32}
+              size={moderateScale(32)}
               color={theme.colors.text.primary}
             />
           </TouchableOpacity>
@@ -150,8 +162,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   pinDotError: {
-    borderColor: theme.colors.status.danger,
-    backgroundColor: theme.colors.status.danger,
+    borderColor: theme.colors.status.error,
+    backgroundColor: theme.colors.status.error,
   },
   keypad: {
     flexDirection: "row",

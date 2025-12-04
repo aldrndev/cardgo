@@ -4,12 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
+import { moderateScale } from "../utils/responsive";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 
@@ -68,7 +69,7 @@ export const SetPinScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
+            size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -110,7 +111,7 @@ export const SetPinScreen = () => {
           <TouchableOpacity style={styles.key} onPress={handleDelete}>
             <Ionicons
               name="backspace-outline"
-              size={32}
+              size={moderateScale(32)}
               color={theme.colors.text.primary}
             />
           </TouchableOpacity>

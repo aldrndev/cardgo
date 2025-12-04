@@ -1,3 +1,12 @@
+export interface PaymentRecord {
+  id: string;
+  paidDate: string; // ISO date
+  amount: number;
+  billingCycle: string; // "2024-12" format (YYYY-MM)
+  notes?: string;
+  paymentType?: "full" | "minimal"; // NEW: Track payment type
+}
+
 export interface Card {
   id: string;
   alias: string;
@@ -17,6 +26,9 @@ export interface Card {
   last4?: string; // Max 4 digits
   isArchived: boolean;
   isPaid?: boolean;
+  paidForCycle?: string; // "YYYY-MM" - tracks which billing cycle was paid
+  paymentHistory?: PaymentRecord[]; // NEW: Track payment history
+  lastPaymentDate?: string; // NEW: ISO Date of last payment
   createdAt: string; // ISO Date
   updatedAt: string; // ISO Date
 

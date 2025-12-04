@@ -27,6 +27,33 @@ import { scale, moderateScale } from "../utils/responsive";
 type AddEditCardScreenRouteProp = RouteProp<RootStackParamList, "AddEditCard">;
 type AddEditCardScreenNavigationProp = any; // Placeholder for navigation type
 
+// Indonesian banks with credit card services
+const INDONESIAN_BANKS: string[] = [
+  "BCA",
+  "BNI",
+  "BRI",
+  "Mandiri",
+  "CIMB Niaga",
+  "Danamon",
+  "Permata",
+  "OCBC NISP",
+  "Panin",
+  "Maybank",
+  "HSBC",
+  "Standard Chartered",
+  "UOB",
+  "DBS",
+  "Bank Mega",
+  "BTN",
+  "Bukopin",
+  "Sinarmas",
+  "Jenius",
+  "Digibank",
+  "Other",
+];
+
+const networks = ["Visa", "Mastercard", "JCB", "Amex", "Other"];
+
 export const AddEditCardScreen = () => {
   const navigation = useNavigation<AddEditCardScreenNavigationProp>();
   const route = useRoute<AddEditCardScreenRouteProp>();
@@ -61,6 +88,7 @@ export const AddEditCardScreen = () => {
     isLimitIncreaseReminderEnabled: false,
   });
   const [tagInput, setTagInput] = useState("");
+  const [monthError, setMonthError] = useState("");
 
   useEffect(() => {
     if (isEditing && existingCard) {
@@ -184,8 +212,6 @@ export const AddEditCardScreen = () => {
 
   const suggestedTags = ["Pribadi", "Bisnis", "Travel", "Belanja", "Cicilan"];
 
-  const networks = ["Visa", "Mastercard", "JCB", "Amex", "Other"];
-
   // Mock card object for preview
   const previewCard = {
     id: "preview",
@@ -206,7 +232,7 @@ export const AddEditCardScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons
               name="arrow-back"
-              size={24}
+              size={moderateScale(24)}
               color={theme.colors.text.primary}
             />
           </TouchableOpacity>
@@ -235,7 +261,7 @@ export const AddEditCardScreen = () => {
               <View style={styles.inputWrapper}>
                 <Ionicons
                   name="card-outline"
-                  size={20}
+                  size={moderateScale(20)}
                   color={theme.colors.text.tertiary}
                   style={styles.inputIcon}
                 />
@@ -253,23 +279,32 @@ export const AddEditCardScreen = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nama Bank</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons
-                  name="business-outline"
-                  size={20}
-                  color={theme.colors.text.tertiary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={formData.bankName}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, bankName: text })
-                  }
-                  placeholder="cth. BCA"
-                  placeholderTextColor={theme.colors.text.tertiary}
-                />
-              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.networkContainer}
+              >
+                {INDONESIAN_BANKS.map((bank) => (
+                  <TouchableOpacity
+                    key={bank}
+                    style={[
+                      styles.networkOption,
+                      formData.bankName === bank && styles.selectedNetwork,
+                    ]}
+                    onPress={() => setFormData({ ...formData, bankName: bank })}
+                  >
+                    <Text
+                      style={[
+                        styles.networkText,
+                        formData.bankName === bank &&
+                          styles.selectedNetworkText,
+                      ]}
+                    >
+                      {bank}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
 
             <View style={styles.inputGroup}>
@@ -334,7 +369,11 @@ export const AddEditCardScreen = () => {
                     end={{ x: 1, y: 1 }}
                   >
                     {formData.themeId === themeOption.id && (
-                      <Ionicons name="checkmark" size={24} color="#FFF" />
+                      <Ionicons
+                        name="checkmark"
+                        size={moderateScale(24)}
+                        color="#FFF"
+                      />
                     )}
                   </LinearGradient>
                 </TouchableOpacity>
@@ -351,7 +390,7 @@ export const AddEditCardScreen = () => {
                 <View style={styles.inputWrapper}>
                   <Ionicons
                     name="calendar-outline"
-                    size={20}
+                    size={moderateScale(20)}
                     color={theme.colors.text.tertiary}
                     style={styles.inputIcon}
                   />
@@ -362,12 +401,15 @@ export const AddEditCardScreen = () => {
                         ? String(formData.billingCycleDay)
                         : ""
                     }
-                    onChangeText={(text) =>
-                      setFormData({
-                        ...formData,
-                        billingCycleDay: text ? parseInt(text) : undefined,
-                      })
-                    }
+                    onChangeText={(text) => {
+                      const val = parseInt(text);
+                      if (!text || (val >= 1 && val <= 31)) {
+                        setFormData({
+                          ...formData,
+                          billingCycleDay: text ? val : undefined,
+                        });
+                      }
+                    }}
                     keyboardType="numeric"
                     maxLength={2}
                     placeholder="1-31"
@@ -380,7 +422,7 @@ export const AddEditCardScreen = () => {
                 <View style={styles.inputWrapper}>
                   <Ionicons
                     name="calendar-outline"
-                    size={20}
+                    size={moderateScale(20)}
                     color={theme.colors.text.tertiary}
                     style={styles.inputIcon}
                   />
@@ -391,12 +433,15 @@ export const AddEditCardScreen = () => {
                         ? String(formData.dueDay)
                         : ""
                     }
-                    onChangeText={(text) =>
-                      setFormData({
-                        ...formData,
-                        dueDay: text ? parseInt(text) : undefined,
-                      })
-                    }
+                    onChangeText={(text) => {
+                      const val = parseInt(text);
+                      if (!text || (val >= 1 && val <= 31)) {
+                        setFormData({
+                          ...formData,
+                          dueDay: text ? val : undefined,
+                        });
+                      }
+                    }}
                     keyboardType="numeric"
                     maxLength={2}
                     placeholder="1-31"
@@ -451,7 +496,7 @@ export const AddEditCardScreen = () => {
               <View style={styles.inputWrapper}>
                 <Ionicons
                   name="lock-closed-outline"
-                  size={20}
+                  size={moderateScale(20)}
                   color={theme.colors.text.tertiary}
                   style={styles.inputIcon}
                 />
@@ -509,7 +554,17 @@ export const AddEditCardScreen = () => {
                 <View style={styles.indentedContent}>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Bulan Expired (MM)</Text>
-                    <View style={styles.inputWrapper}>
+                    <View
+                      style={[
+                        styles.inputWrapper,
+                        monthError
+                          ? {
+                              borderColor: theme.colors.status.error,
+                              borderWidth: 1,
+                            }
+                          : {},
+                      ]}
+                    >
                       <TextInput
                         style={styles.input}
                         value={
@@ -518,11 +573,21 @@ export const AddEditCardScreen = () => {
                             : ""
                         }
                         onChangeText={(text) => {
-                          const val = parseInt(text);
-                          if (!text || (val >= 1 && val <= 12)) {
+                          setMonthError("");
+                          if (!text) {
                             setFormData({
                               ...formData,
-                              expiryMonth: text ? val : undefined,
+                              expiryMonth: undefined,
+                            });
+                            return;
+                          }
+                          const val = parseInt(text);
+                          if (isNaN(val) || val < 1 || val > 12) {
+                            setMonthError("Bulan harus antara 1-12");
+                          } else {
+                            setFormData({
+                              ...formData,
+                              expiryMonth: val,
                             });
                           }
                         }}
@@ -532,6 +597,17 @@ export const AddEditCardScreen = () => {
                         placeholderTextColor={theme.colors.text.tertiary}
                       />
                     </View>
+                    {monthError && (
+                      <Text
+                        style={{
+                          color: theme.colors.status.error,
+                          fontSize: 12,
+                          marginTop: 4,
+                        }}
+                      >
+                        {monthError}
+                      </Text>
+                    )}
                   </View>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Estimasi Biaya</Text>
@@ -643,7 +719,7 @@ export const AddEditCardScreen = () => {
                     <View style={styles.inputWrapper}>
                       <Ionicons
                         name="calendar-outline"
-                        size={20}
+                        size={moderateScale(20)}
                         color={theme.colors.text.tertiary}
                         style={styles.inputIcon}
                       />
@@ -702,7 +778,7 @@ export const AddEditCardScreen = () => {
                     <View style={styles.infoBox}>
                       <Ionicons
                         name="information-circle"
-                        size={20}
+                        size={moderateScale(20)}
                         color={theme.colors.primary}
                       />
                       <Text style={styles.infoText}>
@@ -731,7 +807,7 @@ export const AddEditCardScreen = () => {
                 >
                   <Ionicons
                     name="pricetag-outline"
-                    size={20}
+                    size={moderateScale(20)}
                     color={theme.colors.text.tertiary}
                     style={styles.inputIcon}
                   />
@@ -748,7 +824,7 @@ export const AddEditCardScreen = () => {
                   style={styles.addTagButton}
                   onPress={handleAddTag}
                 >
-                  <Ionicons name="add" size={24} color="#FFF" />
+                  <Ionicons name="add" size={moderateScale(24)} color="#FFF" />
                 </TouchableOpacity>
               </View>
               <View style={styles.tagsContainer}>
@@ -761,7 +837,7 @@ export const AddEditCardScreen = () => {
                     <Text style={styles.tagText}>{tag}</Text>
                     <Ionicons
                       name="close-circle"
-                      size={16}
+                      size={moderateScale(16)}
                       color={theme.colors.text.secondary}
                     />
                   </TouchableOpacity>

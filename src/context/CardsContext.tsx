@@ -10,6 +10,7 @@ import {
   CardFormData,
   Transaction,
   InstallmentPlan,
+  PaymentRecord,
 } from "../types/card";
 import { Subscription } from "../types/subscription";
 import { NotificationService } from "../services/NotificationService";
@@ -20,7 +21,10 @@ import {
   scheduleCardReminder,
   cancelCardReminder,
 } from "../utils/notifications";
-import { getBillingCycleRange } from "../utils/billingCycle";
+import {
+  getBillingCycleRange,
+  getCurrentBillingCycle,
+} from "../utils/billingCycle";
 
 interface CardsContextType {
   cards: Card[];
@@ -53,6 +57,15 @@ interface CardsContextType {
     data: Partial<Subscription>
   ) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
+  // Payment Management
+  markCardAsPaid: (
+    cardId: string,
+    amount?: number,
+    notes?: string,
+    paymentType?: "full" | "minimal"
+  ) => Promise<void>;
+  getPaymentHistory: (cardId: string) => PaymentRecord[];
+  checkAndResetPaidStatus: () => Promise<void>;
 }
 
 const CardsContext = createContext<CardsContextType | undefined>(undefined);
@@ -72,10 +85,13 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
 
   const calculateCardUsage = (card: Card, cardTransactions: Transaction[]) => {
     const { startDate } = getBillingCycleRange(card.billingCycleDay);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
 
     const cycleTransactions = cardTransactions.filter((t) => {
       const tDate = new Date(t.date);
-      return tDate >= startDate;
+      // Only count transactions within the cycle AND already occurred (not future installments)
+      return tDate >= startDate && tDate <= today;
     });
 
     return cycleTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -115,8 +131,42 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     setSubscriptions(storedSubscriptions);
     setIsLoading(false);
 
+    // Check and reset paid status if we've entered a NEW billing cycle
+    const today = new Date();
+    const cardsWithResetStatus = updatedCards.map((card) => {
+      if (!card.isPaid) return card;
+
+      const currentCycle = getCurrentBillingCycle(card.billingCycleDay);
+
+      // Only reset if the current cycle is different from the paid cycle
+      // This means we've entered a new billing cycle since payment
+      if (card.paidForCycle !== currentCycle) {
+        // Reschedule notifications for the new cycle
+        NotificationService.schedulePaymentReminder(card);
+        return {
+          ...card,
+          isPaid: false,
+          updatedAt: today.toISOString(),
+        };
+      }
+      return card;
+    });
+
+    const statusChanged = cardsWithResetStatus.some(
+      (card, idx) => card.isPaid !== updatedCards[idx].isPaid
+    );
+
+    if (statusChanged) {
+      setCards(cardsWithResetStatus);
+      await storage.saveCards(cardsWithResetStatus);
+    }
+
     // Check for due subscriptions after loading
-    checkSubscriptions(storedSubscriptions, storedTransactions, updatedCards);
+    checkSubscriptions(
+      storedSubscriptions,
+      storedTransactions,
+      cardsWithResetStatus
+    );
   };
 
   const checkSubscriptions = async (
@@ -431,6 +481,105 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Payment Management Functions
+  const markCardAsPaid = async (
+    cardId: string,
+    amount?: number,
+    notes?: string,
+    paymentType?: "full" | "minimal"
+  ) => {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    const today = new Date();
+    // Get the CURRENT billing cycle based on the card's billing day
+    const currentCycle = getCurrentBillingCycle(card.billingCycleDay);
+
+    // Create payment record
+    const paymentRecord: PaymentRecord = {
+      id: uuidv4(),
+      paidDate: today.toISOString(),
+      amount: amount || card.currentUsage || 0,
+      billingCycle: currentCycle, // Use the correct billing cycle
+      notes,
+      paymentType: paymentType || "full",
+    };
+
+    // Update card
+    const paymentHistory = card.paymentHistory || [];
+    const updatedPaymentHistory = [paymentRecord, ...paymentHistory];
+
+    // Keep only last 24 months
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const filteredHistory = updatedPaymentHistory.filter((record) => {
+      const recordDate = new Date(record.paidDate);
+      return recordDate >= twoYearsAgo;
+    });
+
+    const updatedCard: Card = {
+      ...card,
+      isPaid: true,
+      paidForCycle: currentCycle, // Track which cycle was paid
+      lastPaymentDate: today.toISOString(),
+      paymentHistory: filteredHistory,
+      updatedAt: today.toISOString(),
+    };
+
+    const updatedCards = cards.map((c) => (c.id === cardId ? updatedCard : c));
+    setCards(updatedCards);
+    await storage.saveCards(updatedCards);
+
+    // Cancel payment notifications
+    await NotificationService.cancelPaymentReminders(cardId);
+  };
+
+  const getPaymentHistory = (cardId: string): PaymentRecord[] => {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || !card.paymentHistory) return [];
+
+    // Return sorted by date descending (newest first)
+    return [...card.paymentHistory].sort(
+      (a, b) => new Date(b.paidDate).getTime() - new Date(a.paidDate).getTime()
+    );
+  };
+
+  const checkAndResetPaidStatus = async () => {
+    const today = new Date();
+
+    let hasChanges = false;
+    const updatedCards = cards.map((card) => {
+      // Only check cards that are marked as paid
+      if (!card.isPaid) return card;
+
+      const currentCycle = getCurrentBillingCycle(card.billingCycleDay);
+
+      // Only reset if we've entered a new billing cycle
+      if (card.paidForCycle !== currentCycle) {
+        hasChanges = true;
+        return {
+          ...card,
+          isPaid: false,
+          updatedAt: today.toISOString(),
+        };
+      }
+
+      return card;
+    });
+
+    if (hasChanges) {
+      setCards(updatedCards);
+      await storage.saveCards(updatedCards);
+
+      // Reschedule payment notifications for reset cards
+      updatedCards.forEach((card) => {
+        if (!card.isPaid) {
+          NotificationService.schedulePaymentReminder(card);
+        }
+      });
+    }
+  };
+
   const restoreData = async (
     newCards: Card[],
     newTransactions: Transaction[],
@@ -480,6 +629,10 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
         addSubscription,
         updateSubscription,
         deleteSubscription,
+        // Payment Management
+        markCardAsPaid,
+        getPaymentHistory,
+        checkAndResetPaidStatus,
       }}
     >
       {children}
