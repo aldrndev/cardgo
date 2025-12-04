@@ -75,10 +75,11 @@ export default function App() {
     };
 
     // Safety timeout to ensure app loads even if something hangs
+    // Reduced to 3s for better PWA experience
     const timeout = setTimeout(() => {
       setAppIsReady(true);
       SplashScreen.hideAsync();
-    }, 5000);
+    }, 3000);
 
     initApp().then(() => clearTimeout(timeout));
   }, []);

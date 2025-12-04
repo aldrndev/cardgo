@@ -1,8 +1,8 @@
 // Card Go Service Worker
-// Version: 1.0.0
+// Version: 1.0.2
 
-const CACHE_NAME = "card-go-v1";
-const RUNTIME_CACHE = "card-go-runtime-v1";
+const CACHE_NAME = "card-go-v2";
+const RUNTIME_CACHE = "card-go-runtime-v2";
 
 // Assets to cache on install
 const PRECACHE_URLS = [
