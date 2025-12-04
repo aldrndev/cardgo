@@ -5,8 +5,7 @@
   "cleanUrls": true,
   "framework": null,
   "rewrites": [
-    { "source": "/_expo/(.*)", "destination": "/_expo/$1" },
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "handle": "filesystem" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
