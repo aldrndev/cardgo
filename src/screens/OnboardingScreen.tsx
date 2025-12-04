@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -18,8 +19,6 @@ import { theme } from "../constants/theme";
 import { storage } from "../utils/storage";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
-
-const { width } = Dimensions.get("window");
 
 const SLIDES = [
   {
@@ -51,6 +50,7 @@ type OnboardingScreenNavigationProp = StackNavigationProp<
 >;
 
 export const OnboardingScreen = () => {
+  const { width } = useWindowDimensions();
   const navigation = useNavigation<OnboardingScreenNavigationProp>();
   const [activeIndex, setActiveIndex] = useState(0);
   const [nickname, setNickname] = useState("");
@@ -109,18 +109,29 @@ export const OnboardingScreen = () => {
         showsHorizontalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
         keyExtractor={(item) => item.id}
+        style={{ flex: 1 }}
         renderItem={({ item, index }) => {
           if (item.id === "input") {
             return (
-              <View style={styles.slide}>
-                <View style={styles.imageContainer}>
+              <View style={[styles.slide, { width }]}>
+                <View
+                  style={[
+                    styles.imageContainer,
+                    {
+                      width: width * 0.8,
+                      height: width * 0.8,
+                      maxHeight: 300,
+                      maxWidth: 300,
+                    },
+                  ]}
+                >
                   <Image
                     source={item.image}
                     style={styles.image}
                     resizeMode="contain"
                   />
                 </View>
-                <View style={styles.inputWrapper}>
+                <View style={[styles.inputWrapper, { width }]}>
                   <Text style={styles.title}>Halo!</Text>
                   <Text style={styles.description}>
                     Boleh kami tahu nama panggilanmu?
@@ -139,8 +150,18 @@ export const OnboardingScreen = () => {
             );
           }
           return (
-            <View style={styles.slide}>
-              <View style={styles.imageContainer}>
+            <View style={[styles.slide, { width }]}>
+              <View
+                style={[
+                  styles.imageContainer,
+                  {
+                    width: width * 0.8,
+                    height: width * 0.8,
+                    maxHeight: 300,
+                    maxWidth: 300,
+                  },
+                ]}
+              >
                 <Image
                   source={item.image}
                   style={styles.image}
@@ -165,7 +186,14 @@ export const OnboardingScreen = () => {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleNext}>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              Platform.OS === "web" && ({ cursor: "pointer" } as any),
+            ]}
+            onPress={handleNext}
+            activeOpacity={0.8}
+          >
             <Text style={styles.buttonText}>
               {activeIndex === allSlides.length - 1
                 ? "Mulai Sekarang"
@@ -188,15 +216,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   slide: {
-    width: width,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: theme.spacing.xl,
   },
   imageContainer: {
-    width: width * 0.8,
-    height: width * 0.8,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: theme.spacing.xl,
@@ -224,6 +249,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: theme.spacing.xl,
+    backgroundColor: theme.colors.background, // Ensure background is opaque
   },
   pagination: {
     flexDirection: "row",
@@ -257,7 +283,6 @@ const styles = StyleSheet.create({
   },
 
   inputWrapper: {
-    width: width,
     paddingHorizontal: theme.spacing.xl,
     alignItems: "center",
   },
