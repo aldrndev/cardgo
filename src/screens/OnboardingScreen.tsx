@@ -107,7 +107,20 @@ export const OnboardingScreen = () => {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
+        onScroll={(event) => {
+          const slideSize = event.nativeEvent.layoutMeasurement.width;
+          const index = event.nativeEvent.contentOffset.x / slideSize;
+          const roundIndex = Math.round(index);
+          if (roundIndex !== activeIndex) {
+            setActiveIndex(roundIndex);
+          }
+        }}
+        scrollEventThrottle={16}
+        getItemLayout={(data, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
         keyExtractor={(item) => item.id}
         style={{ flex: 1 }}
         renderItem={({ item, index }) => {
