@@ -16,24 +16,23 @@ export const StartupScreen = () => {
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      // On web, check if we are on a public route (privacy/terms)
-      if (Platform.OS === "web") {
-        const path = window.location.pathname;
-        if (path === "/privacy" || path === "/terms") {
-          // Let the router handle it, don't redirect
-          return;
+      try {
+        const hasSeen = await storage.getHasSeenOnboarding();
+        if (hasSeen) {
+          navigation.replace("Main");
+        } else {
+          navigation.replace("Onboarding");
         }
-      }
-
-      const hasSeen = await storage.getHasSeenOnboarding();
-      if (hasSeen) {
-        navigation.replace("Main");
-      } else {
+      } catch (error) {
+        console.error("Error checking onboarding:", error);
+        // Default to onboarding on error
         navigation.replace("Onboarding");
       }
     };
 
-    checkOnboarding();
+    // Small delay to ensure navigation is ready
+    const timer = setTimeout(checkOnboarding, 100);
+    return () => clearTimeout(timer);
   }, [navigation]);
 
   return (

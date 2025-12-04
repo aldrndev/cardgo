@@ -26,8 +26,8 @@ const AppContent = () => {
           prefixes: ["https://cardgo-sigma.vercel.app", "cardgo://"],
           config: {
             screens: {
-              PrivacyPolicy: "privacy",
-              Terms: "terms",
+              Startup: "",
+              Onboarding: "onboarding",
               Main: {
                 screens: {
                   HomeTab: "home",
@@ -35,7 +35,7 @@ const AppContent = () => {
                   SettingsTab: "settings",
                 },
               },
-            } as any, // Temporary fix for type inference issue
+            } as any,
           },
         }}
       >
