@@ -5,27 +5,24 @@
   "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "trailingSlash": false,
   "framework": null,
 
   "rewrites": [
     {
-      "source": "/_expo/(.*)",
-      "destination": "/_expo/$1"
+      "source": "/_expo/:path*",
+      "destination": "/_expo/:path*"
     },
     {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
     },
     {
-      "source": "/icons/(.*)",
-      "destination": "/icons/$1"
+      "source": "/icons/:path*",
+      "destination": "/icons/:path*"
     },
     {
-      "source": "/privacy",
-      "destination": "/privacy.html"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/:path((?!privacy|service-worker|manifest|favicon).*)",
       "destination": "/index.html"
     }
   ],
