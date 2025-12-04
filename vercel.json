@@ -10,19 +10,11 @@
 
   "rewrites": [
     {
-      "source": "/_expo/:path*",
-      "destination": "/_expo/:path*"
+      "source": "/privacy",
+      "destination": "/privacy/index.html"
     },
     {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
-      "source": "/icons/:path*",
-      "destination": "/icons/:path*"
-    },
-    {
-      "source": "/:path((?!privacy|service-worker|manifest|favicon).*)",
+      "source": "/((?!_expo|assets|icons|privacy|service-worker|manifest|favicon).*)",
       "destination": "/index.html"
     }
   ],
