@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { LockScreen } from "./src/screens/LockScreen";
 import { View, StyleSheet, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+import { isWeb } from "./src/utils/platform";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -38,12 +39,14 @@ export default function App() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        // Check biometric
-        const biometricEnabled = await BiometricService.isEnabled();
-        if (biometricEnabled) {
-          const success = await BiometricService.authenticate();
-          if (!success) {
-            // Handle biometric failure if needed
+        // Check biometric (skip on web)
+        if (!isWeb) {
+          const biometricEnabled = await BiometricService.isEnabled();
+          if (biometricEnabled) {
+            const success = await BiometricService.authenticate();
+            if (!success) {
+              // Handle biometric failure if needed
+            }
           }
         }
       } catch (e) {
@@ -53,7 +56,14 @@ export default function App() {
         await SplashScreen.hideAsync();
       }
     };
-    initApp();
+
+    // Safety timeout to ensure app loads even if something hangs
+    const timeout = setTimeout(() => {
+      setAppIsReady(true);
+      SplashScreen.hideAsync();
+    }, 5000);
+
+    initApp().then(() => clearTimeout(timeout));
   }, []);
 
   if (!appIsReady) {
