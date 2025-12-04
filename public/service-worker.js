@@ -1,17 +1,11 @@
 // Card Go Service Worker
-// Version: 1.0.2
+// Version: 1.0.3
 
-const CACHE_NAME = "card-go-v2";
-const RUNTIME_CACHE = "card-go-runtime-v2";
+const CACHE_NAME = "card-go-v3";
+const RUNTIME_CACHE = "card-go-runtime-v3";
 
-// Assets to cache on install
-const PRECACHE_URLS = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png",
-];
+// Assets to cache on install (only essential ones)
+const PRECACHE_URLS = ["/", "/index.html", "/manifest.json"];
 
 // Install event - cache essential assets
 self.addEventListener("install", (event) => {
@@ -19,9 +13,17 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log("[ServiceWorker] Precaching app shell");
-        return cache.addAll(PRECACHE_URLS);
+        // Cache each URL individually to handle failures gracefully
+        for (const url of PRECACHE_URLS) {
+          try {
+            await cache.add(url);
+            console.log("[ServiceWorker] Cached:", url);
+          } catch (error) {
+            console.warn("[ServiceWorker] Failed to cache:", url, error);
+          }
+        }
       })
       .then(() => {
         // Force the waiting service worker to become the active service worker
