@@ -99,74 +99,90 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
 
   const loadCards = async () => {
     setIsLoading(true);
-    const [storedCards, storedTransactions, storedPlans, storedSubscriptions] =
-      await Promise.all([
+
+    // Safety timeout
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 10000); // 10 seconds max
+
+    try {
+      const [
+        storedCards,
+        storedTransactions,
+        storedPlans,
+        storedSubscriptions,
+      ] = await Promise.all([
         storage.getCards(),
         storage.getTransactions(),
         storage.getInstallmentPlans(),
         storage.getSubscriptions(),
       ]);
 
-    // Recalculate usage for all cards based on current date
-    const updatedCards = storedCards.map((card) => {
-      const cardTransactions = storedTransactions.filter(
-        (t) => t.cardId === card.id
-      );
-      const usage = calculateCardUsage(card, cardTransactions);
-      return { ...card, currentUsage: usage };
-    });
+      // Recalculate usage for all cards based on current date
+      const updatedCards = storedCards.map((card) => {
+        const cardTransactions = storedTransactions.filter(
+          (t) => t.cardId === card.id
+        );
+        const usage = calculateCardUsage(card, cardTransactions);
+        return { ...card, currentUsage: usage };
+      });
 
-    // If usage changed, save it back
-    const hasChanges = updatedCards.some((card, index) => {
-      return card.currentUsage !== storedCards[index].currentUsage;
-    });
+      // If usage changed, save it back
+      const hasChanges = updatedCards.some((card, index) => {
+        return card.currentUsage !== storedCards[index].currentUsage;
+      });
 
-    if (hasChanges) {
-      await storage.saveCards(updatedCards);
-    }
-
-    setCards(updatedCards);
-    setTransactions(storedTransactions);
-    setInstallmentPlans(storedPlans);
-    setSubscriptions(storedSubscriptions);
-    setIsLoading(false);
-
-    // Check and reset paid status if we've entered a NEW billing cycle
-    const today = new Date();
-    const cardsWithResetStatus = updatedCards.map((card) => {
-      if (!card.isPaid) return card;
-
-      const currentCycle = getCurrentBillingCycle(card.billingCycleDay);
-
-      // Only reset if the current cycle is different from the paid cycle
-      // This means we've entered a new billing cycle since payment
-      if (card.paidForCycle !== currentCycle) {
-        // Reschedule notifications for the new cycle
-        NotificationService.schedulePaymentReminder(card);
-        return {
-          ...card,
-          isPaid: false,
-          updatedAt: today.toISOString(),
-        };
+      if (hasChanges) {
+        await storage.saveCards(updatedCards);
       }
-      return card;
-    });
 
-    const statusChanged = cardsWithResetStatus.some(
-      (card, idx) => card.isPaid !== updatedCards[idx].isPaid
-    );
+      setCards(updatedCards);
+      setTransactions(storedTransactions);
+      setInstallmentPlans(storedPlans);
+      setSubscriptions(storedSubscriptions);
 
-    if (statusChanged) {
-      setCards(cardsWithResetStatus);
-      await storage.saveCards(cardsWithResetStatus);
+      // Check and reset paid status if we've entered a NEW billing cycle
+      const today = new Date();
+      const cardsWithResetStatus = updatedCards.map((card) => {
+        if (!card.isPaid) return card;
+
+        const currentCycle = getCurrentBillingCycle(card.billingCycleDay);
+
+        // Only reset if the current cycle is different from the paid cycle
+        // This means we've entered a new billing cycle since payment
+        if (card.paidForCycle !== currentCycle) {
+          // Reschedule notifications for the new cycle
+          NotificationService.schedulePaymentReminder(card);
+          return {
+            ...card,
+            isPaid: false,
+            updatedAt: today.toISOString(),
+          };
+        }
+        return card;
+      });
+
+      const statusChanged = cardsWithResetStatus.some(
+        (card, idx) => card.isPaid !== updatedCards[idx].isPaid
+      );
+
+      if (statusChanged) {
+        setCards(cardsWithResetStatus);
+        await storage.saveCards(cardsWithResetStatus);
+      }
+
+      // Check for due subscriptions after loading
+      checkSubscriptions(
+        storedSubscriptions,
+        storedTransactions,
+        cardsWithResetStatus
+      );
+    } catch (error) {
+      console.error("Error loading cards:", error);
+    } finally {
+      clearTimeout(timeoutId);
+      setIsLoading(false);
     }
-
-    // Check for due subscriptions after loading
-    checkSubscriptions(
-      storedSubscriptions,
-      storedTransactions,
-      cardsWithResetStatus
-    );
   };
 
   const checkSubscriptions = async (
