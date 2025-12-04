@@ -26,6 +26,7 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import { getBillingCycleRange } from "../utils/billingCycle";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+import { scale, moderateScale } from "../utils/responsive";
 
 type TransactionsListScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -258,7 +259,12 @@ export const TransactionsListScreen = () => {
                         item.currency
                       )}
                     </Text>
-                    <Text style={[styles.rowSubtitle, { fontSize: 11 }]}>
+                    <Text
+                      style={[
+                        styles.rowSubtitle,
+                        { fontSize: moderateScale(11) },
+                      ]}
+                    >
                       ≈ {formatCurrency(item.amount)}
                     </Text>
                   </>
@@ -339,7 +345,7 @@ export const TransactionsListScreen = () => {
         <Text style={styles.title}>
           {card ? `Transaksi ${card.alias}` : "Semua Transaksi"}
         </Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: theme.containerSizes.iconMedium }} />
       </View>
 
       <View style={styles.summaryWrapper}>
@@ -760,7 +766,7 @@ const styles = StyleSheet.create({
   summaryAmount: {
     ...theme.typography.h2,
     color: "white",
-    fontSize: 28,
+    fontSize: moderateScale(28),
   },
   summaryBadge: {
     flexDirection: "row",
@@ -821,10 +827,10 @@ const styles = StyleSheet.create({
   },
   verticalDivider: {
     width: 1,
-    height: 20,
+    height: scale(20),
     backgroundColor: theme.colors.border,
     alignSelf: "center",
-    marginHorizontal: 4,
+    marginHorizontal: 8,
   },
   listContent: {
     padding: theme.spacing.m,
@@ -850,7 +856,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: "700",
     color: theme.colors.text.primary,
-    fontSize: 15,
+    fontSize: moderateScale(11),
   },
   dayTotal: {
     ...theme.typography.caption,
@@ -872,8 +878,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border + "40",
   },
   iconSquircle: {
-    width: 56,
-    height: 56,
+    width: theme.containerSizes.iconLarge,
+    height: theme.containerSizes.iconLarge,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
@@ -892,7 +898,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: "600",
     color: theme.colors.text.primary,
-    fontSize: 16, // Increased from 15
+    fontSize: moderateScale(15),
     flex: 1,
     marginRight: 8,
   },
@@ -909,8 +915,9 @@ const styles = StyleSheet.create({
   rowSubtitle: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
-    fontSize: 12,
+    fontSize: moderateScale(14),
     flex: 1,
+    marginRight: 8,
   },
   miniBadge: {
     backgroundColor: theme.colors.primary + "15",
@@ -920,9 +927,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   miniBadgeText: {
-    fontSize: 10,
-    fontWeight: "600",
+    ...theme.typography.caption,
     color: theme.colors.primary,
+    fontSize: moderateScale(12),
+    fontWeight: "600",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -950,18 +958,18 @@ const styles = StyleSheet.create({
   swipeHintText: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
-    fontSize: 10,
+    fontSize: moderateScale(10),
   },
 
   deleteAction: {
     backgroundColor: theme.colors.status.error,
     justifyContent: "center",
     alignItems: "center",
-    width: 50,
-    height: 50,
-    borderRadius: 30,
+    width: theme.containerSizes.iconLarge,
+    height: theme.containerSizes.iconLarge,
+    borderRadius: 12,
     alignSelf: "center",
-    marginRight: 16,
+    marginLeft: 12,
   },
   emptyContainer: {
     flex: 1,
@@ -1084,12 +1092,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   categoryIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: scale(50),
+    height: scale(50),
+    borderRadius: scale(25),
     backgroundColor: theme.colors.background,
-    alignItems: "center",
+    ...theme.shadows.small,
     justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,

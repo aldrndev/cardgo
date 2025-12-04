@@ -17,6 +17,7 @@ import { getCategoryIcon } from "../utils/categoryIcons";
 import { Subscription } from "../types/subscription";
 import { LinearGradient } from "expo-linear-gradient";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+import { scale, moderateScale } from "../utils/responsive";
 
 export const SubscriptionListScreen = () => {
   const navigation = useNavigation();
@@ -145,7 +146,7 @@ export const SubscriptionListScreen = () => {
         >
           Langganan Saya
         </Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: theme.containerSizes.iconMedium }} />
       </View>
 
       <View style={styles.summaryContainer}>
@@ -259,6 +260,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
+  activeText: {
+    ...theme.typography.caption,
+    color: "white",
+    fontSize: moderateScale(10),
+    fontWeight: "600",
+  },
   countText: {
     ...theme.typography.caption,
     color: theme.colors.primary,
@@ -316,12 +323,20 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   cardIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(6),
     justifyContent: "center",
     alignItems: "center",
     marginRight: 6,
+  },
+  activeIndicator: {
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
+    backgroundColor: theme.colors.status.success,
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardBadgeText: {
     fontSize: 10,
@@ -336,7 +351,7 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: "700",
     color: theme.colors.text.primary,
-    fontSize: 15, // Reduced slightly
+    fontSize: moderateScale(15), // Reduced slightly
   },
   itemDate: {
     ...theme.typography.caption,

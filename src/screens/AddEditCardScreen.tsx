@@ -22,6 +22,7 @@ import { formatNumberInput, parseAmount } from "../utils/formatters";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { CreditCard } from "../components/CreditCard";
+import { scale, moderateScale } from "../utils/responsive";
 
 type AddEditCardScreenRouteProp = RouteProp<RootStackParamList, "AddEditCard">;
 type AddEditCardScreenNavigationProp = any; // Placeholder for navigation type
@@ -859,7 +860,7 @@ const styles = StyleSheet.create({
     ...theme.typography.h3,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.m,
-    fontSize: 18,
+    fontSize: moderateScale(18),
   },
   inputGroup: {
     marginBottom: theme.spacing.m,
@@ -890,12 +891,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 48,
+    height: scale(48),
     ...theme.typography.body,
     color: theme.colors.text.primary,
   },
   textArea: {
-    height: 100,
+    height: scale(100),
     paddingVertical: theme.spacing.s,
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.m,
@@ -941,8 +942,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   themePreview: {
-    width: 60,
-    height: 40,
+    width: scale(60),
+    height: scale(40),
     borderRadius: theme.borderRadius.s,
     justifyContent: "center",
     alignItems: "center",
@@ -954,7 +955,7 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
     marginTop: 4,
-    fontSize: 11,
+    fontSize: moderateScale(11),
   },
   tagInputContainer: {
     flexDirection: "row",
@@ -963,8 +964,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.s,
   },
   addTagButton: {
-    width: 48,
-    height: 48,
+    width: theme.containerSizes.buttonHeight,
+    height: theme.containerSizes.buttonHeight,
     borderRadius: theme.borderRadius.m,
     backgroundColor: theme.colors.primary,
     justifyContent: "center",

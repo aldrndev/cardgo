@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
 import { Ionicons } from "@expo/vector-icons";
+import { scale, moderateScale } from "../utils/responsive";
 import { CATEGORIES } from "../utils/categorizer";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import {
@@ -126,7 +127,7 @@ export const AddSubscriptionScreen = () => {
           />
         </TouchableOpacity>
         <Text style={styles.title}>Tambah Langganan</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: theme.containerSizes.iconMedium }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -341,7 +342,12 @@ export const AddSubscriptionScreen = () => {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
             >
-              <Text style={{ fontSize: 10, color: theme.colors.text.tertiary }}>
+              <Text
+                style={{
+                  fontSize: moderateScale(10),
+                  color: theme.colors.text.tertiary,
+                }}
+              >
                 Geser kiri
               </Text>
               <Ionicons
@@ -439,13 +445,13 @@ const styles = StyleSheet.create({
     marginVertical: theme.spacing.xl,
   },
   currencyPrefix: {
-    fontSize: 32,
+    fontSize: moderateScale(32),
     fontWeight: "600",
     color: theme.colors.text.secondary,
     marginRight: theme.spacing.s,
   },
   amountInput: {
-    fontSize: 48,
+    fontSize: moderateScale(48),
     fontWeight: "700",
     color: theme.colors.text.primary,
     minWidth: 100,
@@ -474,7 +480,7 @@ const styles = StyleSheet.create({
     flex: 1,
     ...theme.typography.body,
     color: theme.colors.text.primary,
-    height: 40,
+    height: theme.containerSizes.iconMedium,
   },
   inputLabel: {
     ...theme.typography.caption,
@@ -508,7 +514,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...theme.typography.h3,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.s,
     marginTop: theme.spacing.s,
@@ -550,16 +556,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   categoryIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: theme.containerSizes.iconSmall,
+    height: theme.containerSizes.iconSmall,
+    borderRadius: scale(14),
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
     ...theme.shadows.small,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: theme.colors.text.secondary,
   },
   saveButton: {
@@ -573,7 +579,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
   inputGroup: {
     marginBottom: theme.spacing.m,

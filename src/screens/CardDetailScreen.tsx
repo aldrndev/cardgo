@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { getBillingCycleRange, formatDateRange } from "../utils/billingCycle";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import Swipeable from "react-native-gesture-handler/Swipeable";
+import { scale, moderateScale } from "../utils/responsive";
 
 type CardDetailScreenRouteProp = RouteProp<RootStackParamList, "CardDetail">;
 type CardDetailScreenNavigationProp = StackNavigationProp<
@@ -582,7 +583,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.s,
   },
   backButtonText: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     color: theme.colors.text.primary,
   },
   title: {
@@ -590,7 +591,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   placeholder: {
-    width: 40,
+    width: theme.containerSizes.iconMedium,
   },
   content: {
     paddingBottom: theme.spacing.xl,
@@ -609,7 +610,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
   cardContainer: {
     marginBottom: theme.spacing.l,
@@ -657,7 +658,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   progressBarBg: {
-    height: 8,
+    height: scale(8),
     backgroundColor: theme.colors.background,
     borderRadius: 4,
     overflow: "hidden",
@@ -695,9 +696,9 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.s,
   },
   healthScoreCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: scale(60),
+    height: scale(60),
+    borderRadius: scale(30),
     borderWidth: 4,
     borderColor: theme.colors.surface,
     backgroundColor: theme.colors.background,
@@ -725,9 +726,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.m,
   },
   seeAllText: {
-    ...theme.typography.button,
+    ...theme.typography.caption,
     color: theme.colors.primary,
-    fontSize: 14,
+    fontSize: moderateScale(14),
   },
   infoRow: {
     flexDirection: "row",
@@ -754,9 +755,9 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
+    width: theme.containerSizes.iconLarge,
+    height: theme.containerSizes.iconLarge,
+    borderRadius: scale(20),
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -767,29 +768,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionIcon: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
   },
   transactionDesc: {
     ...theme.typography.body,
     fontWeight: "600",
     color: theme.colors.text.primary,
-    fontSize: 16, // Increased from 15
+    fontSize: moderateScale(16), // Increased from 15
     marginRight: 8,
   },
   transactionDate: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
   transactionAmount: {
     ...theme.typography.body,
     fontWeight: "700",
     color: theme.colors.text.primary,
-    fontSize: 14,
+    fontSize: moderateScale(14),
   },
   convertedAmount: {
     ...theme.typography.caption,
-    fontSize: 10,
+    fontSize: moderateScale(10),
     color: theme.colors.text.tertiary,
     marginTop: 2,
   },

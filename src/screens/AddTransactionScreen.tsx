@@ -16,7 +16,8 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
-import { RootStackParamList, Transaction } from "../navigation/types";
+import { RootStackParamList } from "../navigation/types";
+import { Transaction } from "../types/card";
 import { categorizeTransaction, CATEGORIES } from "../utils/categorizer";
 import {
   formatNumberInput,
@@ -26,6 +27,7 @@ import {
 } from "../utils/formatters";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
+import { scale, moderateScale } from "../utils/responsive";
 
 type AddTransactionScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -161,7 +163,7 @@ export const AddTransactionScreen = () => {
           <Ionicons name="close" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Tambah Transaksi</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: scale(24) }} />
       </View>
 
       <KeyboardAvoidingView
@@ -563,13 +565,13 @@ const styles = StyleSheet.create({
     marginVertical: theme.spacing.xl,
   },
   currencyPrefix: {
-    fontSize: 32,
+    fontSize: moderateScale(32),
     fontWeight: "600",
     color: theme.colors.text.secondary,
     marginRight: theme.spacing.s,
   },
   amountInput: {
-    fontSize: 48,
+    fontSize: moderateScale(48),
     fontWeight: "700",
     color: theme.colors.text.primary,
     minWidth: 100,
@@ -599,11 +601,11 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text.primary,
     paddingVertical: theme.spacing.s, // ensure text is vertically centered
-    height: 40, // fixed height for alignment
+    height: theme.containerSizes.iconMedium, // fixed height for alignment
   },
   sectionLabel: {
     ...theme.typography.h3,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: theme.colors.text.primary,
   },
   categoryHeader: {
@@ -615,7 +617,7 @@ const styles = StyleSheet.create({
   swipeHintText: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
   categoryScrollContent: {
     gap: theme.spacing.s,
@@ -632,16 +634,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   categoryIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: theme.containerSizes.iconSmall,
+    height: theme.containerSizes.iconSmall,
+    borderRadius: scale(14),
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
     ...theme.shadows.small,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: theme.colors.text.secondary,
   },
   mainSaveButton: {
@@ -655,7 +657,7 @@ const styles = StyleSheet.create({
   mainSaveButtonText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
   switchContainer: {
     flexDirection: "row",

@@ -103,4 +103,18 @@ export const theme = {
       elevation: 10,
     },
   },
+  iconSizes: {
+    xs: scale(16),
+    s: scale(20),
+    m: scale(24),
+    l: scale(28),
+    xl: scale(32),
+  },
+  containerSizes: {
+    iconSmall: scale(28),
+    iconMedium: scale(40),
+    iconLarge: scale(56),
+    avatar: scale(48),
+    buttonHeight: scale(48),
+  },
 };
