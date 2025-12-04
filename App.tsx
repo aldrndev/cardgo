@@ -21,7 +21,24 @@ const AppContent = () => {
 
   return (
     <View style={{ flex: 1 }}>
-      <NavigationContainer>
+      <NavigationContainer
+        linking={{
+          prefixes: ["https://cardgo-sigma.vercel.app", "cardgo://"],
+          config: {
+            screens: {
+              PrivacyPolicy: "privacy",
+              Terms: "terms",
+              Main: {
+                screens: {
+                  HomeTab: "home",
+                  CardsTab: "cards",
+                  SettingsTab: "settings",
+                },
+              },
+            } as any, // Temporary fix for type inference issue
+          },
+        }}
+      >
         <AppNavigator />
       </NavigationContainer>
       {isLocked && (
