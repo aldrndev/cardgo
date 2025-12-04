@@ -1,0 +1,5 @@
+# PWA Generated Icons
+*.png
+!generate-icons.sh
+
+# Keep the script but ignore generated icons

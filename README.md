@@ -86,12 +86,72 @@ Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensiti
     ```
 
 3.  **Jalankan Aplikasi**
+
     ```bash
     npx expo start
     ```
+
     - Scan QR code dengan aplikasi **Expo Go** di Android/iOS.
     - Atau tekan `a` untuk menjalankan di Android Emulator.
     - Atau tekan `i` untuk menjalankan di iOS Simulator.
+
+4.  **Jalankan Web Version (PWA)**
+    ```bash
+    npm run web
+    ```
+    - Aplikasi akan terbuka di browser default Anda.
+    - Akses di `http://localhost:8081` atau port yang ditampilkan.
+
+---
+
+## 🌐 Progressive Web App (PWA) - iOS Support
+
+Card Go sekarang mendukung **PWA** sehingga pengguna iOS dapat menginstall aplikasi ke home screen **tanpa melalui App Store**!
+
+### ✨ Keuntungan PWA untuk iOS:
+
+- ✅ **Gratis** - Tanpa biaya Apple Developer ($99/tahun)
+- ✅ **Offline-First** - Bekerja tanpa koneksi internet
+- ✅ **Install to Home Screen** - Terlihat dan berfungsi seperti aplikasi native
+- ✅ **No Browser UI** - Fullscreen experience
+- ✅ **Auto Updates** - Versi terbaru otomatis tersedia setelah reload
+
+### 📲 Cara Install di iPhone/iPad:
+
+1. **Buka Safari**  
+   Buka aplikasi **Safari** (wajib Safari, tidak bisa Chrome/Firefox di iOS).
+
+2. **Kunjungi URL Aplikasi**  
+   Akses: `https://card-go.vercel.app` (atau URL deployment Anda)
+
+3. **Tambahkan ke Home Screen**
+
+   - Tap tombol **Share** (ikon kotak dengan panah ke atas) di bottom toolbar
+   - Scroll ke bawah dan pilih **"Add to Home Screen"**
+   - Edit nama app jika perlu (default: "Card Go")
+   - Tap **"Add"** di pojok kanan atas
+
+4. **Selesai!**
+   - Icon **Card Go** akan muncul di home screen Anda
+   - Tap icon untuk membuka aplikasi
+   - Aplikasi akan berjalan dalam mode standalone (fullscreen, tanpa address bar)
+
+### 🔄 Update PWA:
+
+Ketika ada versi baru aplikasi:
+
+1. Buka aplikasi PWA di home screen
+2. Swipe down untuk refresh
+3. Update akan otomatis terdownload di background
+
+### ✅ Fitur PWA yang Tersedia:
+
+- ✓ Offline support (semua data tersimpan lokal)
+- ✓ Install to home screen
+- ✓ Standalone mode (fullscreen)
+- ✓ iOS Safe Area support
+- ✓ Custom app icon & splash screen
+- ✓ Manifest & Service Worker
 
 ---
 

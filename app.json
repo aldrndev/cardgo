@@ -32,17 +32,32 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "Card Go",
+      "name": "Card Go - Credit Card Tracker",
       "shortName": "Card Go",
+      "description": "Lacak kartu kredit Anda dengan mudah dan aman. Offline-first, privacy-focused.",
       "display": "standalone",
       "backgroundColor": "#ffffff",
       "themeColor": "#4F46E5",
       "startUrl": "/",
-      "bundler": "metro"
+      "scope": "/",
+      "orientation": "portrait",
+      "bundler": "metro",
+      "output": "single",
+      "lang": "id",
+      "publicPath": "/",
+      "preferRelatedApplications": false,
+      "relatedApplications": [],
+      "manifest": "./public/manifest.json",
+      "serviceWorker": {
+        "url": "/service-worker.js"
+      },
+      "meta": {
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "apple-mobile-web-app-title": "Card Go"
+      }
     },
-    "plugins": [
-      "expo-font"
-    ],
+    "plugins": ["expo-font"],
     "extra": {
       "eas": {
         "projectId": "b0a34643-a9ac-4c13-a350-a45ebb87d85b"
