@@ -1,17 +1,19 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+
   "buildCommand": "npx expo export --platform web",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "framework": null,
+
   "rewrites": [
-    { "source": "/_expo/(.*)", "destination": "/_expo/$1" },
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
-    { "source": "/service-worker.js", "destination": "/service-worker.js" },
-    { "source": "/manifest.json", "destination": "/manifest.json" },
-    { "source": "/favicon.ico", "destination": "/favicon.ico" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
+
   "headers": [
     {
       "source": "/service-worker.js",
