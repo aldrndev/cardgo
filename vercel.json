@@ -4,9 +4,9 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "framework": null,
-  "rewrites": [
+  "routes": [
     { "handle": "filesystem" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
   "headers": [
     {
