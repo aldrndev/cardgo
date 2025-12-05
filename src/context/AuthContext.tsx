@@ -10,17 +10,20 @@ import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, AppStateStatus } from "react-native";
 import { platformCapabilities, isWeb } from "../utils/platform";
+import { BiometricService } from "../services/BiometricService";
 
 interface AuthContextType {
   isLocked: boolean;
   isAuthenticated: boolean;
   hasPin: boolean;
   hasBiometrics: boolean;
+  isBiometricEnabled: boolean; // NEW: Whether user has enabled biometric in settings
   setPin: (pin: string) => Promise<void>;
   unlock: (pin: string) => Promise<boolean>;
   authenticateWithBiometrics: () => Promise<boolean>;
   lockApp: () => void;
   removePin: () => Promise<void>;
+  refreshBiometricStatus: () => Promise<void>; // NEW: Refresh biometric status
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPin, setHasPin] = useState(false);
   const [hasBiometrics, setHasBiometrics] = useState(false);
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false); // NEW
   const [storedPin, setStoredPin] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,16 +57,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkBiometrics = async () => {
     if (!platformCapabilities.biometrics) {
       setHasBiometrics(false);
+      setIsBiometricEnabled(false);
       return;
     }
 
     try {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      const isEnabled = await BiometricService.isEnabled(); // Check user setting
+
       setHasBiometrics(hasHardware && isEnrolled);
+      setIsBiometricEnabled(isEnabled); // Only true if user enabled it
     } catch {
       setHasBiometrics(false);
+      setIsBiometricEnabled(false);
     }
+  };
+
+  const refreshBiometricStatus = async () => {
+    await checkBiometrics();
   };
 
   const checkPinStatus = async () => {
@@ -171,11 +184,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated,
         hasPin,
         hasBiometrics,
+        isBiometricEnabled,
         setPin,
         unlock,
         authenticateWithBiometrics,
         lockApp,
         removePin,
+        refreshBiometricStatus,
       }}
     >
       {children}

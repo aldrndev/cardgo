@@ -23,7 +23,7 @@ const AppContent = () => {
     <View style={{ flex: 1 }}>
       <NavigationContainer
         linking={{
-          prefixes: ["https://cardgo-sigma.vercel.app", "cardgo://"],
+          prefixes: ["cardgo://"],
           config: {
             screens: {
               Startup: "",

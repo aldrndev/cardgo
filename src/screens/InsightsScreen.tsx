@@ -8,19 +8,31 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import { PieChart, BarChart } from "react-native-chart-kit";
+import { LinearGradient } from "expo-linear-gradient";
+import { PieChart } from "react-native-chart-kit";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
-import { colors } from "../constants/colors";
 import { formatCurrency } from "../utils/formatters";
-import { moderateScale } from "../utils/responsive";
+import { moderateScale, scale } from "../utils/responsive";
 
 const { width } = Dimensions.get("window");
 
+// Distinct color palette
+const COLOR_PALETTE = [
+  "#FF6B6B",
+  "#845EC2",
+  "#F9A826",
+  "#2ECC71",
+  "#3498DB",
+  "#E74C3C",
+  "#9B59B6",
+  "#1ABC9C",
+  "#F39C12",
+  "#D35400",
+];
+
 export const InsightsScreen = () => {
-  const navigation = useNavigation();
   const { cards, transactions } = useCards();
   const [selectedPeriod, setSelectedPeriod] = useState<"month" | "year">(
     "month"
@@ -37,6 +49,7 @@ export const InsightsScreen = () => {
     setSelectedDate(newDate);
   };
 
+  // Filter transactions by period
   const filteredTransactions = useMemo(() => {
     const targetMonth = selectedDate.getMonth();
     const targetYear = selectedDate.getFullYear();
@@ -48,95 +61,128 @@ export const InsightsScreen = () => {
           txDate.getMonth() === targetMonth &&
           txDate.getFullYear() === targetYear
         );
-      } else {
-        return txDate.getFullYear() === targetYear;
       }
+      return txDate.getFullYear() === targetYear;
     });
   }, [transactions, selectedPeriod, selectedDate]);
+
+  // Previous period transactions for comparison
+  const prevPeriodTransactions = useMemo(() => {
+    const prevDate = new Date(selectedDate);
+    if (selectedPeriod === "month") {
+      prevDate.setMonth(prevDate.getMonth() - 1);
+    } else {
+      prevDate.setFullYear(prevDate.getFullYear() - 1);
+    }
+    const targetMonth = prevDate.getMonth();
+    const targetYear = prevDate.getFullYear();
+
+    return transactions.filter((tx) => {
+      const txDate = new Date(tx.date);
+      if (selectedPeriod === "month") {
+        return (
+          txDate.getMonth() === targetMonth &&
+          txDate.getFullYear() === targetYear
+        );
+      }
+      return txDate.getFullYear() === targetYear;
+    });
+  }, [transactions, selectedPeriod, selectedDate]);
+
+  // Total spending
+  const totalSpending = filteredTransactions.reduce(
+    (sum, tx) => sum + tx.amount,
+    0
+  );
+  const prevTotalSpending = prevPeriodTransactions.reduce(
+    (sum, tx) => sum + tx.amount,
+    0
+  );
+  const changePercent =
+    prevTotalSpending > 0
+      ? ((totalSpending - prevTotalSpending) / prevTotalSpending) * 100
+      : 0;
+  const avgTransaction =
+    filteredTransactions.length > 0
+      ? totalSpending / filteredTransactions.length
+      : 0;
+
+  // Weekly trend (last 7 days)
+  const weeklyTrend = useMemo(() => {
+    const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+    const trend = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayTx = transactions.filter((t) => {
+        const tDate = new Date(t.date);
+        return tDate.toDateString() === date.toDateString();
+      });
+      trend.push({
+        label: dayNames[date.getDay()],
+        amount: dayTx.reduce((sum, t) => sum + t.amount, 0),
+      });
+    }
+    return trend;
+  }, [transactions]);
+
+  const maxTrendValue = Math.max(...weeklyTrend.map((t) => t.amount), 1);
+
+  // Category breakdown
+  const categoryData = useMemo(() => {
+    const categoryTotals: Record<string, number> = {};
+    filteredTransactions.forEach((tx) => {
+      const cat = tx.category || "Other";
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + tx.amount;
+    });
+
+    return Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, amount], index) => ({
+        name,
+        population: amount,
+        color: COLOR_PALETTE[index % COLOR_PALETTE.length],
+        legendFontColor: theme.colors.text.secondary,
+        legendFontSize: 12,
+        percentage: totalSpending > 0 ? (amount / totalSpending) * 100 : 0,
+      }));
+  }, [filteredTransactions, totalSpending]);
+
+  // Card spending with limit usage
+  const cardSpendingData = useMemo(() => {
+    return cards
+      .filter((c) => !c.isArchived)
+      .map((card) => {
+        const cardTx = filteredTransactions.filter(
+          (tx) => tx.cardId === card.id
+        );
+        return {
+          card,
+          spending: cardTx.reduce((sum, tx) => sum + tx.amount, 0),
+          txCount: cardTx.length,
+          usagePercent: (card.currentUsage / card.creditLimit) * 100,
+        };
+      })
+      .filter((d) => d.spending > 0 || d.usagePercent > 0)
+      .sort((a, b) => b.spending - a.spending);
+  }, [cards, filteredTransactions]);
 
   const chartConfig = {
     backgroundGradientFrom: theme.colors.surface,
     backgroundGradientTo: theme.colors.surface,
-    color: (opacity = 1) => theme.colors.primary,
-    labelColor: (opacity = 1) => theme.colors.text.secondary,
-    strokeWidth: 2,
-    barPercentage: 0.7,
-    useShadowColorFromDataset: false,
-    decimalPlaces: 0,
-    propsForBackgroundLines: {
-      strokeDasharray: "", // solid lines
-      stroke: theme.colors.border,
-      strokeWidth: 1,
-      strokeOpacity: 0.2,
-    },
+    color: () => theme.colors.primary,
+    labelColor: () => theme.colors.text.secondary,
   };
 
-  // Calculate total spending per category
-  const categoryData = useMemo(() => {
-    const categoryTotals: Record<string, number> = {};
-    const palette = [
-      "#FF6B6B", // Red
-      "#4ECDC4", // Teal
-      "#45B7D1", // Blue
-      "#96CEB4", // Green
-      "#FFEEAD", // Yellow
-      "#D4A5A5", // Pink
-      "#9B59B6", // Purple
-      "#34495E", // Dark Blue
-    ];
-
-    filteredTransactions.forEach((tx) => {
-      if (categoryTotals[tx.category]) {
-        categoryTotals[tx.category] += tx.amount;
-      } else {
-        categoryTotals[tx.category] = tx.amount;
-      }
-    });
-
-    const total = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
-
-    return Object.keys(categoryTotals)
-      .map((key, index) => ({
-        name: key,
-        population: categoryTotals[key],
-        color: palette[index % palette.length],
-        legendFontColor: theme.colors.text.secondary,
-        legendFontSize: 12,
-        percentage: total > 0 ? (categoryTotals[key] / total) * 100 : 0,
-      }))
-      .sort((a, b) => b.population - a.population);
-  }, [filteredTransactions]);
-
-  // Calculate spending per card (List format)
-  const cardSpendingData = useMemo(() => {
-    const data: { card: any; amount: number; percentage: number }[] = [];
-    const total = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-
-    cards.forEach((card) => {
-      if (!card.isArchived) {
-        const cardSpending = filteredTransactions
-          .filter((tx) => tx.cardId === card.id)
-          .reduce((sum, tx) => sum + tx.amount, 0);
-
-        if (cardSpending > 0) {
-          data.push({
-            card,
-            amount: cardSpending,
-            percentage: total > 0 ? (cardSpending / total) * 100 : 0,
-          });
-        }
-      }
-    });
-
-    return data.sort((a, b) => b.amount - a.amount);
-  }, [cards, filteredTransactions]);
-
-  const totalSpending = useMemo(() => {
-    return filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-  }, [filteredTransactions]);
+  const formatShortCurrency = (amount: number) => {
+    if (amount >= 1000000) return `Rp ${(amount / 1000000).toFixed(1)}jt`;
+    if (amount >= 1000) return `Rp ${(amount / 1000).toFixed(0)}rb`;
+    return `Rp ${amount}`;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Period Selector */}
       <View style={styles.periodSelector}>
         <TouchableOpacity
           style={[
@@ -151,7 +197,7 @@ export const InsightsScreen = () => {
               selectedPeriod === "month" && styles.periodTextActive,
             ]}
           >
-            Bulan Ini
+            Bulanan
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -167,11 +213,12 @@ export const InsightsScreen = () => {
               selectedPeriod === "year" && styles.periodTextActive,
             ]}
           >
-            Tahun Ini
+            Tahunan
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Date Navigator */}
       <View style={styles.dateNavigator}>
         <TouchableOpacity
           onPress={() => navigateDate(-1)}
@@ -179,7 +226,7 @@ export const InsightsScreen = () => {
         >
           <Ionicons
             name="chevron-back"
-            size={moderateScale(24)}
+            size={24}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
@@ -189,7 +236,7 @@ export const InsightsScreen = () => {
                 month: "long",
                 year: "numeric",
               })
-            : selectedDate.getFullYear()}
+            : selectedDate.getFullYear().toString()}
         </Text>
         <TouchableOpacity
           onPress={() => navigateDate(1)}
@@ -197,118 +244,203 @@ export const InsightsScreen = () => {
         >
           <Ionicons
             name="chevron-forward"
-            size={moderateScale(24)}
+            size={24}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.summaryCard}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        {/* Summary Card */}
+        <LinearGradient
+          colors={["#00A896", "#028090"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.summaryCard}
+        >
           <Text style={styles.summaryLabel}>Total Pengeluaran</Text>
           <Text style={styles.summaryAmount}>
             {formatCurrency(totalSpending)}
           </Text>
+
+          <View style={styles.summaryDivider} />
+
+          <View style={styles.summaryStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {filteredTransactions.length}
+              </Text>
+              <Text style={styles.statLabel}>Transaksi</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {formatShortCurrency(avgTransaction)}
+              </Text>
+              <Text style={styles.statLabel}>Rata-rata</Text>
+            </View>
+            <View style={styles.statItem}>
+              <View style={styles.changeRow}>
+                <Ionicons
+                  name={changePercent >= 0 ? "arrow-up" : "arrow-down"}
+                  size={14}
+                  color="#FFF"
+                />
+                <Text style={styles.statValue}>
+                  {Math.abs(changePercent).toFixed(0)}%
+                </Text>
+              </View>
+              <Text style={styles.statLabel}>vs Sebelum</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* Weekly Trend */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tren 7 Hari Terakhir</Text>
+          <View style={styles.chartBars}>
+            {weeklyTrend.map((item, index) => (
+              <View key={index} style={styles.barColumn}>
+                <Text style={styles.barValue}>
+                  {item.amount > 0 ? formatShortCurrency(item.amount) : "-"}
+                </Text>
+                <View style={styles.barWrapper}>
+                  <View
+                    style={[
+                      styles.bar,
+                      {
+                        height:
+                          item.amount > 0
+                            ? `${Math.max(
+                                (item.amount / maxTrendValue) * 100,
+                                8
+                              )}%`
+                            : 4,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.barLabel}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
-        {categoryData.length > 0 ? (
-          <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Pengeluaran per Kategori</Text>
-            <View style={{ alignItems: "center" }}>
+        {/* Category Breakdown */}
+        {categoryData.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Kategori Pengeluaran</Text>
+            <View
+              style={{ alignItems: "center", marginBottom: theme.spacing.m }}
+            >
               <PieChart
                 data={categoryData}
-                width={width - theme.spacing.xl * 2}
-                height={200}
+                width={width - 80}
+                height={180}
                 chartConfig={chartConfig}
-                accessor={"population"}
-                backgroundColor={"transparent"}
-                paddingLeft={"0"}
-                center={[width / 4, 0]}
-                absolute
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="50"
                 hasLegend={false}
+                absolute
               />
             </View>
-            <View style={styles.legendContainer}>
-              {categoryData.map((item, index) => (
-                <View key={index} style={styles.legendItem}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={styles.legendList}>
+              {categoryData.slice(0, 5).map((item, index) => (
+                <View key={index} style={styles.legendRow}>
+                  <View style={styles.legendLeft}>
                     <View
                       style={[
-                        styles.legendColor,
+                        styles.legendDot,
                         { backgroundColor: item.color },
                       ]}
                     />
-                    <Text style={styles.legendName}>{item.name}</Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.legendAmount}>
-                      {formatCurrency(item.population)}
+                    <Text style={styles.legendName} numberOfLines={1}>
+                      {item.name}
                     </Text>
-                    <Text style={styles.legendPercentage}>
-                      {item.percentage.toFixed(1)}%
+                  </View>
+                  <View style={styles.legendRight}>
+                    <Text style={styles.legendAmount}>
+                      {formatShortCurrency(item.population)}
+                    </Text>
+                    <Text style={styles.legendPercent}>
+                      {item.percentage.toFixed(0)}%
                     </Text>
                   </View>
                 </View>
               ))}
             </View>
           </View>
-        ) : null}
+        )}
 
-        {cardSpendingData.length > 0 ? (
-          <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Pengeluaran per Kartu</Text>
-            {cardSpendingData.map((item, index) => (
-              <View key={index} style={styles.cardSpendingItem}>
-                <View style={styles.cardSpendingHeader}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons
-                      name="card"
-                      size={moderateScale(16)}
-                      color={theme.colors.text.secondary}
-                      style={{ marginRight: 8 }}
+        {/* Card Usage */}
+        {cardSpendingData.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Penggunaan Kartu</Text>
+            {cardSpendingData.slice(0, 4).map((item) => (
+              <View key={item.card.id} style={styles.cardUsageItem}>
+                <View style={styles.cardUsageHeader}>
+                  <View style={styles.cardNameRow}>
+                    <View
+                      style={[
+                        styles.cardDot,
+                        {
+                          backgroundColor:
+                            item.card.colorTheme || theme.colors.primary,
+                        },
+                      ]}
                     />
-                    <Text style={styles.cardSpendingName}>
-                      {item.card.alias.toUpperCase()}
+                    <Text style={styles.cardUsageName} numberOfLines={1}>
+                      {item.card.alias}
                     </Text>
                   </View>
-                  <Text style={styles.cardSpendingAmount}>
-                    {formatCurrency(item.amount)}
+                  <Text style={styles.cardUsageSpending}>
+                    {formatShortCurrency(item.spending)}
                   </Text>
                 </View>
-                <View style={styles.progressBarBg}>
+                <View style={styles.usageBarBg}>
                   <View
                     style={[
-                      styles.progressBarFill,
+                      styles.usageBarFill,
                       {
-                        width: `${item.percentage}%`,
+                        width: `${Math.min(item.usagePercent, 100)}%`,
                         backgroundColor:
-                          item.card.colorTheme || theme.colors.primary,
+                          item.usagePercent > 80
+                            ? theme.colors.status.error
+                            : item.usagePercent > 50
+                            ? theme.colors.status.warning
+                            : theme.colors.primary,
                       },
                     ]}
                   />
                 </View>
-                <Text style={styles.cardSpendingPercentage}>
-                  {item.percentage.toFixed(1)}% dari total
+                <Text style={styles.usageText}>
+                  {item.usagePercent.toFixed(0)}% limit • {item.txCount}{" "}
+                  transaksi
                 </Text>
               </View>
             ))}
           </View>
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons
-                name="pie-chart-outline"
-                size={moderateScale(48)}
-                color={theme.colors.text.tertiary}
-              />
-            </View>
+        )}
+
+        {/* Empty State */}
+        {categoryData.length === 0 && cardSpendingData.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons
+              name="pie-chart-outline"
+              size={48}
+              color={theme.colors.text.tertiary}
+            />
             <Text style={styles.emptyTitle}>Belum Ada Data</Text>
-            <Text style={styles.emptyDescription}>
-              Tidak ada transaksi pengeluaran di periode ini. Coba pilih bulan
-              lain atau tambah transaksi baru.
+            <Text style={styles.emptyDesc}>
+              Tidak ada transaksi di periode ini
             </Text>
           </View>
         )}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -319,99 +451,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.l,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: theme.colors.text.primary,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  summaryCard: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.l,
-    alignItems: "center",
-  },
-  summaryLabel: {
-    ...theme.typography.body,
-    color: theme.colors.text.inverse,
-    opacity: 0.9,
-    marginBottom: theme.spacing.xs,
-  },
-  summaryAmount: {
-    ...theme.typography.h1,
-    color: theme.colors.text.inverse,
-    fontSize: 32,
-  },
-  chartContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  chartTitle: {
-    ...theme.typography.h3,
-    marginBottom: theme.spacing.m,
-    color: theme.colors.text.primary,
-  },
-  emptyStateContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.xl,
-    marginTop: theme.spacing.l,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderStyle: "dashed",
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  emptyTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  emptyDescription: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-    maxWidth: "80%",
-  },
   periodSelector: {
     flexDirection: "row",
     backgroundColor: theme.colors.surface,
     margin: theme.spacing.m,
     padding: 4,
     borderRadius: theme.borderRadius.l,
-    ...theme.shadows.small,
   },
   periodButton: {
     flex: 1,
@@ -423,12 +468,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   periodText: {
-    ...theme.typography.caption,
+    fontSize: moderateScale(14),
     fontWeight: "600",
     color: theme.colors.text.secondary,
   },
   periodTextActive: {
-    color: theme.colors.text.inverse,
+    color: "#FFF",
   },
   dateNavigator: {
     flexDirection: "row",
@@ -441,79 +486,209 @@ const styles = StyleSheet.create({
     padding: theme.spacing.s,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.m,
-    ...theme.shadows.small,
   },
   dateLabel: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    minWidth: 150,
-    textAlign: "center",
-  },
-  legendContainer: {
-    marginTop: theme.spacing.m,
-    gap: theme.spacing.s,
-  },
-  legendItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  legendName: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    fontSize: 14,
-  },
-  legendAmount: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  legendPercentage: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  cardSpendingItem: {
-    marginBottom: theme.spacing.m,
-  },
-  cardSpendingHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  cardSpendingName: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  cardSpendingAmount: {
-    ...theme.typography.body,
+    fontSize: moderateScale(16),
     fontWeight: "700",
     color: theme.colors.text.primary,
   },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
+  content: {
+    paddingHorizontal: theme.spacing.m,
   },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 4,
+  summaryCard: {
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.l,
+    marginBottom: theme.spacing.m,
   },
-  cardSpendingPercentage: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
+  summaryLabel: {
+    fontSize: moderateScale(13),
+    color: "rgba(255,255,255,0.8)",
+  },
+  summaryAmount: {
+    fontSize: moderateScale(28),
+    fontWeight: "700",
+    color: "#FFF",
+    marginTop: theme.spacing.xs,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginVertical: theme.spacing.m,
+  },
+  summaryStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  statItem: {
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: moderateScale(16),
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  statLabel: {
+    fontSize: moderateScale(11),
+    color: "rgba(255,255,255,0.7)",
     marginTop: 2,
+  },
+  changeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.m,
+    marginBottom: theme.spacing.m,
+  },
+  cardTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: "700",
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.m,
+  },
+  chartBars: {
+    flexDirection: "row",
+    height: scale(130),
+    gap: 4,
+  },
+  barColumn: {
+    flex: 1,
+    alignItems: "center",
+  },
+  barValue: {
+    fontSize: moderateScale(8),
+    color: theme.colors.text.tertiary,
+    marginBottom: 4,
+    height: 20,
+    textAlign: "center",
+  },
+  barWrapper: {
+    flex: 1,
+    width: "75%",
+    justifyContent: "flex-end",
+  },
+  bar: {
+    width: "100%",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 4,
+    minHeight: 4,
+  },
+  barLabel: {
+    fontSize: moderateScale(11),
+    color: theme.colors.text.secondary,
+    marginTop: 6,
+    fontWeight: "500",
+  },
+  legendList: {
+    gap: theme.spacing.s,
+  },
+  legendRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: theme.spacing.xs,
+  },
+  legendLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: theme.spacing.s,
+  },
+  legendName: {
+    fontSize: moderateScale(14),
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+  legendRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.m,
+  },
+  legendAmount: {
+    fontSize: moderateScale(14),
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+    minWidth: 65,
     textAlign: "right",
+  },
+  legendPercent: {
+    fontSize: moderateScale(12),
+    color: theme.colors.text.secondary,
+    minWidth: 30,
+    textAlign: "right",
+  },
+  cardUsageItem: {
+    marginBottom: theme.spacing.m,
+    paddingBottom: theme.spacing.s,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  cardUsageHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.xs,
+  },
+  cardNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  cardDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: theme.spacing.s,
+  },
+  cardUsageName: {
+    fontSize: moderateScale(14),
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+  cardUsageSpending: {
+    fontSize: moderateScale(14),
+    fontWeight: "700",
+    color: theme.colors.text.primary,
+  },
+  usageBarBg: {
+    height: 6,
+    backgroundColor: theme.colors.border,
+    borderRadius: 3,
+    marginVertical: theme.spacing.xs,
+  },
+  usageBarFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  usageText: {
+    fontSize: moderateScale(11),
+    color: theme.colors.text.tertiary,
+  },
+  emptyState: {
+    alignItems: "center",
+    padding: theme.spacing.xxl,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.l,
+  },
+  emptyTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: "700",
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.m,
+  },
+  emptyDesc: {
+    fontSize: moderateScale(14),
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.s,
+    textAlign: "center",
   },
 });

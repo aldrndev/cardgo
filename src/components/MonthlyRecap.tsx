@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
 import { theme } from "../constants/theme";
+// const { colors } = useAppTheme(); // Removed invalid hook usage
 import { useCards } from "../context/CardsContext";
 import { LinearGradient } from "expo-linear-gradient";
 

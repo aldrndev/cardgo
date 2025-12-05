@@ -75,7 +75,10 @@ export const NotificationService = {
             body,
             data: { cardId: card.id, type: "payment" },
           },
-          trigger: triggerDate as any,
+          trigger: {
+            type: "date",
+            date: triggerDate,
+          } as any,
           identifier: `payment-${card.id}-${daysBefore}days`,
         });
       }
@@ -113,7 +116,10 @@ export const NotificationService = {
           body: `Segera bayar tagihan ${card.alias} hari ini untuk menghindari denda.`,
           data: { cardId: card.id, type: "payment" },
         },
-        trigger: onDueDate as any,
+        trigger: {
+          type: "date",
+          date: onDueDate,
+        } as any,
         identifier: `payment-${card.id}-today`,
       });
     }
@@ -150,7 +156,10 @@ export const NotificationService = {
             body: `Anda bisa mengajukan kenaikan limit untuk ${card.alias} dalam ${daysBefore} hari lagi.`,
             data: { cardId: card.id, type: "limit" },
           },
-          trigger: triggerDate as any,
+          trigger: {
+            type: "date",
+            date: triggerDate,
+          } as any,
           identifier: `limit-${card.id}-${daysBefore}days`,
         });
       }
@@ -197,7 +206,10 @@ export const NotificationService = {
             body: `Annual Fee untuk ${card.alias} akan di tagihkan dalam ${daysBefore} hari.`,
             data: { cardId: card.id, type: "annual" },
           },
-          trigger: triggerDate as any,
+          trigger: {
+            type: "date",
+            date: triggerDate,
+          } as any,
           identifier: `annual-${card.id}-${daysBefore}days`,
         });
       }
@@ -227,7 +239,10 @@ export const NotificationService = {
         body: `Sudah 7 hari sejak pengajuan kenaikan limit ${cardName}. Update statusnya sekarang di aplikasi!`,
         data: { recordId, type: "limit_status", cardId },
       },
-      trigger: triggerDate as any,
+      trigger: {
+        type: "date",
+        date: triggerDate,
+      } as any,
       identifier: `limit-status-${recordId}`,
     });
   },

@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
+// import { useAppTheme } from "../context/ThemeContext";
 import { PaymentRecord } from "../types/card";
 import { formatCurrency } from "../utils/formatters";
 import { useNavigation } from "@react-navigation/native";

@@ -17,7 +17,7 @@ import { useCards } from "../context/CardsContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { EmptyState } from "../components/EmptyState";
 import { CreditCard } from "../components/CreditCard";
-import { FloatingActionButton } from "../components/FloatingActionButton";
+import { ExpandableFAB } from "../components/FloatingActionButton";
 
 import { storage } from "../utils/storage";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -29,7 +29,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
 import { getCategoryIcon } from "../utils/categoryIcons";
-import { scale, moderateScale } from "../utils/responsive";
+import { scale, moderateScale, isTablet } from "../utils/responsive";
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, "HomeTab">,
@@ -37,7 +37,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.85;
+const CARD_WIDTH = isTablet ? Math.min(width * 0.6, 450) : width * 0.85;
 
 const TIPS = [
   "Bayar tagihan penuh setiap bulan untuk menghindari bunga.",
@@ -102,7 +102,11 @@ export const HomeScreen = () => {
   }, [activeCards]);
 
   const recentTransactions = React.useMemo(() => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+
     return transactions
+      .filter((tx) => new Date(tx.date) <= today) // Only show transactions that have occurred
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
   }, [transactions]);
@@ -270,10 +274,20 @@ export const HomeScreen = () => {
     return "Selamat Malam";
   };
 
+  const getInitials = (name: string | undefined) => {
+    if (!name) return "?";
+    const words = name.trim().split(/\s+/);
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    }
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  };
+
   const today = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
+    year: "numeric",
   });
 
   if (isLoading) {
@@ -304,11 +318,9 @@ export const HomeScreen = () => {
             onPress={() => navigation.navigate("SettingsTab")}
           >
             <View style={styles.avatarContainer}>
-              <Ionicons
-                name="person"
-                size={moderateScale(24)}
-                color="#FFFFFF"
-              />
+              <Text style={styles.avatarInitials}>
+                {getInitials(userProfile?.nickname)}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -324,8 +336,8 @@ export const HomeScreen = () => {
         backgroundColor={theme.colors.background}
       />
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greetingText}>{getGreeting()},</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.greetingText}>{getGreeting()} 👋</Text>
           <Text style={styles.headerTitle}>
             {userProfile?.nickname || "Pengguna"}
           </Text>
@@ -336,7 +348,9 @@ export const HomeScreen = () => {
           onPress={() => navigation.navigate("SettingsTab")}
         >
           <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={24} color="#FFFFFF" />
+            <Text style={styles.avatarInitials}>
+              {getInitials(userProfile?.nickname)}
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -345,208 +359,178 @@ export const HomeScreen = () => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Summary Card */}
-        <View style={styles.summaryContainer}>
-          <LinearGradient
-            colors={["#4F46E5", "#3730A3"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.summaryCard}
-          >
-            <View>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-              >
-                <Text style={[styles.summaryLabel, { marginBottom: 0 }]}>
-                  Total Tagihan
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setIsTotalBillVisible(!isTotalBillVisible)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        <View style={styles.responsiveContainer}>
+          {/* Summary Card */}
+          <View style={styles.summaryContainer}>
+            <LinearGradient
+              colors={["#4F46E5", "#3730A3"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.summaryCard}
+            >
+              <View>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
                 >
-                  <Ionicons
-                    name={
-                      isTotalBillVisible ? "eye-outline" : "eye-off-outline"
-                    }
-                    size={moderateScale(16)}
-                    color="rgba(255,255,255,0.7)"
-                  />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.summaryAmount}>
-                {isTotalBillVisible
-                  ? formatCurrency(totalBill, 1_000_000_000)
-                  : "Rp *******"}
-              </Text>
-            </View>
-            <View style={styles.summaryFooter}>
-              <View>
-                <Text style={styles.summarySubLabel}>Total Limit</Text>
-                <Text style={styles.summarySubValue}>
-                  {formatCurrency(totalLimit)}
+                  <Text style={[styles.summaryLabel, { marginBottom: 0 }]}>
+                    Total Tagihan
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIsTotalBillVisible(!isTotalBillVisible)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons
+                      name={
+                        isTotalBillVisible ? "eye-outline" : "eye-off-outline"
+                      }
+                      size={moderateScale(16)}
+                      color="rgba(255,255,255,0.7)"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.summaryAmount}>
+                  {isTotalBillVisible
+                    ? formatCurrency(totalBill, 1_000_000_000)
+                    : "Rp *******"}
                 </Text>
               </View>
-              <View style={styles.verticalDivider} />
-              <View>
-                <Text style={styles.summarySubLabel}>Sisa Limit</Text>
-                <Text style={styles.summarySubValue}>
-                  {formatCurrency(totalLimit - totalUsage)}
-                </Text>
+              <View style={styles.summaryFooter}>
+                <View>
+                  <Text style={styles.summarySubLabel}>Total Limit</Text>
+                  <Text style={styles.summarySubValue}>
+                    {formatCurrency(totalLimit)}
+                  </Text>
+                </View>
+                <View style={styles.verticalDivider} />
+                <View>
+                  <Text style={styles.summarySubLabel}>Sisa Limit</Text>
+                  <Text style={styles.summarySubValue}>
+                    {formatCurrency(totalLimit - totalUsage)}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </LinearGradient>
-        </View>
+            </LinearGradient>
+          </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickActionsContent}
-          >
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("Search")}
+          {/* Quick Actions */}
+          <View style={styles.quickActionsSection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickActionsContent}
             >
-              <LinearGradient
-                colors={["#06B6D4", "#0891B2"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("Search")}
               >
-                <Ionicons name="search" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Cari</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#06B6D4", "#0891B2"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="search" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Cari</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("AddEditCard", {})}
-            >
-              <LinearGradient
-                colors={["#4F46E5", "#4338CA"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("AddEditCard", {})}
               >
-                <Ionicons name="add" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Tambah</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#4F46E5", "#4338CA"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="add" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Tambah</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("LimitIncreaseHistory", {})}
-            >
-              <LinearGradient
-                colors={["#10B981", "#059669"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("LimitIncreaseHistory", {})}
               >
-                <Ionicons name="trending-up" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Naik Limit</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#10B981", "#059669"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="trending-up" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Naik Limit</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("Calendar")}
-            >
-              <LinearGradient
-                colors={["#F59E0B", "#D97706"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("TransactionsList", {})}
               >
-                <Ionicons name="calendar" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Kalender</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#3B82F6", "#2563EB"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="receipt" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Transaksi</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("TransactionsList", {})}
-            >
-              <LinearGradient
-                colors={["#14B8A6", "#0D9488"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("SubscriptionList", {})}
               >
-                <Ionicons name="receipt" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Transaksi</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#F59E0B", "#D97706"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="repeat" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Langganan</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("SubscriptionList", {})}
-            >
-              <LinearGradient
-                colors={["#8B5CF6", "#7C3AED"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("PaymentHistory", {})}
               >
-                <Ionicons name="repeat" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Langganan</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#B91C1C", "#EF4444"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="wallet" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Pembayaran</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("PaymentHistory", {})}
-            >
-              <LinearGradient
-                colors={["#10B981", "#059669"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("ArchivedCards")}
               >
-                <Ionicons name="wallet" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Pembayaran</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#64748B", "#475569"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <Ionicons name="archive-outline" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.actionLabel}>Arsip</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("InsightsTab")}
-            >
-              <LinearGradient
-                colors={["#3B82F6", "#2563EB"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Statistik</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("ArchivedCards")}
-            >
-              <LinearGradient
-                colors={["#64748B", "#475569"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIcon}
-              >
-                <Ionicons name="archive-outline" size={24} color="#FFFFFF" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Arsip</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        {/* Upcoming Reminders */}
-        {(paymentReminders.length > 0 ||
-          upcomingReminders.length > 0 ||
-          limitIncreaseReminders.length > 0) && (
-          <View style={styles.remindersSection}>
-            <View style={styles.remindersCard}>
+          {/* Upcoming Reminders */}
+          {(paymentReminders.length > 0 ||
+            upcomingReminders.length > 0 ||
+            limitIncreaseReminders.length > 0) && (
+            <View style={styles.remindersSection}>
               <View style={styles.remindersHeader}>
                 <Text style={styles.sectionTitle}>Pengingat Mendatang</Text>
                 <View style={styles.tooltipContainer}>
@@ -577,7 +561,7 @@ export const HomeScreen = () => {
                     }
                   >
                     <LinearGradient
-                      colors={["#3B82F6", "#2563EB"]} // Blue gradient
+                      colors={["#EF4444", "#DC2626"]} // Red gradient for payments
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.reminderGradient}
@@ -585,29 +569,29 @@ export const HomeScreen = () => {
                       <View style={styles.reminderHeader}>
                         <View style={styles.reminderIconContainer}>
                           <Ionicons
-                            name="card-outline"
+                            name="alert-circle"
                             size={20}
                             color="#FFFFFF"
                           />
                         </View>
                         <View style={styles.daysLeftBadge}>
-                          <Text
-                            style={[styles.daysLeftText, { color: "#000000" }]}
-                          >
-                            {reminder.daysLeft} Hari Lagi
+                          <Text style={styles.daysLeftText}>
+                            {reminder.daysLeft} Hari
                           </Text>
                         </View>
                       </View>
-                      <Text style={styles.reminderTitle}>Jatuh Tempo</Text>
-                      <Text style={styles.reminderSubtitle}>
-                        {reminder.cardName}
-                      </Text>
-                      <Text style={styles.reminderDate}>
-                        {new Date(reminder.date).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                        })}
-                      </Text>
+                      <View>
+                        <Text style={styles.reminderTitle}>Jatuh Tempo</Text>
+                        <Text style={styles.reminderSubtitle}>
+                          {reminder.cardName}
+                        </Text>
+                        <Text style={styles.reminderDate}>
+                          {new Date(reminder.date).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                          })}
+                        </Text>
+                      </View>
                     </LinearGradient>
                   </TouchableOpacity>
                 ))}
@@ -624,7 +608,7 @@ export const HomeScreen = () => {
                     }
                   >
                     <LinearGradient
-                      colors={["#8B5CF6", "#6D28D9"]} // Violet gradient
+                      colors={["#10B981", "#059669"]} // Green gradient
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.reminderGradient}
@@ -638,23 +622,23 @@ export const HomeScreen = () => {
                           />
                         </View>
                         <View style={styles.daysLeftBadge}>
-                          <Text
-                            style={[styles.daysLeftText, { color: "#000000" }]}
-                          >
-                            {reminder.daysLeft} Hari Lagi
+                          <Text style={styles.daysLeftText}>
+                            {reminder.daysLeft} Hari
                           </Text>
                         </View>
                       </View>
-                      <Text style={styles.reminderTitle}>Kenaikan Limit</Text>
-                      <Text style={styles.reminderSubtitle}>
-                        {reminder.cardName}
-                      </Text>
-                      <Text style={styles.reminderDate}>
-                        {new Date(reminder.date).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                        })}
-                      </Text>
+                      <View>
+                        <Text style={styles.reminderTitle}>Kenaikan Limit</Text>
+                        <Text style={styles.reminderSubtitle}>
+                          {reminder.cardName}
+                        </Text>
+                        <Text style={styles.reminderDate}>
+                          {new Date(reminder.date).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                          })}
+                        </Text>
+                      </View>
                     </LinearGradient>
                   </TouchableOpacity>
                 ))}
@@ -681,359 +665,383 @@ export const HomeScreen = () => {
                           <Ionicons name="calendar" size={20} color="#FFFFFF" />
                         </View>
                         <View style={styles.daysLeftBadge}>
-                          <Text
-                            style={[styles.daysLeftText, { color: "#000000" }]}
-                          >
-                            {reminder.daysLeft} Hari Lagi
+                          <Text style={styles.daysLeftText}>
+                            {reminder.daysLeft} Hari
                           </Text>
                         </View>
                       </View>
-                      <Text style={styles.reminderTitle}>Annual Fee</Text>
-                      <Text style={styles.reminderSubtitle}>
-                        {reminder.cardName}
-                      </Text>
-                      <Text style={styles.reminderDate}>
-                        {new Date(reminder.date).toLocaleDateString("id-ID", {
-                          month: "long",
-                        })}
-                      </Text>
+                      <View>
+                        <Text style={styles.reminderTitle}>Iuran Tahunan</Text>
+                        <Text style={styles.reminderSubtitle}>
+                          {reminder.cardName}
+                        </Text>
+                        <Text style={styles.reminderDate}>
+                          {new Date(reminder.date).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                          })}
+                        </Text>
+                      </View>
                     </LinearGradient>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Tags Filter - Only show if there are cards */}
-        {unarchivedCards.length > 0 && (
-          <View style={styles.tagsSection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tagsFilterContainer}
-            >
-              {allTags.map((tag) => (
-                <TouchableOpacity
-                  key={tag}
-                  style={[
-                    styles.filterChip,
-                    (selectedTag === tag ||
-                      (!selectedTag && tag === "Semua")) &&
-                      styles.activeFilterChip,
-                  ]}
-                  onPress={() => handleTagSelect(tag)}
-                >
-                  <Text
+          {/* Tags Filter - Only show if there are cards */}
+          {unarchivedCards.length > 0 && (
+            <View style={styles.tagsSection}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tagsFilterContainer}
+              >
+                {allTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
                     style={[
-                      styles.filterText,
+                      styles.filterChip,
                       (selectedTag === tag ||
                         (!selectedTag && tag === "Semua")) &&
-                        styles.activeFilterText,
+                        styles.activeFilterChip,
                     ]}
+                    onPress={() => handleTagSelect(tag)}
                   >
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Cards Carousel */}
-        <View style={styles.carouselSection}>
-          {unarchivedCards.length === 0 ? (
-            <View
-              style={[
-                styles.noResultContainer,
-                { marginTop: 0, borderStyle: "solid", borderWidth: 0 },
-              ]}
-            >
-              <View
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 30,
-                  backgroundColor: theme.colors.primary + "15",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: theme.spacing.m,
-                }}
-              >
-                <Ionicons
-                  name="card-outline"
-                  size={moderateScale(32)}
-                  color={theme.colors.primary}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.noResultText,
-                  {
-                    marginTop: 0,
-                    color: theme.colors.text.primary,
-                    fontWeight: "600",
-                  },
-                ]}
-              >
-                Belum ada kartu
-              </Text>
-              <Text
-                style={{
-                  ...theme.typography.caption,
-                  color: theme.colors.text.secondary,
-                  textAlign: "center",
-                  marginBottom: theme.spacing.l,
-                  maxWidth: "80%",
-                }}
-              >
-                Tambahkan kartu kredit pertamamu untuk mulai memantau
-                pengeluaran
-              </Text>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: theme.colors.primary,
-                  paddingHorizontal: theme.spacing.l,
-                  paddingVertical: theme.spacing.s,
-                  borderRadius: theme.borderRadius.m,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: theme.spacing.s,
-                }}
-                onPress={() => navigation.navigate("AddEditCard", {})}
-              >
-                <Ionicons name="add" size={20} color="#FFF" />
-                <Text style={{ color: "#FFF", fontWeight: "600" }}>
-                  Tambah Kartu
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : activeCards.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.carouselContent}
-              decelerationRate="fast"
-              snapToInterval={
-                Dimensions.get("window").width -
-                theme.spacing.xl * 2 +
-                theme.spacing.m
-              }
-            >
-              {activeCards.map((card) => (
-                <CreditCard
-                  key={card.id}
-                  card={card}
-                  onPress={() =>
-                    navigation.navigate("CardDetail", { cardId: card.id })
-                  }
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.noResultContainer}>
-              <Ionicons
-                name="search-outline"
-                size={moderateScale(48)}
-                color={theme.colors.text.tertiary}
-              />
-              <Text style={styles.noResultText}>
-                Tidak ada kartu dengan tag "{selectedTag}"
-              </Text>
-              <TouchableOpacity
-                style={styles.resetFilterButton}
-                onPress={() => setSelectedTag("Semua")}
-              >
-                <Text style={styles.resetFilterText}>Reset Filter</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        <View
-          style={[styles.sectionDivider, { marginBottom: theme.spacing.s }]}
-        />
-
-        {/* Limit Warnings */}
-        <View style={[styles.warningSection, { marginTop: 0 }]}>
-          {overLimitCards.length > 0 && (
-            <LinearGradient
-              colors={["#B91C1C", "#EF4444"]} // Darker red gradient
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.overLimitCard}
-            >
-              <View style={styles.alertHeader}>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
-                  <View style={styles.warningIconContainer}>
-                    <Ionicons name="warning" size={20} color="#B91C1C" />
-                  </View>
-                  <Text style={styles.overLimitTitle}>Peringatan Limit</Text>
-                </View>
-              </View>
-
-              {overLimitCards.map((card) => {
-                const percentage = Math.min(
-                  (card.currentUsage / card.creditLimit) * 100,
-                  100
-                );
-                const remaining = card.creditLimit - card.currentUsage;
-
-                return (
-                  <View key={card.id} style={styles.overLimitItem}>
-                    <View style={styles.overLimitRow}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <Ionicons name="card" size={16} color="#FFFFFF" />
-                        <Text style={styles.overLimitCardName}>
-                          {card.alias.toUpperCase()}
-                        </Text>
-                      </View>
-                      <Text style={styles.overLimitPercentage}>
-                        {percentage.toFixed(0)}% Terpakai
-                      </Text>
-                    </View>
-
-                    <View style={styles.overLimitProgressBg}>
-                      <View
-                        style={[
-                          styles.overLimitProgressBar,
-                          { width: `${percentage}%` },
-                        ]}
-                      />
-                    </View>
-
-                    <View style={styles.overLimitDetails}>
-                      <View>
-                        <Text style={styles.overLimitLabel}>Sisa Limit</Text>
-                        <Text style={styles.overLimitValue}>
-                          {formatCurrency(remaining)}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.overLimitButton}
-                        onPress={() =>
-                          navigation.navigate("CardDetail", {
-                            cardId: card.id,
-                          })
-                        }
-                      >
-                        <Text style={styles.overLimitButtonText}>
-                          Lihat Detail
-                        </Text>
-                        <Ionicons
-                          name="arrow-forward"
-                          size={moderateScale(14)}
-                          color="#B91C1C"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })}
-            </LinearGradient>
-          )}
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Aktivitas Terakhir</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("TransactionsList", {})}
-            >
-              <Text style={styles.seeAllText}>Lihat Semua</Text>
-            </TouchableOpacity>
-          </View>
-          {recentTransactions.length > 0 ? (
-            recentTransactions.map((tx) => {
-              const card = cards.find((c) => c.id === tx.cardId);
-              const { iconName, iconColor } = getCategoryIcon(tx.category);
-
-              return (
-                <View key={tx.id} style={styles.transactionItem}>
-                  <View style={styles.transactionLeft}>
-                    <View
+                    <Text
                       style={[
-                        styles.transactionIconContainer,
-                        { backgroundColor: iconColor + "20" },
+                        styles.filterText,
+                        (selectedTag === tag ||
+                          (!selectedTag && tag === "Semua")) &&
+                          styles.activeFilterText,
                       ]}
                     >
-                      <Ionicons
-                        name={iconName}
-                        size={moderateScale(28)}
-                        color={iconColor}
-                      />
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Cards Carousel */}
+          <View style={styles.carouselSection}>
+            {unarchivedCards.length === 0 ? (
+              <View
+                style={[
+                  styles.noResultContainer,
+                  { marginTop: 0, borderStyle: "solid", borderWidth: 0 },
+                ]}
+              >
+                <View
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    backgroundColor: theme.colors.primary + "15",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: theme.spacing.m,
+                  }}
+                >
+                  <Ionicons
+                    name="card-outline"
+                    size={moderateScale(32)}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.noResultText,
+                    {
+                      marginTop: 0,
+                      color: theme.colors.text.primary,
+                      fontWeight: "600",
+                    },
+                  ]}
+                >
+                  Belum ada kartu
+                </Text>
+                <Text
+                  style={{
+                    ...theme.typography.caption,
+                    color: theme.colors.text.secondary,
+                    textAlign: "center",
+                    marginBottom: theme.spacing.l,
+                    maxWidth: "80%",
+                  }}
+                >
+                  Tambahkan kartu kredit pertamamu untuk mulai memantau
+                  pengeluaran
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: theme.colors.primary,
+                    paddingHorizontal: theme.spacing.l,
+                    paddingVertical: theme.spacing.s,
+                    borderRadius: theme.borderRadius.m,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: theme.spacing.s,
+                  }}
+                  onPress={() => navigation.navigate("AddEditCard", {})}
+                >
+                  <Ionicons name="add" size={20} color="#FFF" />
+                  <Text style={{ color: "#FFF", fontWeight: "600" }}>
+                    Tambah Kartu
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : activeCards.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.carouselContent}
+                decelerationRate="fast"
+                snapToInterval={
+                  Dimensions.get("window").width -
+                  theme.spacing.xl * 2 +
+                  theme.spacing.m
+                }
+              >
+                {activeCards.map((card) => (
+                  <CreditCard
+                    key={card.id}
+                    card={card}
+                    onPress={() =>
+                      navigation.navigate("CardDetail", { cardId: card.id })
+                    }
+                  />
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.noResultContainer}>
+                <Ionicons
+                  name="search-outline"
+                  size={moderateScale(48)}
+                  color={theme.colors.text.tertiary}
+                />
+                <Text style={styles.noResultText}>
+                  Tidak ada kartu dengan tag "{selectedTag}"
+                </Text>
+                <TouchableOpacity
+                  style={styles.resetFilterButton}
+                  onPress={() => setSelectedTag("Semua")}
+                >
+                  <Text style={styles.resetFilterText}>Reset Filter</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <View
+            style={[styles.sectionDivider, { marginBottom: theme.spacing.s }]}
+          />
+
+          {/* Limit Warnings */}
+          <View style={[styles.warningSection, { marginTop: 0 }]}>
+            {overLimitCards.length > 0 && (
+              <LinearGradient
+                colors={["#B91C1C", "#EF4444"]} // Darker red gradient
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.overLimitCard}
+              >
+                <View style={styles.alertHeader}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <View style={styles.warningIconContainer}>
+                      <Ionicons name="warning" size={20} color="#B91C1C" />
                     </View>
-                    <View style={styles.transactionTextContainer}>
-                      <Text
-                        style={styles.transactionDesc}
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
-                      >
-                        {tx.description}
-                      </Text>
-                      <Text style={styles.transactionSub}>
-                        {new Date(tx.date).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    {tx.currency &&
-                    tx.currency !== "IDR" &&
-                    tx.originalAmount ? (
-                      <>
-                        <Text style={styles.transactionAmount}>
-                          {formatForeignCurrency(
-                            tx.originalAmount,
-                            tx.currency
-                          )}
-                        </Text>
-                        <Text style={styles.convertedAmount}>
-                          ≈ {formatCurrency(tx.amount)}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={styles.transactionAmount}>
-                        {formatCurrency(tx.amount)}
-                      </Text>
-                    )}
+                    <Text style={styles.overLimitTitle}>Peringatan Limit</Text>
                   </View>
                 </View>
-              );
-            })
-          ) : (
-            <Text style={styles.emptyText}>Belum ada transaksi</Text>
-          )}
-        </View>
 
-        {/* Financial Tip */}
-        <View style={styles.tipContainer}>
-          <View style={styles.tipHeader}>
-            <Ionicons
-              name="bulb-outline"
-              size={moderateScale(20)}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.tipTitle}>Tips Keuangan</Text>
+                {overLimitCards.map((card) => {
+                  const percentage = Math.min(
+                    (card.currentUsage / card.creditLimit) * 100,
+                    100
+                  );
+                  const remaining = card.creditLimit - card.currentUsage;
+
+                  return (
+                    <View key={card.id} style={styles.overLimitItem}>
+                      <View style={styles.overLimitRow}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <Ionicons name="card" size={16} color="#FFFFFF" />
+                          <Text style={styles.overLimitCardName}>
+                            {card.alias.toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={styles.overLimitPercentage}>
+                          {percentage.toFixed(0)}% Terpakai
+                        </Text>
+                      </View>
+
+                      <View style={styles.overLimitProgressBg}>
+                        <View
+                          style={[
+                            styles.overLimitProgressBar,
+                            { width: `${percentage}%` },
+                          ]}
+                        />
+                      </View>
+
+                      <View style={styles.overLimitDetails}>
+                        <View>
+                          <Text style={styles.overLimitLabel}>Sisa Limit</Text>
+                          <Text style={styles.overLimitValue}>
+                            {formatCurrency(remaining)}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.overLimitButton}
+                          onPress={() =>
+                            navigation.navigate("CardDetail", {
+                              cardId: card.id,
+                            })
+                          }
+                        >
+                          <Text style={styles.overLimitButtonText}>
+                            Lihat Detail
+                          </Text>
+                          <Ionicons
+                            name="arrow-forward"
+                            size={moderateScale(14)}
+                            color="#B91C1C"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </LinearGradient>
+            )}
           </View>
-          <Text style={styles.tipText}>{tip}</Text>
+
+          {/* Recent Activity */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Aktivitas Terakhir</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("TransactionsList", {})}
+              >
+                <Text style={styles.seeAllText}>Lihat Semua</Text>
+              </TouchableOpacity>
+            </View>
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((tx) => {
+                const card = cards.find((c) => c.id === tx.cardId);
+                const { iconName, iconColor } = getCategoryIcon(tx.category);
+
+                return (
+                  <View key={tx.id} style={styles.transactionItem}>
+                    <View style={styles.transactionLeft}>
+                      <View
+                        style={[
+                          styles.transactionIconContainer,
+                          { backgroundColor: iconColor + "20" },
+                        ]}
+                      >
+                        <Ionicons
+                          name={iconName}
+                          size={moderateScale(28)}
+                          color={iconColor}
+                        />
+                      </View>
+                      <View style={styles.transactionTextContainer}>
+                        <Text
+                          style={styles.transactionDesc}
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                        >
+                          {tx.description}
+                        </Text>
+                        <Text style={styles.transactionSub}>
+                          {new Date(tx.date).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      {tx.currency &&
+                      tx.currency !== "IDR" &&
+                      tx.originalAmount ? (
+                        <>
+                          <Text style={styles.transactionAmount}>
+                            {formatForeignCurrency(
+                              tx.originalAmount,
+                              tx.currency
+                            )}
+                          </Text>
+                          <Text style={styles.convertedAmount}>
+                            ≈ {formatCurrency(tx.amount)}
+                          </Text>
+                        </>
+                      ) : (
+                        <Text style={styles.transactionAmount}>
+                          {formatCurrency(tx.amount)}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <Text style={styles.emptyText}>Belum ada transaksi</Text>
+            )}
+          </View>
+
+          {/* Financial Tip */}
+          <View style={styles.tipContainer}>
+            <View style={styles.tipHeader}>
+              <Ionicons
+                name="bulb-outline"
+                size={moderateScale(20)}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.tipTitle}>Tips Keuangan</Text>
+            </View>
+            <Text style={styles.tipText}>{tip}</Text>
+          </View>
         </View>
       </ScrollView>
 
-      <FloatingActionButton
-        onPress={() => navigation.navigate("AddEditCard", {})}
+      <ExpandableFAB
+        actions={[
+          {
+            icon: "card-outline",
+            label: "Tambah Kartu",
+            onPress: () => navigation.navigate("AddEditCard", {}),
+            color: "#4F46E5",
+          },
+          {
+            icon: "receipt-outline",
+            label: "Catat Transaksi",
+            onPress: () => navigation.navigate("AddTransaction", {}),
+            color: "#10B981",
+          },
+          {
+            icon: "repeat-outline",
+            label: "Langganan Baru",
+            onPress: () => navigation.navigate("AddSubscription", {}),
+            color: "#8B5CF6",
+          },
+        ]}
       />
       <MonthlyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
     </SafeAreaView>
@@ -1045,6 +1053,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  responsiveContainer: {
+    width: "100%",
+    maxWidth: isTablet ? 600 : undefined,
+    alignSelf: "center",
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1055,14 +1068,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: theme.spacing.l,
-    paddingVertical: theme.spacing.m,
+    paddingTop: theme.spacing.m,
+    paddingBottom: theme.spacing.l,
     backgroundColor: theme.colors.background,
   },
+  headerLeft: {
+    flex: 1,
+  },
   greetingText: {
-    ...theme.typography.h2,
-    fontSize: 18,
-    color: theme.colors.text.primary,
-    fontWeight: "800",
+    fontSize: moderateScale(14),
+    color: theme.colors.text.secondary,
+    fontWeight: "500",
+    marginBottom: 2,
   },
   logo: {
     ...theme.typography.h2,
@@ -1071,17 +1088,15 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    ...theme.typography.body,
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: moderateScale(22),
+    fontWeight: "700",
     color: theme.colors.text.primary,
-    // marginTop: 2,
-    // marginBottom: 2,
+    marginBottom: 2,
   },
   dateText: {
-    ...theme.typography.caption,
+    fontSize: moderateScale(12),
     color: theme.colors.text.tertiary,
-    fontSize: 12,
+    fontWeight: "500",
   },
   profileButton: {
     padding: 4,
@@ -1094,6 +1109,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...theme.shadows.small,
+  },
+  avatarInitials: {
+    ...theme.typography.h3,
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   content: {
     paddingBottom: 100,
@@ -1364,13 +1384,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.m,
     gap: theme.spacing.m,
   },
-  reminderCard: {
-    width: 160,
-    padding: theme.spacing.m,
+  reminderItem: {
+    width: 180, // Increased from 150
     borderRadius: theme.borderRadius.l,
     ...theme.shadows.small,
     marginRight: theme.spacing.s,
     overflow: "hidden",
+  },
+  reminderGradient: {
+    padding: theme.spacing.m,
+    height: 130, // Reduced from 160
+    justifyContent: "space-between",
   },
   reminderHeader: {
     flexDirection: "row",
@@ -1382,6 +1406,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1389,12 +1414,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
   },
   daysLeftText: {
     ...theme.typography.caption,
     fontWeight: "700",
     fontSize: 10,
+    color: theme.colors.text.primary,
   },
   reminderBody: {
     gap: 2,
@@ -1528,18 +1554,7 @@ const styles = StyleSheet.create({
   warningSection: {
     marginBottom: theme.spacing.xl,
   },
-  reminderItem: {
-    width: 160,
-    borderRadius: theme.borderRadius.l,
-    ...theme.shadows.small,
-    marginRight: theme.spacing.s,
-    overflow: "hidden",
-  },
-  reminderGradient: {
-    padding: theme.spacing.m,
-    minHeight: 140,
-    justifyContent: "space-between",
-  },
+
   reminderTitle: {
     ...theme.typography.body,
     fontWeight: "700",

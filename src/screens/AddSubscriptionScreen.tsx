@@ -56,10 +56,7 @@ export const AddSubscriptionScreen = () => {
       Alert.alert("Validasi Gagal", "Mohon pilih Kartu Kredit");
       return;
     }
-    if (!description.trim()) {
-      Alert.alert("Validasi Gagal", "Mohon isi Deskripsi");
-      return;
-    }
+    // Description is optional - nama layanan sudah cukup sebagai identifikasi
 
     if (currency !== "IDR" && !exchangeRate) {
       Alert.alert("Validasi Gagal", "Mohon masukkan nilai tukar (kurs).");

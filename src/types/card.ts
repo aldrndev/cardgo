@@ -43,6 +43,9 @@ export interface Card {
   limitIncreaseFrequency?: number; // Months (e.g., 6)
   nextLimitIncreaseDate?: string; // Calculated ISO Date
   isLimitIncreaseReminderEnabled?: boolean;
+
+  // Linked/Shared Limits
+  linkedGroupId?: string; // Reference to LinkedLimitGroup
 }
 
 export interface Subscription {
@@ -160,5 +163,14 @@ export const CARD_THEMES: CardTheme[] = [
 
 export type CardFormData = Omit<
   Card,
-  "id" | "createdAt" | "updatedAt" | "isArchived"
+  "id" | "createdAt" | "updatedAt" | "currentUsage"
 >;
+
+export interface LinkedLimitGroup {
+  id: string;
+  name: string; // e.g., "BCA Main + Supplementary"
+  cardIds: string[];
+  sharedLimit: number;
+  createdAt: string;
+  updatedAt: string;
+}

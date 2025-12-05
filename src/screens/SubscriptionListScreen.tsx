@@ -10,13 +10,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { theme } from "../constants/theme";
+
 import { useCards } from "../context/CardsContext";
+
 import { Ionicons } from "@expo/vector-icons";
 import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
+
 import { getCategoryIcon } from "../utils/categoryIcons";
+
 import { Subscription } from "../types/subscription";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+
 import { scale, moderateScale } from "../utils/responsive";
 
 export const SubscriptionListScreen = () => {

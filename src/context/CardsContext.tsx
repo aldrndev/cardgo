@@ -62,10 +62,14 @@ interface CardsContextType {
     cardId: string,
     amount?: number,
     notes?: string,
-    paymentType?: "full" | "minimal"
+    paymentType?: "full" | "minimal",
+    paidDate?: Date
   ) => Promise<void>;
   getPaymentHistory: (cardId: string) => PaymentRecord[];
   checkAndResetPaidStatus: () => Promise<void>;
+  // Linked Limits
+  linkedLimitGroups: any[];
+  getGroupUsage: (groupId: string) => number;
 }
 
 const CardsContext = createContext<CardsContextType | undefined>(undefined);
@@ -77,6 +81,7 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     []
   );
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [linkedLimitGroups, setLinkedLimitGroups] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -502,21 +507,25 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     cardId: string,
     amount?: number,
     notes?: string,
-    paymentType?: "full" | "minimal"
+    paymentType?: "full" | "minimal",
+    paidDate?: Date // User-selected payment date
   ) => {
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
 
-    const today = new Date();
+    const paymentDate = paidDate || new Date();
     // Get the CURRENT billing cycle based on the card's billing day
     const currentCycle = getCurrentBillingCycle(card.billingCycleDay);
+
+    // Calculate payment amount
+    const paymentAmount = amount || card.currentUsage || 0;
 
     // Create payment record
     const paymentRecord: PaymentRecord = {
       id: uuidv4(),
-      paidDate: today.toISOString(),
-      amount: amount || card.currentUsage || 0,
-      billingCycle: currentCycle, // Use the correct billing cycle
+      paidDate: paymentDate.toISOString(),
+      amount: paymentAmount,
+      billingCycle: currentCycle,
       notes,
       paymentType: paymentType || "full",
     };
@@ -533,21 +542,34 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
       return recordDate >= twoYearsAgo;
     });
 
+    // Payment restores limit INSTANTLY
+    // Full payment: usage goes to 0
+    // Partial payment: usage reduced by payment amount
+    const newUsage =
+      paymentType === "full" || paymentAmount >= (card.currentUsage || 0)
+        ? 0
+        : Math.max(0, (card.currentUsage || 0) - paymentAmount);
+
+    const isFullyPaid = newUsage === 0;
+
     const updatedCard: Card = {
       ...card,
-      isPaid: true,
-      paidForCycle: currentCycle, // Track which cycle was paid
-      lastPaymentDate: today.toISOString(),
+      currentUsage: newUsage, // Reduce usage by payment
+      isPaid: isFullyPaid,
+      paidForCycle: isFullyPaid ? currentCycle : card.paidForCycle,
+      lastPaymentDate: paymentDate.toISOString(),
       paymentHistory: filteredHistory,
-      updatedAt: today.toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const updatedCards = cards.map((c) => (c.id === cardId ? updatedCard : c));
     setCards(updatedCards);
     await storage.saveCards(updatedCards);
 
-    // Cancel payment notifications
-    await NotificationService.cancelPaymentReminders(cardId);
+    // Only cancel notifications if fully paid
+    if (isFullyPaid) {
+      await NotificationService.cancelPaymentReminders(cardId);
+    }
   };
 
   const getPaymentHistory = (cardId: string): PaymentRecord[] => {
@@ -625,6 +647,16 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   };
 
+  // Linked Limit Groups
+  const getGroupUsage = (groupId: string): number => {
+    const group = linkedLimitGroups.find((g) => g.id === groupId);
+    if (!group) return 0;
+
+    return cards
+      .filter((card) => group.cardIds.includes(card.id))
+      .reduce((sum, card) => sum + (card.currentUsage || 0), 0);
+  };
+
   return (
     <CardsContext.Provider
       value={{
@@ -649,6 +681,9 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
         markCardAsPaid,
         getPaymentHistory,
         checkAndResetPaidStatus,
+        // Linked Limits
+        linkedLimitGroups,
+        getGroupUsage,
       }}
     >
       {children}

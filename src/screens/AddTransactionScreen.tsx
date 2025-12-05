@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Modal,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -65,6 +66,13 @@ export const AddTransactionScreen = () => {
   const [installmentMonths, setInstallmentMonths] = useState(3);
   const [customMonthlyAmount, setCustomMonthlyAmount] = useState("");
   const [adminFee, setAdminFee] = useState("");
+
+  // Date Picker State
+  const [transactionDate, setTransactionDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDay, setTempDay] = useState(new Date().getDate());
+  const [tempMonth, setTempMonth] = useState(new Date().getMonth());
+  const [tempYear, setTempYear] = useState(new Date().getFullYear());
 
   // Helper to parse localized numbers (remove dots/commas)
   const parseNumber = (value: string) => {
@@ -136,7 +144,7 @@ export const AddTransactionScreen = () => {
           id: Date.now().toString(),
           cardId: selectedCardId,
           amount: finalAmount, // Always store IDR equivalent for totals
-          date: new Date().toISOString(),
+          date: transactionDate.toISOString(), // Use selected date
           description,
           category,
           type: "expense",
@@ -306,6 +314,39 @@ export const AddTransactionScreen = () => {
               ) : null}
             </View>
           ) : null}
+
+          {/* Date Picker Button */}
+          <TouchableOpacity
+            style={styles.datePickerButton}
+            onPress={() => {
+              setTempDay(transactionDate.getDate());
+              setTempMonth(transactionDate.getMonth());
+              setTempYear(transactionDate.getFullYear());
+              setShowDatePicker(true);
+            }}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={moderateScale(20)}
+              color={theme.colors.primary}
+            />
+            <View style={{ flex: 1, marginLeft: theme.spacing.s }}>
+              <Text style={styles.datePickerLabel}>Tanggal Transaksi</Text>
+              <Text style={styles.datePickerValue}>
+                {transactionDate.toLocaleDateString("id-ID", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={moderateScale(18)}
+              color={theme.colors.text.tertiary}
+            />
+          </TouchableOpacity>
 
           <View style={styles.card}>
             <View style={styles.switchContainer}>
@@ -536,6 +577,90 @@ export const AddTransactionScreen = () => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <View style={styles.datePickerModal}>
+          <View style={styles.datePickerContent}>
+            <View style={styles.datePickerHeader}>
+              <Text style={styles.datePickerTitle}>Pilih Tanggal</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Ionicons
+                  name="close"
+                  size={moderateScale(24)}
+                  color={theme.colors.text.secondary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dateRow}>
+              <View style={styles.dateColumn}>
+                <Text style={styles.dateLabel}>Hari</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={tempDay.toString()}
+                  onChangeText={(text) => {
+                    const num = parseInt(text) || 1;
+                    setTempDay(Math.min(31, Math.max(1, num)));
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+              <View style={styles.dateColumn}>
+                <Text style={styles.dateLabel}>Bulan</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={(tempMonth + 1).toString()}
+                  onChangeText={(text) => {
+                    const num = parseInt(text) || 1;
+                    setTempMonth(Math.min(12, Math.max(1, num)) - 1);
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+              <View style={styles.dateColumn}>
+                <Text style={styles.dateLabel}>Tahun</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={tempYear.toString()}
+                  onChangeText={(text) => {
+                    const num = parseInt(text) || new Date().getFullYear();
+                    setTempYear(num);
+                  }}
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+              </View>
+            </View>
+
+            <View style={styles.datePickerActions}>
+              <TouchableOpacity
+                style={styles.datePickerCancel}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.datePickerCancelText}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.datePickerConfirm}
+                onPress={() => {
+                  const newDate = new Date(tempYear, tempMonth, tempDay);
+                  setTransactionDate(newDate);
+                  setShowDatePicker(false);
+                }}
+              >
+                <Text style={styles.datePickerConfirmText}>Pilih</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -794,5 +919,102 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
     marginTop: 4,
+  },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    marginBottom: theme.spacing.m,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.small,
+  },
+  datePickerLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: 2,
+  },
+  datePickerValue: {
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+    fontWeight: "500",
+  },
+  datePickerModal: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  datePickerContent: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.l,
+    width: "85%",
+    maxHeight: "80%",
+    ...theme.shadows.large,
+  },
+  datePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.m,
+  },
+  datePickerTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text.primary,
+  },
+  dateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.l,
+    gap: theme.spacing.s,
+  },
+  dateColumn: {
+    flex: 1,
+  },
+  dateLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  dateInput: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+    textAlign: "center",
+    ...theme.typography.h3,
+    color: theme.colors.text.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  datePickerActions: {
+    flexDirection: "row",
+    gap: theme.spacing.m,
+    marginTop: theme.spacing.m,
+  },
+  datePickerCancel: {
+    flex: 1,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    backgroundColor: theme.colors.background,
+    alignItems: "center",
+  },
+  datePickerConfirm: {
+    flex: 1,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+  },
+  datePickerCancelText: {
+    ...theme.typography.button,
+    color: theme.colors.text.secondary,
+  },
+  datePickerConfirmText: {
+    ...theme.typography.button,
+    color: theme.colors.text.inverse,
   },
 });

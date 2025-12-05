@@ -107,7 +107,7 @@ export const SettingsScreen = () => {
     refreshCards,
   } = useCards();
   const { getRecordsByCardId } = useLimitIncrease();
-  const { hasPin, removePin } = useAuth();
+  const { hasPin, removePin, refreshBiometricStatus } = useAuth();
 
   const [biometricEnabled, setBiometricEnabled] = React.useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = React.useState(false);
@@ -155,10 +155,12 @@ export const SettingsScreen = () => {
       if (success) {
         await BiometricService.setEnabled(true);
         setBiometricEnabled(true);
+        await refreshBiometricStatus(); // Refresh AuthContext state
       }
     } else {
       await BiometricService.setEnabled(false);
       setBiometricEnabled(false);
+      await refreshBiometricStatus(); // Refresh AuthContext state
     }
   };
 
@@ -536,6 +538,22 @@ export const SettingsScreen = () => {
             />
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Kustomisasi</Text>
+          <SettingsItem
+            icon="options-outline"
+            label="Preferensi"
+            sublabel="Kategori kustom, mata uang, dan lainnya"
+            onPress={() => navigation.navigate("Customization")}
+          />
+          <SettingsItem
+            icon="link-outline"
+            label="Limit Gabungan"
+            sublabel="Kelola kartu dengan limit bersama"
+            onPress={() => navigation.navigate("LinkedLimits")}
+          />
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Zona Bahaya</Text>

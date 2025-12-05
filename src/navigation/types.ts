@@ -6,7 +6,7 @@ export type RootStackParamList = {
   AddEditCard: { cardId?: string };
   About: undefined;
   TransactionsList: { cardId?: string };
-  AddTransaction: { cardId: string };
+  AddTransaction: { cardId?: string };
   AddSubscription: { cardId?: string };
   SetPin: undefined;
   ArchivedCards: undefined;
@@ -19,6 +19,8 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   Terms: undefined;
   BackupExport: undefined;
+  Customization: undefined;
+  LinkedLimits: undefined;
 };
 
 export type TabParamList = {

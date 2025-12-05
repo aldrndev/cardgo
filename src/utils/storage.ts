@@ -212,4 +212,62 @@ export const storage = {
       };
     }
   },
+
+  async saveCustomCategories(categories: string[]): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(categories);
+      await AsyncStorage.setItem("@card_go_custom_categories", jsonValue);
+    } catch (e) {
+      console.error("Failed to save custom categories", e);
+    }
+  },
+
+  async getCustomCategories(): Promise<string[]> {
+    try {
+      const jsonValue = await AsyncStorage.getItem(
+        "@card_go_custom_categories"
+      );
+      return jsonValue != null ? JSON.parse(jsonValue) : [];
+    } catch (e) {
+      console.error("Failed to fetch custom categories", e);
+      return [];
+    }
+  },
+
+  async saveDefaultCurrency(currency: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem("@card_go_default_currency", currency);
+    } catch (e) {
+      console.error("Failed to save default currency", e);
+    }
+  },
+
+  async getDefaultCurrency(): Promise<string> {
+    try {
+      const value = await AsyncStorage.getItem("@card_go_default_currency");
+      return value || "IDR";
+    } catch (e) {
+      console.error("Failed to fetch default currency", e);
+      return "IDR";
+    }
+  },
+
+  async saveLinkedLimitGroups(groups: any[]): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(groups);
+      await AsyncStorage.setItem("@card_go_linked_limits", jsonValue);
+    } catch (e) {
+      console.error("Failed to save linked limit groups", e);
+    }
+  },
+
+  async getLinkedLimitGroups(): Promise<any[]> {
+    try {
+      const jsonValue = await AsyncStorage.getItem("@card_go_linked_limits");
+      return jsonValue != null ? JSON.parse(jsonValue) : [];
+    } catch (e) {
+      console.error("Failed to fetch linked limit groups", e);
+      return [];
+    }
+  },
 };

@@ -514,9 +514,11 @@ export const TransactionsListScreen = () => {
               contentContainerStyle={styles.yearScrollContent}
             >
               {[
+                now.getFullYear() + 1, // Next year for future transactions
                 now.getFullYear(),
                 now.getFullYear() - 1,
                 now.getFullYear() - 2,
+                now.getFullYear() - 3,
               ].map((year) => (
                 <TouchableOpacity
                   key={year}
