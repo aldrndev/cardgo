@@ -14,12 +14,17 @@ import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
+import * as Print from "expo-print";
 import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrencyExact } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
 import { storage } from "../utils/storage";
+import {
+  ExportOptionsModal,
+  ExportOptions,
+} from "../components/ExportOptionsModal";
 
 export const BackupExportScreen = () => {
   const navigation = useNavigation();
@@ -29,6 +34,17 @@ export const BackupExportScreen = () => {
 
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<string | null>(null);
+  const [showCustomExport, setShowCustomExport] = useState(false);
+
+  // Inline export options state
+  const [exportFormat, setExportFormat] = useState<"csv" | "txt" | "pdf">(
+    "csv"
+  );
+  const [includeTransactions, setIncludeTransactions] = useState(true);
+  const [includeCards, setIncludeCards] = useState(true);
+  const [includeSubscriptions, setIncludeSubscriptions] = useState(false);
+  const [includeInstallments, setIncludeInstallments] = useState(false);
+  const [includePayments, setIncludePayments] = useState(false);
 
   // Calculate summary stats
   const stats = useMemo(() => {
@@ -57,6 +73,11 @@ export const BackupExportScreen = () => {
       totalUsage,
     };
   }, [cards, transactions, subscriptions, installmentPlans, limitRecords]);
+
+  // Get all unique categories from transactions
+  const allCategories = useMemo(() => {
+    return Array.from(new Set(transactions.map((t) => t.category))).sort();
+  }, [transactions]);
 
   // Create JSON backup
   const handleJsonBackup = async () => {
@@ -238,7 +259,7 @@ export const BackupExportScreen = () => {
       report += `RINGKASAN\n`;
       report += `-----------------------------------------\n`;
       report += `Total Transaksi: ${monthlyTransactions.length}\n`;
-      report += `Total Pengeluaran: ${formatCurrency(
+      report += `Total Pengeluaran: ${formatCurrencyExact(
         monthlyTransactions.reduce((sum, t) => sum + t.amount, 0)
       )}\n\n`;
 
@@ -247,7 +268,7 @@ export const BackupExportScreen = () => {
       Object.entries(byCategory)
         .sort((a, b) => b[1] - a[1])
         .forEach(([cat, amount]) => {
-          report += `${cat}: ${formatCurrency(amount)}\n`;
+          report += `${cat}: ${formatCurrencyExact(amount)}\n`;
         });
 
       report += `\nPENGELUARAN PER KARTU\n`;
@@ -255,7 +276,7 @@ export const BackupExportScreen = () => {
       Object.entries(byCard)
         .sort((a, b) => b[1] - a[1])
         .forEach(([name, amount]) => {
-          report += `${name}: ${formatCurrency(amount)}\n`;
+          report += `${name}: ${formatCurrencyExact(amount)}\n`;
         });
 
       report += `\nSTATUS KARTU\n`;
@@ -264,9 +285,9 @@ export const BackupExportScreen = () => {
         .filter((c) => !c.isArchived)
         .forEach((c) => {
           const pct = ((c.currentUsage / c.creditLimit) * 100).toFixed(1);
-          report += `${c.alias}: ${formatCurrency(
+          report += `${c.alias}: ${formatCurrencyExact(
             c.currentUsage
-          )} / ${formatCurrency(c.creditLimit)} (${pct}%)\n`;
+          )} / ${formatCurrencyExact(c.creditLimit)} (${pct}%)\n`;
         });
 
       const fileName = `cardgo-laporan-${monthName.toLowerCase()}-${currentYear}.txt`;
@@ -359,6 +380,608 @@ export const BackupExportScreen = () => {
     } catch (error) {
       console.error("Restore failed:", error);
       Alert.alert("Error", "Gagal membaca file backup");
+    }
+  };
+
+  // Handle inline custom export
+  const handleInlineExport = async () => {
+    setIsExporting(true);
+    setExportType("custom");
+
+    try {
+      // Use "all data" date range for simplicity
+      const now = new Date();
+      const dateRange = {
+        start: new Date(2020, 0, 1),
+        end: now,
+      };
+      const format = exportFormat;
+
+      // Use all cards (no filter)
+      const cardIds: string[] = [];
+      const categories: string[] = [];
+
+      // Filter transactions
+
+      // Filter transactions
+      let filteredTransactions = transactions.filter((t) => {
+        const txDate = new Date(t.date);
+        return txDate >= dateRange.start && txDate <= dateRange.end;
+      });
+
+      // Filter by cards
+      if (cardIds.length > 0) {
+        filteredTransactions = filteredTransactions.filter((t) =>
+          cardIds.includes(t.cardId)
+        );
+      }
+
+      // Filter by categories
+      if (categories.length > 0) {
+        filteredTransactions = filteredTransactions.filter((t) =>
+          categories.includes(t.category)
+        );
+      }
+
+      // Filter cards
+      let filteredCards = cards;
+      if (cardIds.length > 0) {
+        filteredCards = cards.filter((c) => cardIds.includes(c.id));
+      }
+
+      // Filter subscriptions
+      let filteredSubscriptions = subscriptions;
+      if (cardIds.length > 0) {
+        filteredSubscriptions = subscriptions.filter((s) =>
+          cardIds.includes(s.cardId)
+        );
+      }
+
+      // Filter installments
+      let filteredInstallments = installmentPlans;
+      if (cardIds.length > 0) {
+        filteredInstallments = installmentPlans.filter((i) =>
+          cardIds.includes(i.cardId)
+        );
+      }
+
+      const dateStr = new Date().toISOString().split("T")[0];
+      const startStr = dateRange.start.toLocaleDateString("id-ID");
+      const endStr = dateRange.end.toLocaleDateString("id-ID");
+
+      // Check if at least one data type is selected
+      if (
+        !options.includeTransactions &&
+        !options.includeCards &&
+        !options.includeSubscriptions &&
+        !options.includeInstallments &&
+        !options.includePayments
+      ) {
+        Alert.alert("Error", "Pilih minimal satu tipe data untuk di-export");
+        return;
+      }
+
+      // Check if there's data to export
+      const hasData =
+        (options.includeTransactions && filteredTransactions.length > 0) ||
+        (options.includeCards && filteredCards.length > 0) ||
+        (options.includeSubscriptions && filteredSubscriptions.length > 0) ||
+        (options.includeInstallments && filteredInstallments.length > 0) ||
+        (options.includePayments &&
+          filteredCards.some((c) => (c.paymentHistory?.length ?? 0) > 0));
+
+      if (!hasData) {
+        Alert.alert(
+          "Tidak Ada Data",
+          "Tidak ada data yang sesuai dengan filter yang dipilih. Coba ubah periode atau filter lainnya."
+        );
+        return;
+      }
+
+      if (format === "csv") {
+        // Generate CSV
+        let csv = "";
+
+        // Transactions section
+        if (options.includeTransactions && filteredTransactions.length > 0) {
+          csv += "=== TRANSAKSI ===\n";
+          csv +=
+            "Tanggal,Kartu,Kategori,Deskripsi,Jumlah (IDR),Currency,Original Amount\n";
+
+          const sorted = [...filteredTransactions].sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+
+          sorted.forEach((t) => {
+            const card = cards.find((c) => c.id === t.cardId);
+            const cardName = card?.alias || "Unknown";
+            const date = new Date(t.date).toLocaleDateString("id-ID");
+            const desc = t.description.replace(/,/g, ";");
+            csv += `${date},"${cardName}","${t.category}","${desc}",${
+              t.amount
+            },${t.currency || "IDR"},${t.originalAmount || t.amount}\n`;
+          });
+          csv += "\n";
+        }
+
+        // Cards section
+        if (options.includeCards && filteredCards.length > 0) {
+          csv += "=== RINGKASAN KARTU ===\n";
+          csv +=
+            "Nama Kartu,Bank,Network,Limit,Pemakaian,Persentase,Billing Date,Due Date,Status\n";
+
+          filteredCards.forEach((c) => {
+            const pct = ((c.currentUsage / c.creditLimit) * 100).toFixed(1);
+            const status = c.isArchived ? "Archived" : "Active";
+            csv += `"${c.alias}","${c.bankName}","${c.network}",${c.creditLimit},${c.currentUsage},${pct}%,${c.billingCycleDay},${c.dueDay},${status}\n`;
+          });
+          csv += "\n";
+        }
+
+        // Subscriptions section
+        if (options.includeSubscriptions && filteredSubscriptions.length > 0) {
+          csv += "=== LANGGANAN ===\n";
+          csv += "Nama,Kartu,Kategori,Jumlah,Siklus,Tanggal Tagihan,Status\n";
+
+          filteredSubscriptions.forEach((s) => {
+            const card = cards.find((c) => c.id === s.cardId);
+            csv += `"${s.name}","${card?.alias || ""}","${s.category}",${
+              s.amount
+            },"${s.billingCycle}",${s.billingDay},"${
+              s.isActive ? "Aktif" : "Nonaktif"
+            }"\n`;
+          });
+          csv += "\n";
+        }
+
+        // Installments section
+        if (options.includeInstallments && filteredInstallments.length > 0) {
+          csv += "=== CICILAN ===\n";
+          csv += "Deskripsi,Kartu,Total,Cicilan/Bulan,Tenor\n";
+
+          filteredInstallments.forEach((i) => {
+            const card = cards.find((c) => c.id === i.cardId);
+            csv += `"${i.description}","${card?.alias || ""}",${
+              i.originalAmount
+            },${i.monthlyAmount},${i.totalMonths}\n`;
+          });
+          csv += "\n";
+        }
+
+        // Payment history section
+        if (options.includePayments) {
+          const allPayments: any[] = [];
+          filteredCards.forEach((c) => {
+            if (c.paymentHistory) {
+              c.paymentHistory.forEach((p) => {
+                allPayments.push({ ...p, cardAlias: c.alias });
+              });
+            }
+          });
+
+          if (allPayments.length > 0) {
+            csv += "=== RIWAYAT PEMBAYARAN ===\n";
+            csv += "Tanggal,Kartu,Jumlah,Tipe,Catatan\n";
+
+            allPayments
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .forEach((p) => {
+                const date = new Date(p.date).toLocaleDateString("id-ID");
+                csv += `${date},"${p.cardAlias}",${p.amount},"${p.type}","${
+                  p.notes || ""
+                }"\n`;
+              });
+          }
+        }
+
+        const fileName = `cardgo-export-kustom-${dateStr}.csv`;
+        const fileUri = FileSystem.documentDirectory + fileName;
+
+        await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: "utf8" });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "text/csv",
+            dialogTitle: "Export Kustom CardGo",
+          });
+        }
+      } else if (format === "txt") {
+        // Generate TXT Report
+        let report = `LAPORAN KUSTOM CARDGO\n`;
+        report += `========================================\n`;
+        report += `Periode: ${startStr} - ${endStr}\n`;
+        report += `Generated: ${new Date().toLocaleString("id-ID")}\n`;
+        report += `========================================\n\n`;
+
+        // Transactions summary
+        if (options.includeTransactions && filteredTransactions.length > 0) {
+          const totalSpent = filteredTransactions.reduce(
+            (sum, t) => sum + t.amount,
+            0
+          );
+
+          report += `RINGKASAN TRANSAKSI\n`;
+          report += `-----------------------------------------\n`;
+          report += `Total Transaksi: ${filteredTransactions.length}\n`;
+          report += `Total Pengeluaran: ${formatCurrencyExact(totalSpent)}\n\n`;
+
+          // By category
+          const byCategory: { [key: string]: number } = {};
+          filteredTransactions.forEach((t) => {
+            byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
+          });
+
+          report += `PENGELUARAN PER KATEGORI\n`;
+          report += `-----------------------------------------\n`;
+          Object.entries(byCategory)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([cat, amount]) => {
+              report += `${cat}: ${formatCurrencyExact(amount)}\n`;
+            });
+          report += "\n";
+
+          // By card
+          const byCard: { [key: string]: number } = {};
+          filteredTransactions.forEach((t) => {
+            const card = cards.find((c) => c.id === t.cardId);
+            const name = card?.alias || "Unknown";
+            byCard[name] = (byCard[name] || 0) + t.amount;
+          });
+
+          report += `PENGELUARAN PER KARTU\n`;
+          report += `-----------------------------------------\n`;
+          Object.entries(byCard)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([name, amount]) => {
+              report += `${name}: ${formatCurrencyExact(amount)}\n`;
+            });
+          report += "\n";
+        }
+
+        // Cards status
+        if (options.includeCards && filteredCards.length > 0) {
+          report += `STATUS KARTU\n`;
+          report += `-----------------------------------------\n`;
+          filteredCards.forEach((c) => {
+            const pct = ((c.currentUsage / c.creditLimit) * 100).toFixed(1);
+            report += `${c.alias}:\n`;
+            report += `  Limit: ${formatCurrencyExact(c.creditLimit)}\n`;
+            report += `  Pemakaian: ${formatCurrencyExact(
+              c.currentUsage
+            )} (${pct}%)\n`;
+            report += `  Sisa: ${formatCurrencyExact(
+              c.creditLimit - c.currentUsage
+            )}\n`;
+            report += "\n";
+          });
+        }
+
+        // Subscriptions
+        if (options.includeSubscriptions && filteredSubscriptions.length > 0) {
+          const totalMonthly = filteredSubscriptions
+            .filter((s) => s.isActive)
+            .reduce((sum, s) => sum + s.amount, 0);
+
+          report += `LANGGANAN AKTIF\n`;
+          report += `-----------------------------------------\n`;
+          report += `Total Bulanan: ${formatCurrencyExact(totalMonthly)}\n\n`;
+          filteredSubscriptions
+            .filter((s) => s.isActive)
+            .forEach((s) => {
+              const card = cards.find((c) => c.id === s.cardId);
+              report += `${s.name} (${
+                card?.alias || ""
+              }): ${formatCurrencyExact(s.amount)}/bulan\n`;
+            });
+          report += "\n";
+        }
+
+        // Installments
+        if (options.includeInstallments && filteredInstallments.length > 0) {
+          report += `CICILAN AKTIF\n`;
+          report += `-----------------------------------------\n`;
+          filteredInstallments.forEach((i) => {
+            const card = cards.find((c) => c.id === i.cardId);
+            report += `${i.description} (${card?.alias || ""}):\n`;
+            report += `  Total: ${formatCurrencyExact(i.originalAmount)}\n`;
+            report += `  Cicilan: ${formatCurrencyExact(
+              i.monthlyAmount
+            )}/bulan\n`;
+            report += `  Tenor: ${i.totalMonths} bulan\n`;
+            report += "\n";
+          });
+        }
+
+        // Payment history
+        if (options.includePayments) {
+          const allPayments: any[] = [];
+          filteredCards.forEach((c) => {
+            if (c.paymentHistory) {
+              c.paymentHistory.forEach((p) => {
+                allPayments.push({ ...p, cardAlias: c.alias });
+              });
+            }
+          });
+
+          if (allPayments.length > 0) {
+            report += `RIWAYAT PEMBAYARAN\n`;
+            report += `-----------------------------------------\n`;
+            allPayments
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .slice(0, 10)
+              .forEach((p) => {
+                const date = new Date(p.date).toLocaleDateString("id-ID");
+                report += `${date} - ${p.cardAlias}: ${formatCurrencyExact(
+                  p.amount
+                )} (${p.type})\n`;
+              });
+          }
+        }
+
+        const fileName = `cardgo-laporan-kustom-${dateStr}.txt`;
+        const fileUri = FileSystem.documentDirectory + fileName;
+
+        await FileSystem.writeAsStringAsync(fileUri, report, {
+          encoding: "utf8",
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "text/plain",
+            dialogTitle: "Laporan Kustom CardGo",
+          });
+        }
+      } else if (format === "pdf") {
+        // Generate PDF with HTML
+        let html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Laporan CardGo</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
+              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3B82F6; padding-bottom: 20px; }
+              .header h1 { color: #3B82F6; font-size: 28px; margin-bottom: 8px; }
+              .header p { color: #666; font-size: 14px; }
+              .section { margin-bottom: 30px; }
+              .section-title { background: #3B82F6; color: white; padding: 10px 15px; font-size: 16px; font-weight: 600; border-radius: 8px 8px 0 0; }
+              .section-content { border: 1px solid #e0e0e0; border-top: none; padding: 15px; background: #fafafa; border-radius: 0 0 8px 8px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+              th { background: #f0f0f0; text-align: left; padding: 10px; font-size: 12px; color: #555; }
+              td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+              tr:last-child td { border-bottom: none; }
+              .amount { font-weight: 600; color: #1f2937; }
+              .summary-box { display: flex; justify-content: space-between; padding: 15px; background: #EFF6FF; border-radius: 8px; margin-bottom: 15px; }
+              .summary-item { text-align: center; }
+              .summary-value { font-size: 24px; font-weight: 700; color: #3B82F6; }
+              .summary-label { font-size: 12px; color: #666; margin-top: 4px; }
+              .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>📊 Laporan CardGo</h1>
+              <p>Periode: ${startStr} - ${endStr}</p>
+              <p>Generated: ${new Date().toLocaleString("id-ID")}</p>
+            </div>
+        `;
+
+        // Transactions section
+        if (options.includeTransactions && filteredTransactions.length > 0) {
+          const totalSpent = filteredTransactions.reduce(
+            (sum, t) => sum + t.amount,
+            0
+          );
+
+          html += `
+            <div class="section">
+              <div class="section-title">💳 Transaksi (${
+                filteredTransactions.length
+              })</div>
+              <div class="section-content">
+                <div class="summary-box">
+                  <div class="summary-item">
+                    <div class="summary-value">${
+                      filteredTransactions.length
+                    }</div>
+                    <div class="summary-label">Transaksi</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-value">${formatCurrencyExact(
+                      totalSpent
+                    )}</div>
+                    <div class="summary-label">Total Pengeluaran</div>
+                  </div>
+                </div>
+                <table>
+                  <tr><th>Tanggal</th><th>Kartu</th><th>Kategori</th><th>Deskripsi</th><th>Jumlah</th></tr>
+          `;
+
+          const sorted = [...filteredTransactions]
+            .sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
+            .slice(0, 50); // Limit to 50 for PDF
+
+          sorted.forEach((t) => {
+            const card = cards.find((c) => c.id === t.cardId);
+            const date = new Date(t.date).toLocaleDateString("id-ID");
+            html += `<tr><td>${date}</td><td>${card?.alias || "-"}</td><td>${
+              t.category
+            }</td><td>${
+              t.description
+            }</td><td class="amount">${formatCurrencyExact(
+              t.amount
+            )}</td></tr>`;
+          });
+
+          html += `</table></div></div>`;
+        }
+
+        // Cards section
+        if (options.includeCards && filteredCards.length > 0) {
+          html += `
+            <div class="section">
+              <div class="section-title">🏦 Status Kartu (${filteredCards.length})</div>
+              <div class="section-content">
+                <table>
+                  <tr><th>Nama Kartu</th><th>Bank</th><th>Limit</th><th>Pemakaian</th><th>%</th><th>Status</th></tr>
+          `;
+
+          filteredCards.forEach((c) => {
+            const pct = ((c.currentUsage / c.creditLimit) * 100).toFixed(1);
+            const status = c.isArchived ? "Archived" : "Active";
+            html += `<tr><td>${c.alias}</td><td>${
+              c.bankName
+            }</td><td class="amount">${formatCurrencyExact(
+              c.creditLimit
+            )}</td><td class="amount">${formatCurrencyExact(
+              c.currentUsage
+            )}</td><td>${pct}%</td><td>${status}</td></tr>`;
+          });
+
+          html += `</table></div></div>`;
+        }
+
+        // Subscriptions section
+        if (options.includeSubscriptions && filteredSubscriptions.length > 0) {
+          const totalMonthly = filteredSubscriptions
+            .filter((s) => s.isActive)
+            .reduce((sum, s) => sum + s.amount, 0);
+
+          html += `
+            <div class="section">
+              <div class="section-title">🔄 Langganan Aktif</div>
+              <div class="section-content">
+                <div class="summary-box">
+                  <div class="summary-item">
+                    <div class="summary-value">${formatCurrencyExact(
+                      totalMonthly
+                    )}</div>
+                    <div class="summary-label">Total Bulanan</div>
+                  </div>
+                </div>
+                <table>
+                  <tr><th>Nama</th><th>Kartu</th><th>Kategori</th><th>Jumlah/Bulan</th></tr>
+          `;
+
+          filteredSubscriptions
+            .filter((s) => s.isActive)
+            .forEach((s) => {
+              const card = cards.find((c) => c.id === s.cardId);
+              html += `<tr><td>${s.name}</td><td>${
+                card?.alias || "-"
+              }</td><td>${
+                s.category
+              }</td><td class="amount">${formatCurrencyExact(
+                s.amount
+              )}</td></tr>`;
+            });
+
+          html += `</table></div></div>`;
+        }
+
+        // Installments section
+        if (options.includeInstallments && filteredInstallments.length > 0) {
+          html += `
+            <div class="section">
+              <div class="section-title">📅 Cicilan Aktif</div>
+              <div class="section-content">
+                <table>
+                  <tr><th>Deskripsi</th><th>Kartu</th><th>Total</th><th>Cicilan/Bulan</th><th>Tenor</th></tr>
+          `;
+
+          filteredInstallments.forEach((i) => {
+            const card = cards.find((c) => c.id === i.cardId);
+            html += `<tr><td>${i.description}</td><td>${
+              card?.alias || "-"
+            }</td><td class="amount">${formatCurrencyExact(
+              i.originalAmount
+            )}</td><td class="amount">${formatCurrencyExact(
+              i.monthlyAmount
+            )}</td><td>${i.totalMonths} bulan</td></tr>`;
+          });
+
+          html += `</table></div></div>`;
+        }
+
+        // Payment history section
+        if (options.includePayments) {
+          const allPayments: any[] = [];
+          filteredCards.forEach((c) => {
+            if (c.paymentHistory) {
+              c.paymentHistory.forEach((p) => {
+                allPayments.push({ ...p, cardAlias: c.alias });
+              });
+            }
+          });
+
+          if (allPayments.length > 0) {
+            html += `
+              <div class="section">
+                <div class="section-title">✅ Riwayat Pembayaran</div>
+                <div class="section-content">
+                  <table>
+                    <tr><th>Tanggal</th><th>Kartu</th><th>Jumlah</th><th>Tipe</th></tr>
+            `;
+
+            allPayments
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .slice(0, 20)
+              .forEach((p) => {
+                const date = new Date(p.date).toLocaleDateString("id-ID");
+                html += `<tr><td>${date}</td><td>${
+                  p.cardAlias
+                }</td><td class="amount">${formatCurrencyExact(
+                  p.amount
+                )}</td><td>${p.type}</td></tr>`;
+              });
+
+            html += `</table></div></div>`;
+          }
+        }
+
+        html += `
+            <div class="footer">
+              <p>Dokumen ini dibuat oleh CardGo - Credit Card Tracker</p>
+            </div>
+          </body>
+          </html>
+        `;
+
+        // Generate PDF
+        const { uri } = await Print.printToFileAsync({
+          html,
+          base64: false,
+        });
+
+        // Share the PDF file
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/pdf",
+            dialogTitle: "Laporan PDF CardGo",
+          });
+        }
+      }
+
+      Alert.alert("Sukses", "Laporan berhasil di-export!");
+    } catch (error) {
+      console.error("Custom export failed:", error);
+      Alert.alert("Error", "Gagal export laporan");
+    } finally {
+      setIsExporting(false);
+      setExportType(null);
     }
   };
 
@@ -513,6 +1136,15 @@ export const BackupExportScreen = () => {
             type="monthly"
             color="#F59E0B"
           />
+
+          <ExportButton
+            icon="options-outline"
+            title="Laporan Kustom"
+            subtitle="Pilih data, periode, dan format sesuai kebutuhan"
+            onPress={() => setShowExportModal(true)}
+            type="custom"
+            color="#EC4899"
+          />
         </View>
 
         {/* Info */}
@@ -528,6 +1160,15 @@ export const BackupExportScreen = () => {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Flexible Export Modal */}
+      <ExportOptionsModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleCustomExport}
+        cards={cards}
+        categories={allCategories}
+      />
     </SafeAreaView>
   );
 };

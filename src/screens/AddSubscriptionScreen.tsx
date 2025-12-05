@@ -241,7 +241,12 @@ export const AddSubscriptionScreen = () => {
                 style={styles.textInput}
                 placeholder="Contoh: 25"
                 value={billingDay}
-                onChangeText={setBillingDay}
+                onChangeText={(text) => {
+                  const val = parseInt(text);
+                  if (!text || (val >= 1 && val <= 31)) {
+                    setBillingDay(text);
+                  }
+                }}
                 keyboardType="numeric"
                 maxLength={2}
                 placeholderTextColor={theme.colors.text.tertiary}
@@ -336,20 +341,11 @@ export const AddSubscriptionScreen = () => {
             >
               Kategori
             </Text>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <Text
-                style={{
-                  fontSize: moderateScale(10),
-                  color: theme.colors.text.tertiary,
-                }}
-              >
-                Geser kiri
-              </Text>
+            <View style={styles.swipeHintContainer}>
+              <Text style={styles.swipeHintText}>Geser kiri untuk lainnya</Text>
               <Ionicons
                 name="arrow-forward"
-                size={moderateScale(10)}
+                size={moderateScale(12)}
                 color={theme.colors.text.tertiary}
               />
             </View>
@@ -605,5 +601,15 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,
     marginTop: 4,
+  },
+  swipeHintContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  swipeHintText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    fontSize: moderateScale(12),
   },
 });

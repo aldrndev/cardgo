@@ -37,7 +37,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = isTablet ? Math.min(width * 0.6, 450) : width * 0.85;
+const CARD_WIDTH = isTablet ? Math.min(width * 0.6, 450) : width * 0.92; // Wider card
 
 const TIPS = [
   "Bayar tagihan penuh setiap bulan untuk menghindari bunga.",
@@ -393,6 +393,18 @@ export const HomeScreen = () => {
                     ? formatCurrency(totalBill, 1_000_000_000)
                     : "Rp *******"}
                 </Text>
+
+                {/* Card Count Badge */}
+                <View style={styles.cardCountBadge}>
+                  <Ionicons
+                    name="card-outline"
+                    size={moderateScale(14)}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.cardCountText}>
+                    Total {unarchivedCards.length} Kartu
+                  </Text>
+                </View>
               </View>
               <View style={styles.summaryFooter}>
                 <View>
@@ -1068,18 +1080,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: theme.spacing.l,
-    paddingTop: theme.spacing.m,
-    paddingBottom: theme.spacing.l,
+    paddingTop: theme.spacing.xl, // More top padding
+    paddingBottom: theme.spacing.m,
     backgroundColor: theme.colors.background,
   },
   headerLeft: {
     flex: 1,
   },
   greetingText: {
-    fontSize: moderateScale(14),
     color: theme.colors.text.secondary,
     fontWeight: "500",
-    marginBottom: 2,
+    marginBottom: 4,
+    fontSize: moderateScale(16), // Larger greeting
   },
   logo: {
     ...theme.typography.h2,
@@ -1088,10 +1100,10 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: moderateScale(22),
+    fontSize: moderateScale(26), // Larger Name
     fontWeight: "700",
     color: theme.colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   dateText: {
     fontSize: moderateScale(12),
@@ -1128,15 +1140,36 @@ const styles = StyleSheet.create({
     ...theme.shadows.medium,
   },
   summaryLabel: {
-    ...theme.typography.caption,
-    color: "rgba(255, 255, 255, 0.8)",
+    ...theme.typography.body,
+    color: "rgba(255, 255, 255, 0.9)",
     marginBottom: 4,
+    fontSize: moderateScale(14),
+    fontWeight: "500",
   },
   summaryAmount: {
     ...theme.typography.h1,
     color: "#FFFFFF",
-    fontSize: 32,
-    marginBottom: theme.spacing.l,
+    fontSize: moderateScale(34),
+    fontWeight: "700",
+    marginBottom: theme.spacing.s, // Reduce spacing to make room for badge
+    includeFontPadding: false,
+  },
+  cardCountBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+    alignSelf: "flex-start", // Don't stretch
+    marginBottom: theme.spacing.l, // Spacing from footer
+  },
+  cardCountText: {
+    ...theme.typography.caption,
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: moderateScale(12),
   },
   summaryFooter: {
     flexDirection: "row",
@@ -1154,12 +1187,14 @@ const styles = StyleSheet.create({
   summarySubLabel: {
     ...theme.typography.caption,
     color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 10,
+    fontSize: moderateScale(12),
+    marginBottom: 2,
   },
   summarySubValue: {
     ...theme.typography.body,
     color: "#FFFFFF",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: moderateScale(16),
   },
   quickActionsSection: {
     marginBottom: theme.spacing.l,
@@ -1194,6 +1229,7 @@ const styles = StyleSheet.create({
   tagsFilterContainer: {
     paddingHorizontal: theme.spacing.l,
     gap: theme.spacing.s,
+    // Removed paddingBottom to make it tighter
   },
   filterChip: {
     paddingHorizontal: theme.spacing.l,
@@ -1276,10 +1312,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.l,
     paddingVertical: theme.spacing.l,
     marginBottom: theme.spacing.xl,
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.m,
-    borderRadius: theme.borderRadius.xl,
-    ...theme.shadows.small,
+    // Removed card styling for full width clean look
+    // backgroundColor: theme.colors.surface,
+    // marginHorizontal: theme.spacing.m,
+    // borderRadius: theme.borderRadius.xl,
+    // ...theme.shadows.small,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -1288,9 +1325,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.m,
   },
   sectionTitle: {
-    ...theme.typography.h3,
+    ...theme.typography.h2, // Larger title
+    fontSize: 20,
     color: theme.colors.text.primary,
-    borderBottomColor: theme.colors.border,
+    fontWeight: "700",
   },
   seeAllText: {
     ...theme.typography.button,
@@ -1300,7 +1338,7 @@ const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 16, // Increased padding
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },

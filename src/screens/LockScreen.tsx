@@ -16,16 +16,24 @@ const { width } = Dimensions.get("window");
 const PIN_LENGTH = 4;
 
 export const LockScreen = () => {
-  const { unlock, authenticateWithBiometrics, hasBiometrics } = useAuth();
+  const {
+    unlock,
+    authenticateWithBiometrics,
+    hasBiometrics,
+    isBiometricEnabled,
+  } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
+  // Check if biometric should be available: hardware exists AND user enabled it
+  const canUseBiometrics = hasBiometrics && isBiometricEnabled;
+
   useEffect(() => {
-    // Only attempt biometric auth if available
-    if (hasBiometrics) {
+    // Only attempt biometric auth if available AND user enabled it
+    if (canUseBiometrics) {
       authenticateWithBiometrics();
     }
-  }, [hasBiometrics]);
+  }, [canUseBiometrics]);
 
   const handlePress = async (number: string) => {
     if (pin.length < PIN_LENGTH) {
@@ -87,7 +95,7 @@ export const LockScreen = () => {
               <Text style={styles.keyText}>{number}</Text>
             </TouchableOpacity>
           ))}
-          {hasBiometrics ? (
+          {canUseBiometrics ? (
             <TouchableOpacity style={styles.key} onPress={handleBiometric}>
               <Ionicons
                 name="finger-print"

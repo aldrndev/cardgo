@@ -191,7 +191,9 @@ export const SearchScreen = () => {
               color={theme.colors.text.tertiary}
             />
           </View>
-          <Text style={styles.initialTitle}>Cari di Card Go</Text>
+          {/* <Text style={styles.initialTitle}>Cari di Card Go</Text> 
+              User requested to remove this text.
+          */}
           <Text style={styles.initialSubtitle}>
             Ketik nama kartu, deskripsi transaksi, atau kategori
           </Text>
@@ -321,25 +323,26 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.m,
   },
   transactionsList: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    overflow: "hidden",
-    ...theme.shadows.small,
+    // backgroundColor: theme.colors.surface, // Removed
+    // borderRadius: theme.borderRadius.l, // Removed
+    // overflow: "hidden", // Removed
+    // ...theme.shadows.small, // Removed
   },
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: theme.spacing.m,
+    paddingVertical: 16, // Increased padding
+    paddingHorizontal: 0, // Removed horizontal padding since container handles it? No, keep standard spacing if needed, let's align with CardDetail
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   iconContainer: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    width: 56, // Fixed to match HomeScreen/CardDetail
+    height: 56,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: theme.spacing.m,
+    marginRight: 16,
   },
   transactionContent: {
     flex: 1,

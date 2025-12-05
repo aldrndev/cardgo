@@ -38,6 +38,8 @@ type CardDetailScreenNavigationProp = StackNavigationProp<
   "CardDetail"
 >;
 
+const CARD_WIDTH = isTablet ? Math.min(width * 0.6, 450) : width * 0.92;
+
 export const CardDetailScreen = () => {
   const navigation = useNavigation<CardDetailScreenNavigationProp>();
   const route = useRoute<CardDetailScreenRouteProp>();
@@ -257,7 +259,12 @@ export const CardDetailScreen = () => {
               <View>
                 <CreditCard
                   card={card}
-                  containerStyle={{ width: "100%", marginHorizontal: 0 }}
+                  containerStyle={{
+                    width: CARD_WIDTH,
+                    marginHorizontal: 0,
+                    marginRight: 0, // Force remove default margin
+                    alignSelf: "center",
+                  }}
                 />
               </View>
             </Swipeable>
@@ -273,7 +280,7 @@ export const CardDetailScreen = () => {
             </View>
           </View>
           {/* === RINGKASAN PENGGUNAAN === */}
-          <View style={styles.section}>
+          <View style={styles.cardSection}>
             <Text style={styles.sectionTitle}>Ringkasan Penggunaan</Text>
 
             {/* Usage Info */}
@@ -595,27 +602,26 @@ export const CardDetailScreen = () => {
                   <View style={styles.paidIconCircle}>
                     <Ionicons
                       name="checkmark"
-                      size={moderateScale(28)}
+                      size={moderateScale(16)}
                       color="#FFF"
                     />
                   </View>
-                  <Text style={styles.paidCardTitle}>Lunas!</Text>
-                  <Text style={styles.paidCardSubtitle}>
-                    Tagihan bulan ini sudah dibayar
-                  </Text>
-                  {card.lastPaymentDate && (
-                    <Text style={styles.paidCardDate}>
-                      Dibayar pada{" "}
-                      {new Date(card.lastPaymentDate).toLocaleDateString(
-                        "id-ID",
-                        {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        }
-                      )}
-                    </Text>
-                  )}
+                  <View>
+                    <Text style={styles.paidCardTitle}>Lunas</Text>
+                    {card.lastPaymentDate && (
+                      <Text style={styles.paidCardDate}>
+                        Dibayar tgl{" "}
+                        {new Date(card.lastPaymentDate).toLocaleDateString(
+                          "id-ID",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               )}
             </View>
@@ -623,7 +629,12 @@ export const CardDetailScreen = () => {
             {/* Notes */}
             {card.notes ? (
               <>
-                <View style={styles.sectionDivider} />
+                <View
+                  style={[
+                    styles.sectionDivider,
+                    { marginVertical: theme.spacing.s },
+                  ]}
+                />
                 <View style={styles.noteContainer}>
                   <Text style={styles.label}>Catatan</Text>
                   <Text style={styles.noteText}>{card.notes}</Text>
@@ -711,14 +722,6 @@ export const CardDetailScreen = () => {
             ) : (
               <Text style={styles.emptyText}>Tidak ada langganan aktif</Text>
             )}
-            <TouchableOpacity
-              style={styles.circleAddButton}
-              onPress={() =>
-                navigation.navigate("AddSubscription", { cardId: card.id })
-              }
-            >
-              <Ionicons name="add" size={moderateScale(24)} color="#FFF" />
-            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
@@ -799,16 +802,6 @@ export const CardDetailScreen = () => {
             ) : (
               <Text style={styles.emptyText}>Belum ada transaksi</Text>
             )}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.circleAddButton}
-                onPress={() =>
-                  navigation.navigate("AddTransaction", { cardId: card.id })
-                }
-              >
-                <Ionicons name="add" size={moderateScale(24)} color="#FFF" />
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -973,22 +966,32 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     marginBottom: theme.spacing.l,
-    marginTop: theme.spacing.m, // Added spacing
-    // alignItems: "center", // Removed to allow full width
-    paddingHorizontal: theme.spacing.m, // Ensure some padding from screen edges
+    marginTop: theme.spacing.m,
+    // paddingHorizontal: theme.spacing.m, // Removed to allow custom width
+    alignItems: "center", // Centered
   },
   section: {
+    // backgroundColor: theme.colors.surface, // Removed card bg
+    paddingHorizontal: theme.spacing.l, // Keep padding
+    paddingVertical: theme.spacing.l,
+    marginBottom: theme.spacing.l, // Reduced margin
+    // borderRadius: theme.borderRadius.m,
+    // ...theme.shadows.small,
+  },
+  sectionTitle: {
+    ...theme.typography.h2,
+    fontSize: 20,
+    fontWeight: "700",
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.m,
+  },
+  cardSection: {
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.l,
     marginHorizontal: theme.spacing.m,
     marginBottom: theme.spacing.m,
     borderRadius: theme.borderRadius.m,
     ...theme.shadows.small,
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
   },
   subSectionTitle: {
     ...theme.typography.body,
@@ -1144,14 +1147,14 @@ const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   iconContainer: {
-    width: theme.containerSizes.iconLarge,
-    height: theme.containerSizes.iconLarge,
-    borderRadius: scale(20),
+    width: 56, // Fixed to match HomeScreen
+    height: 56, // Fixed to match HomeScreen
+    borderRadius: 20, // Fixed to match HomeScreen
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -1443,33 +1446,28 @@ const styles = StyleSheet.create({
   // Paid Card Styles
   paidCard: {
     backgroundColor: theme.colors.status.success + "10",
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+    flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.status.success + "30",
+    gap: 12,
   },
   paidIconCircle: {
-    width: moderateScale(56),
-    height: moderateScale(56),
-    borderRadius: moderateScale(28),
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
     backgroundColor: theme.colors.status.success,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.medium,
   },
   paidCardTitle: {
-    ...theme.typography.h2,
+    ...theme.typography.body,
     color: theme.colors.status.success,
     fontWeight: "700",
-    marginBottom: 4,
   },
-  paidCardSubtitle: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.s,
-  },
+  // paidCardSubtitle removed to save space
   paidCardDate: {
     ...theme.typography.caption,
     color: theme.colors.text.tertiary,

@@ -129,6 +129,15 @@ export const SettingsScreen = () => {
     loadNotificationPrefs();
   }, []);
 
+  const getInitials = (name: string | undefined) => {
+    if (!name) return "?";
+    const words = name.trim().split(/\s+/);
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    }
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  };
+
   const loadUserProfile = async () => {
     const profile = await storage.getUserProfile();
     setUserProfile(profile);
@@ -336,11 +345,9 @@ export const SettingsScreen = () => {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Ionicons
-              name="person"
-              size={moderateScale(40)}
-              color={theme.colors.primary}
-            />
+            <Text style={styles.avatarInitials}>
+              {getInitials(userProfile?.nickname)}
+            </Text>
           </View>
           <View>
             <Text style={styles.profileName}>
@@ -348,12 +355,28 @@ export const SettingsScreen = () => {
             </Text>
             <Text style={styles.profileSubtitle}>
               Member sejak{" "}
-              {userProfile?.joinDate
-                ? new Date(userProfile.joinDate).toLocaleDateString("id-ID", {
+              {(() => {
+                try {
+                  if (userProfile?.joinDate) {
+                    const date = new Date(userProfile.joinDate);
+                    if (!isNaN(date.getTime())) {
+                      return date.toLocaleDateString("id-ID", {
+                        month: "long",
+                        year: "numeric",
+                      });
+                    }
+                  }
+                  return new Date().toLocaleDateString("id-ID", {
                     month: "long",
                     year: "numeric",
-                  })
-                : "2023"}
+                  });
+                } catch {
+                  return new Date().toLocaleDateString("id-ID", {
+                    month: "long",
+                    year: "numeric",
+                  });
+                }
+              })()}
             </Text>
           </View>
         </View>
@@ -640,10 +663,15 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: theme.colors.primary + "15",
+    backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
     marginRight: theme.spacing.m,
+  },
+  avatarInitials: {
+    ...theme.typography.h2,
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   profileName: {
     ...theme.typography.h3,

@@ -101,30 +101,72 @@ export const OnboardingScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
-        ref={flatListRef}
-        data={allSlides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={(event) => {
-          const slideSize = event.nativeEvent.layoutMeasurement.width;
-          const index = event.nativeEvent.contentOffset.x / slideSize;
-          const roundIndex = Math.round(index);
-          if (roundIndex !== activeIndex) {
-            setActiveIndex(roundIndex);
-          }
-        }}
-        scrollEventThrottle={16}
-        getItemLayout={(data, index) => ({
-          length: width,
-          offset: width * index,
-          index,
-        })}
-        keyExtractor={(item) => item.id}
+      <KeyboardAvoidingView
         style={{ flex: 1 }}
-        renderItem={({ item, index }) => {
-          if (item.id === "input") {
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={allSlides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={(event) => {
+            const slideSize = event.nativeEvent.layoutMeasurement.width;
+            const index = event.nativeEvent.contentOffset.x / slideSize;
+            const roundIndex = Math.round(index);
+            if (roundIndex !== activeIndex) {
+              setActiveIndex(roundIndex);
+            }
+          }}
+          scrollEventThrottle={16}
+          getItemLayout={(data, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+          keyExtractor={(item) => item.id}
+          style={{ flex: 1 }}
+          renderItem={({ item, index }) => {
+            if (item.id === "input") {
+              return (
+                <View style={[styles.slide, { width }]}>
+                  <View
+                    style={[
+                      styles.imageContainer,
+                      {
+                        width: width * 0.8,
+                        height: width * 0.8,
+                        maxHeight: 300,
+                        maxWidth: 300,
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={item.image}
+                      style={styles.image}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={[styles.inputWrapper, { width }]}>
+                    <Text style={styles.title}>Halo!</Text>
+                    <Text style={styles.description}>
+                      Boleh kami tahu nama panggilanmu?
+                    </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={styles.input}
+                      placeholder="Masukkan nama panggilan"
+                      value={nickname}
+                      onChangeText={setNickname}
+                      maxLength={20}
+                      placeholderTextColor={theme.colors.text.tertiary}
+                    />
+                  </View>
+                </View>
+              );
+            }
             return (
               <View style={[styles.slide, { width }]}>
                 <View
@@ -144,77 +186,41 @@ export const OnboardingScreen = () => {
                     resizeMode="contain"
                   />
                 </View>
-                <View style={[styles.inputWrapper, { width }]}>
-                  <Text style={styles.title}>Halo!</Text>
-                  <Text style={styles.description}>
-                    Boleh kami tahu nama panggilanmu?
-                  </Text>
-                  <TextInput
-                    ref={inputRef}
-                    style={styles.input}
-                    placeholder="Masukkan nama panggilan"
-                    value={nickname}
-                    onChangeText={setNickname}
-                    maxLength={20}
-                    placeholderTextColor={theme.colors.text.tertiary}
-                  />
-                </View>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.description}>{item.description}</Text>
               </View>
             );
-          }
-          return (
-            <View style={[styles.slide, { width }]}>
+          }}
+        />
+
+        <View style={styles.footer}>
+          <View style={styles.pagination}>
+            {allSlides.map((_, index) => (
               <View
-                style={[
-                  styles.imageContainer,
-                  {
-                    width: width * 0.8,
-                    height: width * 0.8,
-                    maxHeight: 300,
-                    maxWidth: 300,
-                  },
-                ]}
-              >
-                <Image
-                  source={item.image}
-                  style={styles.image}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.description}>{item.description}</Text>
-            </View>
-          );
-        }}
-      />
+                key={index}
+                style={[styles.dot, activeIndex === index && styles.activeDot]}
+              />
+            ))}
+          </View>
 
-      <View style={styles.footer}>
-        <View style={styles.pagination}>
-          {allSlides.map((_, index) => (
-            <View
-              key={index}
-              style={[styles.dot, activeIndex === index && styles.activeDot]}
-            />
-          ))}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                Platform.OS === "web" && ({ cursor: "pointer" } as any),
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {activeIndex === allSlides.length - 1
+                  ? "Mulai Sekarang"
+                  : "Lanjut"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              Platform.OS === "web" && ({ cursor: "pointer" } as any),
-            ]}
-            onPress={handleNext}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>
-              {activeIndex === allSlides.length - 1
-                ? "Mulai Sekarang"
-                : "Lanjut"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

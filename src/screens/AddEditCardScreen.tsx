@@ -573,23 +573,18 @@ export const AddEditCardScreen = () => {
                             : ""
                         }
                         onChangeText={(text) => {
-                          setMonthError("");
+                          const val = parseInt(text);
                           if (!text) {
                             setFormData({
                               ...formData,
                               expiryMonth: undefined,
                             });
-                            return;
+                            setMonthError("");
+                          } else if (val >= 1 && val <= 12) {
+                            setFormData({ ...formData, expiryMonth: val });
+                            setMonthError("");
                           }
-                          const val = parseInt(text);
-                          if (isNaN(val) || val < 1 || val > 12) {
-                            setMonthError("Bulan harus antara 1-12");
-                          } else {
-                            setFormData({
-                              ...formData,
-                              expiryMonth: val,
-                            });
-                          }
+                          // If invalid, do nothing (reject input)
                         }}
                         keyboardType="numeric"
                         maxLength={2}
@@ -597,17 +592,6 @@ export const AddEditCardScreen = () => {
                         placeholderTextColor={theme.colors.text.tertiary}
                       />
                     </View>
-                    {monthError && (
-                      <Text
-                        style={{
-                          color: theme.colors.status.error,
-                          fontSize: 12,
-                          marginTop: 4,
-                        }}
-                      >
-                        {monthError}
-                      </Text>
-                    )}
                   </View>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Estimasi Biaya</Text>

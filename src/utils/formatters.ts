@@ -90,3 +90,22 @@ export const formatForeignCurrency = (amount: number, currency: string) => {
     maximumFractionDigits: 0,
   }).format(amount);
 };
+
+/**
+ * Formats a number into a currency string WITHOUT abbreviations.
+ * Use this for reports, exports, and anywhere exact amounts are needed.
+ * @param amount The amount to format
+ * @returns Exact formatted currency string (e.g., "Rp 12.500.000")
+ */
+export const formatCurrencyExact = (amount: number): string => {
+  if (isNaN(amount)) {
+    return "Rp 0";
+  }
+  const formatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+  return formatted.replace(/Rp\s?/, "Rp ");
+};
