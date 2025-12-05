@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -14,12 +13,28 @@ import { theme } from "../constants/theme";
 import { moderateScale } from "../utils/responsive";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
+import { BANKS, getBankById } from "../constants/banks";
 
 export const LinkedLimitsScreen = () => {
   const navigation = useNavigation();
-  const { cards, linkedLimitGroups, getGroupUsage } = useCards();
+  const { cards, getSharedLimitInfo } = useCards();
 
-  const unlinkedCards = cards.filter((c) => !c.linkedGroupId && !c.isArchived);
+  // Get all unique bankIds that have shared limits
+  const sharedLimitBanks = useMemo(() => {
+    const bankIds = new Set<string>();
+    cards.forEach((card) => {
+      if (card.bankId && card.useSharedLimit && !card.isArchived) {
+        bankIds.add(card.bankId);
+      }
+    });
+    return Array.from(bankIds)
+      .map((bankId) => {
+        const bank = getBankById(bankId);
+        const info = getSharedLimitInfo(bankId);
+        return { bankId, bank, info };
+      })
+      .filter((item) => item.info !== null);
+  }, [cards, getSharedLimitInfo]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -47,28 +62,25 @@ export const LinkedLimitsScreen = () => {
             color={theme.colors.primary}
           />
           <Text style={styles.infoText}>
-            Fitur limit gabungan mengelompokkan kartu yang berbagi limit yang
-            sama (contoh: kartu utama + kartu tambahan)
+            Limit gabungan mengelompokkan kartu dari bank yang sama yang berbagi
+            limit (contoh: kartu utama + kartu tambahan)
           </Text>
         </View>
 
-        {/* Limit Groups */}
-        {linkedLimitGroups && linkedLimitGroups.length > 0 ? (
+        {/* Shared Limit Groups by Bank */}
+        {sharedLimitBanks.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Grup Limit</Text>
-            {linkedLimitGroups.map((group) => {
-              const groupUsage = getGroupUsage(group.id);
-              const groupCards = cards.filter((c) =>
-                group.cardIds.includes(c.id)
-              );
-              const usagePercent = (groupUsage / group.sharedLimit) * 100;
+            <Text style={styles.sectionTitle}>Grup Limit per Bank</Text>
+            {sharedLimitBanks.map(({ bankId, bank, info }) => {
+              if (!info) return null;
+              const usagePercent = (info.totalUsage / info.sharedLimit) * 100;
 
               return (
-                <View key={group.id} style={styles.groupCard}>
+                <View key={bankId} style={styles.groupCard}>
                   <View style={styles.groupHeader}>
-                    <Text style={styles.groupName}>{group.name}</Text>
+                    <Text style={styles.groupName}>{bank?.code || bankId}</Text>
                     <Text style={styles.groupLimit}>
-                      {formatCurrency(group.sharedLimit)}
+                      {formatCurrency(info.sharedLimit)}
                     </Text>
                   </View>
 
@@ -83,12 +95,15 @@ export const LinkedLimitsScreen = () => {
                       />
                     </View>
                     <Text style={styles.progressText}>
-                      {formatCurrency(groupUsage)} ({usagePercent.toFixed(0)}%)
+                      {formatCurrency(info.totalUsage)} (
+                      {usagePercent.toFixed(0)}%)
                     </Text>
                   </View>
 
-                  <Text style={styles.cardsLabel}>Kartu dalam grup:</Text>
-                  {groupCards.map((card) => (
+                  <Text style={styles.cardsLabel}>
+                    {info.cards.length} kartu dalam grup:
+                  </Text>
+                  {info.cards.map((card) => (
                     <View key={card.id} style={styles.cardItem}>
                       <Text style={styles.cardName}>{card.alias}</Text>
                       <Text style={styles.cardUsage}>
@@ -107,21 +122,13 @@ export const LinkedLimitsScreen = () => {
               size={moderateScale(64)}
               color={theme.colors.text.tertiary}
             />
-            <Text style={styles.emptyTitle}>Belum Ada Grup Limit</Text>
+            <Text style={styles.emptyTitle}>Belum Ada Limit Gabungan</Text>
             <Text style={styles.emptyText}>
-              Buat grup untuk mengelola kartu dengan limit gabungan
+              Aktifkan "Limit Gabungan" saat menambah kartu untuk mengelompokkan
+              kartu dengan bank yang sama
             </Text>
           </View>
         )}
-
-        {/* Note for future */}
-        <View style={styles.noteCard}>
-          <Text style={styles.noteText}>
-            💡 Fitur pembuatan dan pengeditan grup limit akan tersedia pada
-            update selanjutnya. Untuk saat ini, tampilan hanya menunjukkan grup
-            yang sudah ada.
-          </Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

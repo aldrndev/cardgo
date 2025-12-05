@@ -45,7 +45,9 @@ export interface Card {
   isLimitIncreaseReminderEnabled?: boolean;
 
   // Linked/Shared Limits
-  linkedGroupId?: string; // Reference to LinkedLimitGroup
+  bankId?: string; // Reference to Bank.id from banks.ts
+  useSharedLimit?: boolean; // If true, shares creditLimit with same bankId cards
+  linkedGroupId?: string; // Reference to LinkedLimitGroup (legacy)
 }
 
 export interface Subscription {
@@ -89,6 +91,11 @@ export interface InstallmentPlan {
   description: string; // (e.g., "iPhone 15")
   startDate: string; // ISO Date of first installment
   createdAt: string;
+  // New fields
+  currency?: string;
+  exchangeRate?: number;
+  isZeroPercent?: boolean;
+  startMonth?: number; // Default 1. If 4, means starts at 4/totalMonths
 }
 
 export interface CardTheme {

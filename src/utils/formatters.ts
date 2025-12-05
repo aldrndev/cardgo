@@ -30,20 +30,19 @@ export const formatCurrency = (
   }
 
   if (absAmount >= 1_000_000_000) {
-    // 1.5 M, 10 M, etc.
     const value = absAmount / 1_000_000_000;
-    // Check if it's a whole number to avoid .0
-    const formattedValue =
-      value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
-    return `${isNegative ? "-" : ""}Rp ${formattedValue} M`;
+    // 2 decimal places, with dot separator (default JS behavior)
+    return `${isNegative ? "-" : ""}Rp ${value
+      .toFixed(2)
+      .replace(/\.00$/, "")} M`;
   }
 
   if (absAmount >= 10_000_000) {
     // 10 Jt, 100 Jt
     const value = absAmount / 1_000_000;
-    const formattedValue =
-      value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
-    return `${isNegative ? "-" : ""}Rp ${formattedValue} Jt`;
+    return `${isNegative ? "-" : ""}Rp ${value
+      .toFixed(2)
+      .replace(/\.00$/, "")} Jt`;
   }
 
   // Fallback
@@ -77,18 +76,38 @@ export const formatNumberInput = (
 };
 
 export const formatForeignCurrency = (amount: number, currency: string) => {
-  if (amount >= 1000000) {
-    return `${currency} ${(amount / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  const absAmount = Math.abs(amount);
+  const isNegative = amount < 0;
+  const prefix = isNegative ? "-" : "";
+
+  // Helper to format with dot decimal, max 2 places, remove trailing zeros
+  const formatVal = (val: number) => {
+    // en-US uses dot for decimal.
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(val);
+  };
+
+  if (absAmount >= 1_000_000) {
+    const val = absAmount / 1_000_000;
+    return `${prefix}${currency} ${formatVal(val)}M`;
   }
-  if (amount >= 1000) {
-    return `${currency} ${(amount / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+
+  // User requested "1K - 999K DISINGKAT JADI K"
+  if (absAmount >= 1_000) {
+    const val = absAmount / 1_000;
+    return `${prefix}${currency} ${formatVal(val)}K`;
   }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency,
+
+  // < 1000 -> Full number. Use en-US for dot decimal separator.
+  const formattedDecimal = new Intl.NumberFormat("en-US", {
+    style: "decimal",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+    maximumFractionDigits: 2,
+  }).format(absAmount);
+
+  return `${prefix}${currency} ${formattedDecimal}`;
 };
 
 /**

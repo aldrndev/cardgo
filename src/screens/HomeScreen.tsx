@@ -94,10 +94,20 @@ export const HomeScreen = () => {
       (sum, card) => sum + (card.currentUsage || 0),
       0
     );
-    const limit = activeCards.reduce(
-      (sum, card) => sum + (card.creditLimit || 0),
-      0
-    );
+
+    // Calculate total limit, avoiding double-counting shared limits
+    const processedBankIds = new Set<string>();
+    const limit = activeCards.reduce((sum, card) => {
+      if (card.useSharedLimit && card.bankId) {
+        // For shared limit cards, only count the limit once per bankId
+        if (processedBankIds.has(card.bankId)) {
+          return sum; // Skip - already counted this bank's shared limit
+        }
+        processedBankIds.add(card.bankId);
+      }
+      return sum + (card.creditLimit || 0);
+    }, 0);
+
     return { totalBill: bill, totalLimit: limit, totalUsage: bill };
   }, [activeCards]);
 

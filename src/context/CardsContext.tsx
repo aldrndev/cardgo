@@ -70,6 +70,13 @@ interface CardsContextType {
   // Linked Limits
   linkedLimitGroups: any[];
   getGroupUsage: (groupId: string) => number;
+  // Shared Limit by Bank
+  getSharedLimitUsage: (bankId: string) => number;
+  getSharedLimitInfo: (bankId: string) => {
+    sharedLimit: number;
+    totalUsage: number;
+    cards: Card[];
+  } | null;
 }
 
 const CardsContext = createContext<CardsContextType | undefined>(undefined);
@@ -224,6 +231,9 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
           category: sub.category,
           description: `Tagihan Langganan: ${sub.name}`,
           isPaid: false,
+          // Multi-currency support
+          currency: sub.currency,
+          originalAmount: sub.originalAmount,
         };
         newTransactions.push(newTx);
 
@@ -381,9 +391,17 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     const startDate = new Date(planData.startDate);
 
     // 1. Create Installment Transactions
-    for (let i = 0; i < planData.totalMonths; i++) {
+    const startMonthIndex = (planData.startMonth || 1) - 1; // 0-based index. If startMonth 4, we start loop at 3 (representing month 4)
+
+    // We only create transactions for the REMAINING months
+    // Example: Tenor 12, Started 3 (Start Month 4). Loop i from 3 to 11.
+    // Transactions created: 4/12, 5/12 ... 12/12.
+    for (let i = startMonthIndex; i < planData.totalMonths; i++) {
       const txDate = new Date(startDate);
-      txDate.setMonth(startDate.getMonth() + i);
+      // We add (i - startMonthIndex) to the start date because "startDate" represents the date of the NEXT billing
+      // If user says "Started 3 months ago", the startDate passed from UI is usually "Today/Next Bill".
+      // Wait, let's stick to the logic: startDate is the first installment date for THIS created plan.
+      txDate.setMonth(startDate.getMonth() + (i - startMonthIndex));
 
       newTransactions.push({
         id: uuidv4(),
@@ -399,6 +417,11 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
         installmentId: planId,
         installmentNumber: i + 1,
         installmentTotal: planData.totalMonths,
+        // Multi-currency support
+        // Multi-currency support
+        currency: planData.currency,
+        originalAmount: planData.originalAmount,
+        exchangeRate: planData.exchangeRate,
       });
     }
 
@@ -657,6 +680,38 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
       .reduce((sum, card) => sum + (card.currentUsage || 0), 0);
   };
 
+  // Shared Limit by Bank - Get total usage for all cards with same bankId that have useSharedLimit enabled
+  const getSharedLimitUsage = (bankId: string): number => {
+    return cards
+      .filter((c) => c.bankId === bankId && c.useSharedLimit && !c.isArchived)
+      .reduce((sum, card) => sum + (card.currentUsage || 0), 0);
+  };
+
+  // Shared Limit by Bank - Get full info including the shared limit (from latest card's creditLimit)
+  const getSharedLimitInfo = (bankId: string) => {
+    const sharedCards = cards
+      .filter((c) => c.bankId === bankId && c.useSharedLimit && !c.isArchived)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+
+    if (sharedCards.length === 0) return null;
+
+    // The shared limit is the creditLimit of the most recently updated card
+    const sharedLimit = sharedCards[0].creditLimit || 0;
+    const totalUsage = sharedCards.reduce(
+      (sum, card) => sum + (card.currentUsage || 0),
+      0
+    );
+
+    return {
+      sharedLimit,
+      totalUsage,
+      cards: sharedCards,
+    };
+  };
+
   return (
     <CardsContext.Provider
       value={{
@@ -684,6 +739,9 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
         // Linked Limits
         linkedLimitGroups,
         getGroupUsage,
+        // Shared Limit by Bank
+        getSharedLimitUsage,
+        getSharedLimitInfo,
       }}
     >
       {children}

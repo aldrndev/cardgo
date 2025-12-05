@@ -181,9 +181,24 @@ export const CardDetailScreen = () => {
     }
   };
 
+  const { getSharedLimitInfo } = useCards();
+
+  // Get shared limit info if this card uses shared limit
+  const sharedLimitInfo =
+    card.bankId && card.useSharedLimit ? getSharedLimitInfo(card.bankId) : null;
+
+  // Use shared limit or individual limit
+  const effectiveLimit = sharedLimitInfo
+    ? sharedLimitInfo.sharedLimit
+    : card.creditLimit || 0;
+  const effectiveUsage = sharedLimitInfo
+    ? sharedLimitInfo.totalUsage
+    : card.currentUsage || 0;
+  const remainingLimit = effectiveLimit - effectiveUsage;
+
   const currentUsage = card.currentUsage || 0;
   let usagePercentage =
-    card.creditLimit > 0 ? (currentUsage / card.creditLimit) * 100 : 0;
+    effectiveLimit > 0 ? (effectiveUsage / effectiveLimit) * 100 : 0;
   if (isNaN(usagePercentage)) usagePercentage = 0;
 
   let budgetPercentage =
@@ -310,9 +325,15 @@ export const CardDetailScreen = () => {
                 ]}
               />
             </View>
-            <Text style={styles.percentageText}>
-              {usagePercentage.toFixed(1)}% Terpakai
-            </Text>
+            <View style={styles.usageInfoRow}>
+              <Text style={styles.percentageText}>
+                {usagePercentage.toFixed(1)}% Terpakai
+                {sharedLimitInfo && " (gabungan)"}
+              </Text>
+              <Text style={styles.percentageText}>
+                {formatCurrency(remainingLimit)} sisa limit
+              </Text>
+            </View>
 
             {/* Monthly Budget */}
             {card.monthlyBudget && card.monthlyBudget > 0 && (
@@ -1066,10 +1087,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderRadius: 4,
   },
+  usageInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   percentageText: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
-    textAlign: "right",
   },
   detailRow: {
     flexDirection: "row",

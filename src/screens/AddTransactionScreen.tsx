@@ -40,7 +40,7 @@ type AddTransactionScreenNavigationProp = StackNavigationProp<
   "AddTransaction"
 >;
 
-const CURRENCIES = ["IDR", "USD", "SGD", "EUR", "JPY", "AUD"];
+import { CURRENCIES, Currency } from "../constants/currencies";
 
 export const AddTransactionScreen = () => {
   const navigation = useNavigation<AddTransactionScreenNavigationProp>();
@@ -60,12 +60,20 @@ export const AddTransactionScreen = () => {
   // Multi-Currency State
   const [currency, setCurrency] = useState("IDR");
   const [exchangeRate, setExchangeRate] = useState("");
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [searchCurrency, setSearchCurrency] = useState("");
 
   // Installment State
   const [isInstallment, setIsInstallment] = useState(false);
-  const [installmentMonths, setInstallmentMonths] = useState(3);
+  const [installmentMonths, setInstallmentMonths] = useState(""); // Total tenor (string for input)
   const [customMonthlyAmount, setCustomMonthlyAmount] = useState("");
   const [adminFee, setAdminFee] = useState("");
+
+  // Enhanced Installment State
+  const [isAlreadyStarted, setIsAlreadyStarted] = useState(false);
+  const [paidInstallmentMonths, setPaidInstallmentMonths] = useState(""); // "Sudah Berjalan" (string)
+  const [isZeroPercent, setIsZeroPercent] = useState(true); // Default 0% true
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Date Picker State
   const [transactionDate, setTransactionDate] = useState(new Date());
@@ -80,9 +88,15 @@ export const AddTransactionScreen = () => {
   };
 
   // Calculate default monthly amount, but allow override
-  const calculatedMonthly = amount
-    ? Math.ceil(parseNumber(amount) / installmentMonths)
-    : 0;
+  // Calculate default monthly amount (IDR Total / Tenor)
+  const calculatedMonthly =
+    amount && installmentMonths
+      ? Math.ceil(
+          (parseNumber(amount) *
+            (currency === "IDR" ? 1 : parseNumber(exchangeRate))) /
+            parseNumber(installmentMonths)
+        )
+      : 0;
 
   // Use custom amount if set, otherwise use calculated
   const finalMonthlyAmount = customMonthlyAmount
@@ -122,6 +136,15 @@ export const AddTransactionScreen = () => {
       return;
     }
 
+    if (isInstallment && !installmentMonths) {
+      Alert.alert("Validasi Gagal", "Mohon isi Tenor (Total Bulan)");
+      return;
+    }
+    if (isInstallment && isAlreadyStarted && !paidInstallmentMonths) {
+      Alert.alert("Validasi Gagal", "Mohon isi Durasi yang Sudah Berjalan");
+      return;
+    }
+
     const numericAmount = parseNumber(amount);
     const numericRate = currency === "IDR" ? 1 : parseNumber(exchangeRate);
     const finalAmount = numericAmount * numericRate;
@@ -131,11 +154,18 @@ export const AddTransactionScreen = () => {
         await addInstallmentPlan(
           {
             cardId: selectedCardId,
-            originalAmount: finalAmount, // Installment plan usually tracks total IDR liability
-            totalMonths: installmentMonths,
-            monthlyAmount: finalMonthlyAmount, // This logic might need adjustment for multi-currency installments, but keeping simple for now
+            originalAmount: numericAmount, // Store original currency amount (e.g. USD 1000)
+            totalMonths: parseNumber(installmentMonths),
+            monthlyAmount: finalMonthlyAmount,
             description,
             startDate: new Date().toISOString(),
+            // New enhanced parameters
+            currency: currency !== "IDR" ? currency : undefined,
+            exchangeRate: currency !== "IDR" ? numericRate : undefined,
+            isZeroPercent: isZeroPercent,
+            startMonth: isAlreadyStarted
+              ? parseNumber(paidInstallmentMonths) + 1
+              : 1, // If started, we start at next month
           },
           adminFee ? parseNumber(adminFee) : 0
         );
@@ -224,62 +254,161 @@ export const AddTransactionScreen = () => {
           )}
 
           {/* Currency Selector */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mata Uang</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+          <TouchableOpacity
+            style={[styles.inputContainer, { marginBottom: theme.spacing.l }]}
+            onPress={() => setShowCurrencyPicker(true)}
+          >
+            <Ionicons
+              name="flag-outline"
+              size={moderateScale(20)}
+              color={theme.colors.text.secondary}
+              style={styles.inputIcon}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Mata Uang</Text>
+              <Text style={styles.textInput}>
+                {CURRENCIES.find((c) => c.code === currency)?.flag}{" "}
+                {CURRENCIES.find((c) => c.code === currency)?.code} -{" "}
+                {CURRENCIES.find((c) => c.code === currency)?.name}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-down"
+              size={20}
+              color={theme.colors.text.secondary}
+            />
+          </TouchableOpacity>
+
+          {/* Currency Picker Modal */}
+          <Modal
+            visible={showCurrencyPicker}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setShowCurrencyPicker(false)}
+          >
+            <SafeAreaView
+              style={{ flex: 1, backgroundColor: theme.colors.background }}
             >
-              {CURRENCIES.map((curr) => (
-                <TouchableOpacity
-                  key={curr}
-                  style={[
-                    styles.currencyChip,
-                    currency === curr && styles.activeCurrencyChip,
-                  ]}
-                  onPress={() => setCurrency(curr)}
-                >
-                  <Text
-                    style={[
-                      styles.currencyChipText,
-                      currency === curr && styles.activeCurrencyChipText,
-                    ]}
-                  >
-                    {curr}
-                  </Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Pilih Mata Uang</Text>
+                <TouchableOpacity onPress={() => setShowCurrencyPicker(false)}>
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={theme.colors.text.primary}
+                  />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
+              <View style={styles.searchContainer}>
+                <Ionicons
+                  name="search"
+                  size={20}
+                  color={theme.colors.text.secondary}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Cari mata uang..."
+                  value={searchCurrency}
+                  onChangeText={setSearchCurrency}
+                  autoFocus={false}
+                />
+              </View>
+              <ScrollView contentContainerStyle={styles.currencyList}>
+                {CURRENCIES.filter(
+                  (c) =>
+                    c.code
+                      .toLowerCase()
+                      .includes(searchCurrency.toLowerCase()) ||
+                    c.name.toLowerCase().includes(searchCurrency.toLowerCase())
+                ).map((c) => (
+                  <TouchableOpacity
+                    key={c.code}
+                    style={styles.currencyItem}
+                    onPress={() => {
+                      setCurrency(c.code);
+                      setShowCurrencyPicker(false);
+                      setSearchCurrency("");
+                    }}
+                  >
+                    <Text style={styles.currencyFlag}>{c.flag}</Text>
+                    <View>
+                      <Text style={styles.currencyCode}>{c.code}</Text>
+                      <Text style={styles.currencyName}>{c.name}</Text>
+                    </View>
+                    {currency === c.code && (
+                      <Ionicons
+                        name="checkmark"
+                        size={24}
+                        color={theme.colors.primary}
+                        style={{ marginLeft: "auto" }}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </SafeAreaView>
+          </Modal>
+
+          {/* Amount Input - Hero Element */}
+          <View style={styles.amountCard}>
+            <Text style={styles.amountLabel}>Nominal Transaksi</Text>
+            <View style={styles.amountInputRow}>
+              <Text style={styles.currencyPrefix}>{currency}</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={formatNumberInput(amount)}
+                onChangeText={(text) => setAmount(parseNumber(text).toString())}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={theme.colors.text.tertiary}
+                autoFocus
+              />
+            </View>
+            {currency !== "IDR" && amount && exchangeRate && (
+              <Text style={styles.amountEquivalent}>
+                ≈ Rp{" "}
+                {(
+                  parseNumber(amount) * parseNumber(exchangeRate)
+                ).toLocaleString("id-ID")}
+              </Text>
+            )}
           </View>
 
-          <View style={styles.amountContainer}>
-            <Text style={styles.currencyPrefix}>{currency}</Text>
-            <TextInput
-              style={styles.amountInput}
-              value={formatNumberInput(amount)}
-              onChangeText={(text) => setAmount(parseNumber(text).toString())}
-              keyboardType="numeric"
-              placeholder="0"
-              placeholderTextColor={theme.colors.text.tertiary}
-              autoFocus
-            />
-          </View>
+          {/* Installment Summary - Moved below Amount */}
+          {isInstallment && amount && installmentMonths ? (
+            <View style={styles.installmentSummaryCard}>
+              <Text style={styles.installmentSummaryLabel}>Total Cicilan</Text>
+              <Text style={styles.installmentSummaryAmount}>
+                {formatCurrency(
+                  finalMonthlyAmount * parseNumber(installmentMonths)
+                )}
+              </Text>
+              <Text style={styles.installmentSummaryDetail}>
+                {installmentMonths}x cicilan @{" "}
+                {formatCurrency(finalMonthlyAmount)}/bulan
+              </Text>
+              {adminFee ? (
+                <Text style={styles.installmentSummaryDetail}>
+                  + Biaya Admin: {formatCurrency(parseNumber(adminFee))}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
 
           {/* Exchange Rate Input (if not IDR) */}
           {currency !== "IDR" && (
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="cash-outline"
-                size={moderateScale(20)}
-                color={theme.colors.text.secondary}
-                style={styles.inputIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>Nilai Tukar (Ke IDR)</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputGroupLabel}>Nilai Tukar (Ke IDR)</Text>
+              <View style={styles.inputRow}>
+                <Ionicons
+                  name="cash-outline"
+                  size={moderateScale(20)}
+                  color={theme.colors.text.secondary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={styles.textInput}
-                  placeholder="Contoh: 15000"
+                  style={styles.inputField}
+                  placeholder="Contoh: 15.000"
                   placeholderTextColor={theme.colors.text.tertiary}
                   keyboardType="numeric"
                   value={formatNumberInput(exchangeRate)}
@@ -287,33 +416,9 @@ export const AddTransactionScreen = () => {
                     setExchangeRate(parseNumber(text).toString())
                   }
                 />
-                {amount && exchangeRate && (
-                  <Text style={styles.helperText}>
-                    Estimasi:{" "}
-                    {formatCurrency(
-                      parseNumber(amount) * parseNumber(exchangeRate)
-                    )}
-                  </Text>
-                )}
               </View>
             </View>
           )}
-
-          {isInstallment && amount ? (
-            <View style={styles.installmentSummary}>
-              <Text style={styles.installmentSummaryText}>
-                Total Cicilan x {installmentMonths}:{" "}
-                {Math.round(
-                  finalMonthlyAmount * installmentMonths
-                ).toLocaleString("id-ID")}
-              </Text>
-              {adminFee ? (
-                <Text style={styles.installmentSummarySubText}>
-                  + Admin Fee: {parseNumber(adminFee).toLocaleString("id-ID")}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
 
           {/* Date Picker Button */}
           <TouchableOpacity
@@ -366,50 +471,140 @@ export const AddTransactionScreen = () => {
 
             {isInstallment && (
               <View style={styles.installmentOptions}>
-                <Text style={[styles.sectionLabel, { marginBottom: 8 }]}>
-                  Tenor (Bulan)
-                </Text>
-                <View style={styles.tenorGrid}>
-                  {[3, 6, 12, 18, 24].map((m) => (
-                    <TouchableOpacity
-                      key={m}
-                      style={[
-                        styles.tenorItem,
-                        installmentMonths === m && styles.tenorItemActive,
-                      ]}
-                      onPress={() => {
-                        setInstallmentMonths(m);
-                        setCustomMonthlyAmount(""); // Reset custom amount on tenor change
+                {/* Tenor Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputGroupLabel}>
+                    Tenor (Total Bulan)
+                  </Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons
+                      name="calendar-number-outline"
+                      size={moderateScale(20)}
+                      color={theme.colors.text.secondary}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.inputField}
+                      value={installmentMonths}
+                      onChangeText={(text) => {
+                        setInstallmentMonths(text.replace(/[^0-9]/g, ""));
+                        setCustomMonthlyAmount("");
                       }}
-                    >
-                      <Text
-                        style={[
-                          styles.tenorText,
-                          installmentMonths === m && styles.tenorTextActive,
-                        ]}
-                      >
-                        {m}x
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                      keyboardType="numeric"
+                      placeholder="12"
+                      placeholderTextColor={theme.colors.text.tertiary}
+                    />
+                  </View>
                 </View>
 
-                <View style={styles.divider} />
+                {/* Already Started Toggle */}
+                <View style={[styles.switchContainer, { marginTop: 12 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.switchLabel}>
+                      Cicilan Sudah Berjalan?
+                    </Text>
+                    <Text style={styles.switchSubLabel}>
+                      Input durasi yang sudah dibayar
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isAlreadyStarted}
+                    onValueChange={setIsAlreadyStarted}
+                    trackColor={{
+                      false: "#767577",
+                      true: theme.colors.primary,
+                    }}
+                    thumbColor={isAlreadyStarted ? "#fff" : "#f4f3f4"}
+                  />
+                </View>
 
-                <Text style={styles.sectionLabel}>Detail Cicilan</Text>
+                {isAlreadyStarted && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputGroupLabel}>
+                      Sudah Berjalan (Bulan)
+                    </Text>
+                    <View style={styles.inputRow}>
+                      <Ionicons
+                        name="hourglass-outline"
+                        size={moderateScale(20)}
+                        color={theme.colors.text.secondary}
+                        style={styles.inputIcon}
+                      />
+                      <TextInput
+                        style={styles.inputField}
+                        value={paidInstallmentMonths}
+                        onChangeText={(text) => {
+                          setPaidInstallmentMonths(text.replace(/[^0-9]/g, ""));
+                        }}
+                        keyboardType="numeric"
+                        placeholder="3"
+                        placeholderTextColor={theme.colors.text.tertiary}
+                      />
+                    </View>
+                    <Text style={styles.helperText}>
+                      Sisa:{" "}
+                      {Math.max(
+                        0,
+                        parseNumber(installmentMonths) -
+                          parseNumber(paidInstallmentMonths)
+                      )}{" "}
+                      transaksi (Mulai ke-
+                      {parseNumber(paidInstallmentMonths) + 1})
+                    </Text>
+                  </View>
+                )}
+
+                {/* 0% Interest Toggle */}
+                <View style={styles.switchContainer}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.switchLabel}>Cicilan 0%?</Text>
+                    <Text style={styles.switchSubLabel}>
+                      Jika aktif, cicilan per bulan = Total / Tenor
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isZeroPercent}
+                    onValueChange={(val) => {
+                      setIsZeroPercent(val);
+                      if (val) setCustomMonthlyAmount(""); // Reset custom if enabling 0%
+                    }}
+                    trackColor={{
+                      false: "#767577",
+                      true: theme.colors.primary,
+                    }}
+                    thumbColor={isZeroPercent ? "#fff" : "#f4f3f4"}
+                  />
+                </View>
+
+                {!isZeroPercent && (
+                  <Text
+                    style={[
+                      styles.helperText,
+                      { marginTop: 0, marginBottom: 12 },
+                    ]}
+                  >
+                    Masukan nominal cicilan tagihan bulanan sesuai info dari
+                    bank (termasuk bunga jika ada).
+                  </Text>
+                )}
 
                 {/* Monthly Amount Input */}
-                <View style={styles.inputContainer}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={moderateScale(20)}
-                    color={theme.colors.text.secondary}
-                    style={styles.inputIcon}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>Cicilan per Bulan</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputGroupLabel}>
+                    Cicilan per Bulan {isZeroPercent ? "(otomatis)" : ""}
+                  </Text>
+                  <View
+                    style={[styles.inputRow, isZeroPercent && { opacity: 0.6 }]}
+                  >
+                    <Ionicons
+                      name="wallet-outline"
+                      size={moderateScale(20)}
+                      color={theme.colors.text.secondary}
+                      style={styles.inputIcon}
+                    />
                     <TextInput
-                      style={styles.textInput}
+                      style={styles.inputField}
+                      editable={!isZeroPercent}
                       value={
                         customMonthlyAmount
                           ? formatNumberInput(customMonthlyAmount)
@@ -423,27 +618,27 @@ export const AddTransactionScreen = () => {
                       placeholderTextColor={theme.colors.text.tertiary}
                     />
                   </View>
+                  {!isZeroPercent && (
+                    <Text style={styles.helperText}>
+                      Masukan sesuai tagihan bulanan dari bank.
+                    </Text>
+                  )}
                 </View>
 
                 {/* Admin Fee Input */}
-                <View
-                  style={[
-                    styles.inputContainer,
-                    { marginBottom: theme.spacing.s },
-                  ]}
-                >
-                  <Ionicons
-                    name="receipt-outline"
-                    size={moderateScale(20)}
-                    color={theme.colors.text.secondary}
-                    style={styles.inputIcon}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>
-                      Biaya Admin (Opsional)
-                    </Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputGroupLabel}>
+                    Biaya Admin (Opsional)
+                  </Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons
+                      name="receipt-outline"
+                      size={moderateScale(20)}
+                      color={theme.colors.text.secondary}
+                      style={styles.inputIcon}
+                    />
                     <TextInput
-                      style={styles.textInput}
+                      style={styles.inputField}
                       value={formatNumberInput(adminFee)}
                       onChangeText={(text) =>
                         setAdminFee(parseNumber(text).toString())
@@ -457,24 +652,24 @@ export const AddTransactionScreen = () => {
               </View>
             )}
 
-            {isInstallment && <View style={styles.divider} />}
-
-            <View
-              style={[styles.inputContainer, { marginTop: theme.spacing.m }]}
-            >
-              <Ionicons
-                name="create-outline"
-                size={moderateScale(20)}
-                color={theme.colors.text.secondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.textInput}
-                value={description}
-                onChangeText={handleDescriptionChange}
-                placeholder="Deskripsi (cth. Makan Siang)"
-                placeholderTextColor={theme.colors.text.tertiary}
-              />
+            {/* Description Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputGroupLabel}>Deskripsi Transaksi</Text>
+              <View style={styles.inputRow}>
+                <Ionicons
+                  name="create-outline"
+                  size={moderateScale(20)}
+                  color={theme.colors.text.secondary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.inputField}
+                  value={description}
+                  onChangeText={handleDescriptionChange}
+                  placeholder="Makan Siang, Belanja Online, dll."
+                  placeholderTextColor={theme.colors.text.tertiary}
+                />
+              </View>
             </View>
 
             <View style={styles.categoryHeader}>
@@ -687,23 +882,41 @@ const styles = StyleSheet.create({
   content: {
     padding: theme.spacing.m,
   },
-  amountContainer: {
+  amountCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: theme.spacing.l,
+    marginBottom: theme.spacing.l,
+    alignItems: "center",
+    ...theme.shadows.medium,
+  },
+  amountLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.s,
+  },
+  amountInputRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: theme.spacing.xl,
+  },
+  amountEquivalent: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    marginTop: theme.spacing.s,
   },
   currencyPrefix: {
-    fontSize: moderateScale(32),
+    fontSize: moderateScale(28),
     fontWeight: "600",
     color: theme.colors.text.secondary,
     marginRight: theme.spacing.s,
   },
   amountInput: {
-    fontSize: moderateScale(48),
+    fontSize: moderateScale(42),
     fontWeight: "700",
     color: theme.colors.text.primary,
     minWidth: 100,
+    textAlign: "center",
   },
   card: {
     backgroundColor: theme.colors.surface,
@@ -715,12 +928,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
+    borderRadius: 16, // Modern rounded corners
     paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s, // reduced vertical padding
+    paddingVertical: 8, // More padding for nicer feel
     marginBottom: theme.spacing.l,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    height: 64, // Taller inputs for easier tapping
   },
   inputIcon: {
     marginRight: theme.spacing.m,
@@ -729,13 +943,15 @@ const styles = StyleSheet.create({
     flex: 1,
     ...theme.typography.body,
     color: theme.colors.text.primary,
-    paddingVertical: theme.spacing.s, // ensure text is vertically centered
-    height: theme.containerSizes.iconMedium, // fixed height for alignment
+    height: "100%", // Fill container
+    textAlignVertical: "center",
   },
   sectionLabel: {
     ...theme.typography.h3,
     fontSize: moderateScale(16),
+    fontWeight: "700",
     color: theme.colors.text.primary,
+    marginBottom: theme.spacing.m,
   },
   categoryHeader: {
     flexDirection: "row",
@@ -761,15 +977,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
+    height: 40,
   },
   categoryIconContainer: {
-    width: theme.containerSizes.iconSmall,
-    height: theme.containerSizes.iconSmall,
-    borderRadius: scale(14),
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
-    ...theme.shadows.small,
   },
   categoryText: {
     fontSize: moderateScale(12),
@@ -777,10 +993,13 @@ const styles = StyleSheet.create({
   },
   mainSaveButton: {
     backgroundColor: theme.colors.primary,
-    padding: theme.spacing.m,
+    paddingVertical: 16,
+    paddingHorizontal: theme.spacing.l,
     borderRadius: theme.borderRadius.m,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: theme.spacing.xl,
+    minHeight: 52,
     ...theme.shadows.medium,
   },
   mainSaveButtonText: {
@@ -806,19 +1025,56 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
   },
-  installmentSummary: {
-    alignItems: "center",
+  // New Installment Summary Card
+  installmentSummaryCard: {
+    backgroundColor: theme.colors.primary + "10",
+    borderRadius: 16,
+    padding: theme.spacing.m,
     marginBottom: theme.spacing.l,
-    marginTop: -theme.spacing.l,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.primary + "30",
   },
-  installmentSummaryText: {
-    ...theme.typography.h3,
+  installmentSummaryLabel: {
+    ...theme.typography.caption,
     color: theme.colors.primary,
+    marginBottom: 4,
   },
-  installmentSummarySubText: {
+  installmentSummaryAmount: {
+    ...theme.typography.h2,
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  installmentSummaryDetail: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
     marginTop: 4,
+  },
+  // Input Group (Label outside, input inside)
+  inputGroup: {
+    marginBottom: theme.spacing.l,
+  },
+  inputGroupLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
+    paddingHorizontal: theme.spacing.m,
+    height: 56,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  inputField: {
+    flex: 1,
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+    height: "100%",
   },
   installmentOptions: {
     marginBottom: theme.spacing.m,
@@ -827,36 +1083,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: theme.colors.border,
     marginVertical: theme.spacing.m,
-  },
-  inputLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: 2,
-  },
-  tenorGrid: {
-    flexDirection: "row",
-    gap: theme.spacing.s,
-    flexWrap: "wrap",
-  },
-  tenorItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  tenorItemActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  tenorText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  tenorTextActive: {
-    color: theme.colors.text.inverse,
   },
   cardSelectorContainer: {
     marginBottom: theme.spacing.l,
@@ -874,10 +1100,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.background,
+    height: 48, // Consistent height for cards
   },
   cardOptionActive: {
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
+    borderColor: theme.colors.primary,
   },
   cardOptionText: {
     ...theme.typography.body,
@@ -887,49 +1115,113 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     fontWeight: "600",
   },
-  inputGroup: {
-    marginBottom: theme.spacing.m,
-  },
-  label: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 8,
-  },
-  currencyChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+
+  currencySelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    borderRadius: 16,
+    paddingHorizontal: theme.spacing.m,
+    height: 64, // Match InputContainer
   },
-  activeCurrencyChip: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+  currencySelectorText: {
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
   },
-  currencyChipText: {
-    ...theme.typography.caption,
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing.m,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text.primary,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    margin: theme.spacing.m,
+    paddingHorizontal: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    height: 52, // Standard height
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: theme.spacing.s,
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+    height: "100%",
+  },
+  currencyList: {
+    padding: theme.spacing.m,
+  },
+  currencyItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: theme.spacing.m,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    height: 60,
+  },
+  currencyFlag: {
+    fontSize: 24,
+    marginRight: theme.spacing.m,
+  },
+  currencyCode: {
+    ...theme.typography.body,
     fontWeight: "600",
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.primary,
   },
-  activeCurrencyChipText: {
-    color: theme.colors.text.inverse,
+  currencyName: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
   },
   helperText: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
-    marginTop: 4,
+    marginTop: 6,
+    marginLeft: 4,
+    lineHeight: 18,
+  },
+  input: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.m,
+    paddingHorizontal: theme.spacing.m,
+    height: 52, // Standard height
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+  },
+  inputLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  inputDisabled: {
+    backgroundColor: theme.colors.background,
+    color: theme.colors.text.tertiary,
   },
   datePickerButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
+    paddingHorizontal: theme.spacing.m,
+    height: 64, // Match InputContainer
+    borderRadius: 16,
+    marginBottom: theme.spacing.l,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.small,
   },
   datePickerLabel: {
     ...theme.typography.caption,
@@ -1016,5 +1308,19 @@ const styles = StyleSheet.create({
   datePickerConfirmText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
+  },
+
+  tooltipContainer: {
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.s,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 8,
+  },
+  tooltipText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    lineHeight: 18,
   },
 });

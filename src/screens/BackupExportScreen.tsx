@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -21,10 +22,6 @@ import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { formatCurrencyExact } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
 import { storage } from "../utils/storage";
-import {
-  ExportOptionsModal,
-  ExportOptions,
-} from "../components/ExportOptionsModal";
 
 export const BackupExportScreen = () => {
   const navigation = useNavigation();
@@ -45,6 +42,33 @@ export const BackupExportScreen = () => {
   const [includeSubscriptions, setIncludeSubscriptions] = useState(false);
   const [includeInstallments, setIncludeInstallments] = useState(false);
   const [includePayments, setIncludePayments] = useState(false);
+
+  // Date range state
+  type DatePreset =
+    | "thisMonth"
+    | "3months"
+    | "6months"
+    | "1year"
+    | "all"
+    | "custom";
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+
+  // Custom date input state
+  const now = new Date();
+  const [startDay, setStartDay] = useState(1);
+  const [startMonth, setStartMonth] = useState(now.getMonth());
+  const [startYear, setStartYear] = useState(now.getFullYear());
+  const [endDay, setEndDay] = useState(now.getDate());
+  const [endMonth, setEndMonth] = useState(now.getMonth());
+  const [endYear, setEndYear] = useState(now.getFullYear());
+
+  // Card selection state
+  const [selectAllCards, setSelectAllCards] = useState(true);
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+
+  // Category selection state
+  const [selectAllCategories, setSelectAllCategories] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // Calculate summary stats
   const stats = useMemo(() => {
@@ -389,19 +413,39 @@ export const BackupExportScreen = () => {
     setExportType("custom");
 
     try {
-      // Use "all data" date range for simplicity
+      // Calculate date range from preset
       const now = new Date();
-      const dateRange = {
-        start: new Date(2020, 0, 1),
-        end: now,
-      };
+      let startDate = new Date(2020, 0, 1);
+      let endDate = now;
+
+      switch (datePreset) {
+        case "thisMonth":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case "3months":
+          startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+          break;
+        case "6months":
+          startDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+          break;
+        case "1year":
+          startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+          break;
+        case "custom":
+          startDate = new Date(startYear, startMonth, startDay);
+          endDate = new Date(endYear, endMonth, endDay);
+          break;
+        case "all":
+        default:
+          startDate = new Date(2020, 0, 1);
+      }
+
+      const dateRange = { start: startDate, end: endDate };
       const format = exportFormat;
 
-      // Use all cards (no filter)
-      const cardIds: string[] = [];
-      const categories: string[] = [];
-
-      // Filter transactions
+      // Use selected cards or all if "select all" is checked
+      const cardIds = selectAllCards ? [] : selectedCardIds;
+      const categories = selectAllCategories ? [] : selectedCategories;
 
       // Filter transactions
       let filteredTransactions = transactions.filter((t) => {
@@ -451,11 +495,11 @@ export const BackupExportScreen = () => {
 
       // Check if at least one data type is selected
       if (
-        !options.includeTransactions &&
-        !options.includeCards &&
-        !options.includeSubscriptions &&
-        !options.includeInstallments &&
-        !options.includePayments
+        !includeTransactions &&
+        !includeCards &&
+        !includeSubscriptions &&
+        !includeInstallments &&
+        !includePayments
       ) {
         Alert.alert("Error", "Pilih minimal satu tipe data untuk di-export");
         return;
@@ -463,11 +507,11 @@ export const BackupExportScreen = () => {
 
       // Check if there's data to export
       const hasData =
-        (options.includeTransactions && filteredTransactions.length > 0) ||
-        (options.includeCards && filteredCards.length > 0) ||
-        (options.includeSubscriptions && filteredSubscriptions.length > 0) ||
-        (options.includeInstallments && filteredInstallments.length > 0) ||
-        (options.includePayments &&
+        (includeTransactions && filteredTransactions.length > 0) ||
+        (includeCards && filteredCards.length > 0) ||
+        (includeSubscriptions && filteredSubscriptions.length > 0) ||
+        (includeInstallments && filteredInstallments.length > 0) ||
+        (includePayments &&
           filteredCards.some((c) => (c.paymentHistory?.length ?? 0) > 0));
 
       if (!hasData) {
@@ -483,7 +527,7 @@ export const BackupExportScreen = () => {
         let csv = "";
 
         // Transactions section
-        if (options.includeTransactions && filteredTransactions.length > 0) {
+        if (includeTransactions && filteredTransactions.length > 0) {
           csv += "=== TRANSAKSI ===\n";
           csv +=
             "Tanggal,Kartu,Kategori,Deskripsi,Jumlah (IDR),Currency,Original Amount\n";
@@ -505,7 +549,7 @@ export const BackupExportScreen = () => {
         }
 
         // Cards section
-        if (options.includeCards && filteredCards.length > 0) {
+        if (includeCards && filteredCards.length > 0) {
           csv += "=== RINGKASAN KARTU ===\n";
           csv +=
             "Nama Kartu,Bank,Network,Limit,Pemakaian,Persentase,Billing Date,Due Date,Status\n";
@@ -519,7 +563,7 @@ export const BackupExportScreen = () => {
         }
 
         // Subscriptions section
-        if (options.includeSubscriptions && filteredSubscriptions.length > 0) {
+        if (includeSubscriptions && filteredSubscriptions.length > 0) {
           csv += "=== LANGGANAN ===\n";
           csv += "Nama,Kartu,Kategori,Jumlah,Siklus,Tanggal Tagihan,Status\n";
 
@@ -535,7 +579,7 @@ export const BackupExportScreen = () => {
         }
 
         // Installments section
-        if (options.includeInstallments && filteredInstallments.length > 0) {
+        if (includeInstallments && filteredInstallments.length > 0) {
           csv += "=== CICILAN ===\n";
           csv += "Deskripsi,Kartu,Total,Cicilan/Bulan,Tenor\n";
 
@@ -549,7 +593,7 @@ export const BackupExportScreen = () => {
         }
 
         // Payment history section
-        if (options.includePayments) {
+        if (includePayments) {
           const allPayments: any[] = [];
           filteredCards.forEach((c) => {
             if (c.paymentHistory) {
@@ -597,7 +641,7 @@ export const BackupExportScreen = () => {
         report += `========================================\n\n`;
 
         // Transactions summary
-        if (options.includeTransactions && filteredTransactions.length > 0) {
+        if (includeTransactions && filteredTransactions.length > 0) {
           const totalSpent = filteredTransactions.reduce(
             (sum, t) => sum + t.amount,
             0
@@ -642,7 +686,7 @@ export const BackupExportScreen = () => {
         }
 
         // Cards status
-        if (options.includeCards && filteredCards.length > 0) {
+        if (includeCards && filteredCards.length > 0) {
           report += `STATUS KARTU\n`;
           report += `-----------------------------------------\n`;
           filteredCards.forEach((c) => {
@@ -660,7 +704,7 @@ export const BackupExportScreen = () => {
         }
 
         // Subscriptions
-        if (options.includeSubscriptions && filteredSubscriptions.length > 0) {
+        if (includeSubscriptions && filteredSubscriptions.length > 0) {
           const totalMonthly = filteredSubscriptions
             .filter((s) => s.isActive)
             .reduce((sum, s) => sum + s.amount, 0);
@@ -680,7 +724,7 @@ export const BackupExportScreen = () => {
         }
 
         // Installments
-        if (options.includeInstallments && filteredInstallments.length > 0) {
+        if (includeInstallments && filteredInstallments.length > 0) {
           report += `CICILAN AKTIF\n`;
           report += `-----------------------------------------\n`;
           filteredInstallments.forEach((i) => {
@@ -696,7 +740,7 @@ export const BackupExportScreen = () => {
         }
 
         // Payment history
-        if (options.includePayments) {
+        if (includePayments) {
           const allPayments: any[] = [];
           filteredCards.forEach((c) => {
             if (c.paymentHistory) {
@@ -775,7 +819,7 @@ export const BackupExportScreen = () => {
         `;
 
         // Transactions section
-        if (options.includeTransactions && filteredTransactions.length > 0) {
+        if (includeTransactions && filteredTransactions.length > 0) {
           const totalSpent = filteredTransactions.reduce(
             (sum, t) => sum + t.amount,
             0
@@ -827,7 +871,7 @@ export const BackupExportScreen = () => {
         }
 
         // Cards section
-        if (options.includeCards && filteredCards.length > 0) {
+        if (includeCards && filteredCards.length > 0) {
           html += `
             <div class="section">
               <div class="section-title">🏦 Status Kartu (${filteredCards.length})</div>
@@ -852,7 +896,7 @@ export const BackupExportScreen = () => {
         }
 
         // Subscriptions section
-        if (options.includeSubscriptions && filteredSubscriptions.length > 0) {
+        if (includeSubscriptions && filteredSubscriptions.length > 0) {
           const totalMonthly = filteredSubscriptions
             .filter((s) => s.isActive)
             .reduce((sum, s) => sum + s.amount, 0);
@@ -890,7 +934,7 @@ export const BackupExportScreen = () => {
         }
 
         // Installments section
-        if (options.includeInstallments && filteredInstallments.length > 0) {
+        if (includeInstallments && filteredInstallments.length > 0) {
           html += `
             <div class="section">
               <div class="section-title">📅 Cicilan Aktif</div>
@@ -914,7 +958,7 @@ export const BackupExportScreen = () => {
         }
 
         // Payment history section
-        if (options.includePayments) {
+        if (includePayments) {
           const allPayments: any[] = [];
           filteredCards.forEach((c) => {
             if (c.paymentHistory) {
@@ -1137,14 +1181,444 @@ export const BackupExportScreen = () => {
             color="#F59E0B"
           />
 
-          <ExportButton
-            icon="options-outline"
-            title="Laporan Kustom"
-            subtitle="Pilih data, periode, dan format sesuai kebutuhan"
-            onPress={() => setShowExportModal(true)}
-            type="custom"
-            color="#EC4899"
-          />
+          <TouchableOpacity
+            style={[styles.exportButton, { borderBottomWidth: 0 }]}
+            onPress={() => setShowCustomExport(!showCustomExport)}
+          >
+            <View style={[styles.exportIcon, { backgroundColor: "#EC489915" }]}>
+              <Ionicons name="options-outline" size={24} color="#EC4899" />
+            </View>
+            <View style={styles.exportContent}>
+              <Text style={styles.exportTitle}>Laporan Kustom</Text>
+              <Text style={styles.exportSubtitle}>
+                Pilih data dan format sesuai kebutuhan
+              </Text>
+            </View>
+            <Ionicons
+              name={showCustomExport ? "chevron-up" : "chevron-down"}
+              size={20}
+              color={theme.colors.text.tertiary}
+            />
+          </TouchableOpacity>
+
+          {/* Inline Export Options */}
+          {showCustomExport && (
+            <View style={styles.inlineExportSection}>
+              {/* Period/Date Preset Selection */}
+              <Text style={styles.inlineLabel}>Periode:</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.presetScroll}
+              >
+                {(
+                  [
+                    { key: "thisMonth", label: "Bulan Ini" },
+                    { key: "3months", label: "3 Bulan" },
+                    { key: "6months", label: "6 Bulan" },
+                    { key: "1year", label: "1 Tahun" },
+                    { key: "all", label: "Semua Data" },
+                    { key: "custom", label: "Pilih Tanggal" },
+                  ] as const
+                ).map((preset) => (
+                  <TouchableOpacity
+                    key={preset.key}
+                    style={[
+                      styles.formatChip,
+                      datePreset === preset.key && styles.formatChipActive,
+                    ]}
+                    onPress={() => setDatePreset(preset.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.formatChipText,
+                        datePreset === preset.key &&
+                          styles.formatChipTextActive,
+                      ]}
+                    >
+                      {preset.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Custom Date Picker - Text Input Style */}
+              {datePreset === "custom" && (
+                <View style={styles.customDateSection}>
+                  {/* Start Date (Dari) */}
+                  <Text style={styles.dateInputLabel}>Dari:</Text>
+                  <View style={styles.dateInputRow}>
+                    <View style={styles.dateInputColumn}>
+                      <Text style={styles.dateInputHeader}>Hari</Text>
+                      <TextInput
+                        style={styles.dateInputField}
+                        value={startDay.toString()}
+                        onChangeText={(text) => {
+                          const num = parseInt(text) || 1;
+                          setStartDay(Math.min(31, Math.max(1, num)));
+                        }}
+                        keyboardType="numeric"
+                        maxLength={2}
+                      />
+                    </View>
+                    <View style={styles.dateInputColumn}>
+                      <Text style={styles.dateInputHeader}>Bulan</Text>
+                      <TextInput
+                        style={styles.dateInputField}
+                        value={(startMonth + 1).toString()}
+                        onChangeText={(text) => {
+                          const num = parseInt(text) || 1;
+                          setStartMonth(Math.min(12, Math.max(1, num)) - 1);
+                        }}
+                        keyboardType="numeric"
+                        maxLength={2}
+                      />
+                    </View>
+                    <View style={styles.dateInputColumn}>
+                      <Text style={styles.dateInputHeader}>Tahun</Text>
+                      <TextInput
+                        style={styles.dateInputField}
+                        value={startYear.toString()}
+                        onChangeText={(text) => {
+                          const num =
+                            parseInt(text) || new Date().getFullYear();
+                          setStartYear(num);
+                        }}
+                        keyboardType="numeric"
+                        maxLength={4}
+                      />
+                    </View>
+                  </View>
+
+                  {/* End Date (Sampai) */}
+                  <Text style={[styles.dateInputLabel, { marginTop: 12 }]}>
+                    Sampai:
+                  </Text>
+                  <View style={styles.dateInputRow}>
+                    <View style={styles.dateInputColumn}>
+                      <Text style={styles.dateInputHeader}>Hari</Text>
+                      <TextInput
+                        style={styles.dateInputField}
+                        value={endDay.toString()}
+                        onChangeText={(text) => {
+                          const num = parseInt(text) || 1;
+                          setEndDay(Math.min(31, Math.max(1, num)));
+                        }}
+                        keyboardType="numeric"
+                        maxLength={2}
+                      />
+                    </View>
+                    <View style={styles.dateInputColumn}>
+                      <Text style={styles.dateInputHeader}>Bulan</Text>
+                      <TextInput
+                        style={styles.dateInputField}
+                        value={(endMonth + 1).toString()}
+                        onChangeText={(text) => {
+                          const num = parseInt(text) || 1;
+                          setEndMonth(Math.min(12, Math.max(1, num)) - 1);
+                        }}
+                        keyboardType="numeric"
+                        maxLength={2}
+                      />
+                    </View>
+                    <View style={styles.dateInputColumn}>
+                      <Text style={styles.dateInputHeader}>Tahun</Text>
+                      <TextInput
+                        style={styles.dateInputField}
+                        value={endYear.toString()}
+                        onChangeText={(text) => {
+                          const num =
+                            parseInt(text) || new Date().getFullYear();
+                          setEndYear(num);
+                        }}
+                        keyboardType="numeric"
+                        maxLength={4}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Card Selection */}
+              <Text style={[styles.inlineLabel, { marginTop: 16 }]}>
+                Kartu:
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.toggleChip,
+                  selectAllCards && styles.toggleChipActive,
+                  { alignSelf: "flex-start", marginBottom: 8 },
+                ]}
+                onPress={() => {
+                  setSelectAllCards(!selectAllCards);
+                  if (!selectAllCards) setSelectedCardIds([]);
+                }}
+              >
+                <Ionicons
+                  name={selectAllCards ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={
+                    selectAllCards
+                      ? theme.colors.primary
+                      : theme.colors.text.tertiary
+                  }
+                />
+                <Text style={styles.toggleText}>Semua Kartu</Text>
+              </TouchableOpacity>
+
+              {!selectAllCards && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.presetScroll}
+                >
+                  {cards.map((card) => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={[
+                        styles.selectionChip,
+                        selectedCardIds.includes(card.id) &&
+                          styles.selectionChipActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedCardIds((prev) =>
+                          prev.includes(card.id)
+                            ? prev.filter((id) => id !== card.id)
+                            : [...prev, card.id]
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.selectionChipText,
+                          selectedCardIds.includes(card.id) &&
+                            styles.selectionChipTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {card.alias.toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Category Selection */}
+              <Text style={[styles.inlineLabel, { marginTop: 24 }]}>
+                Kategori:
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.toggleChip,
+                  selectAllCategories && styles.toggleChipActive,
+                  { alignSelf: "flex-start", marginBottom: 8 },
+                ]}
+                onPress={() => {
+                  setSelectAllCategories(!selectAllCategories);
+                  if (!selectAllCategories) setSelectedCategories([]);
+                }}
+              >
+                <Ionicons
+                  name={selectAllCategories ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={
+                    selectAllCategories
+                      ? theme.colors.primary
+                      : theme.colors.text.tertiary
+                  }
+                />
+                <Text style={styles.toggleText}>Semua Kategori</Text>
+              </TouchableOpacity>
+
+              {!selectAllCategories && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.presetScroll}
+                >
+                  {allCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.selectionChip,
+                        selectedCategories.includes(cat) &&
+                          styles.selectionChipActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedCategories((prev) =>
+                          prev.includes(cat)
+                            ? prev.filter((c) => c !== cat)
+                            : [...prev, cat]
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.selectionChipText,
+                          selectedCategories.includes(cat) &&
+                            styles.selectionChipTextActive,
+                        ]}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Format Selection */}
+              <Text style={[styles.inlineLabel, { marginTop: 24 }]}>
+                Format:
+              </Text>
+              <View style={styles.formatRow}>
+                {(["csv", "txt", "pdf"] as const).map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[
+                      styles.formatChip,
+                      exportFormat === f && styles.formatChipActive,
+                    ]}
+                    onPress={() => setExportFormat(f)}
+                  >
+                    <Text
+                      style={[
+                        styles.formatChipText,
+                        exportFormat === f && styles.formatChipTextActive,
+                      ]}
+                    >
+                      {f.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Data Type Toggles */}
+              <Text style={[styles.inlineLabel, { marginTop: 24 }]}>
+                Data yang Di-export:
+              </Text>
+              <View style={styles.toggleRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleChip,
+                    includeTransactions && styles.toggleChipActive,
+                  ]}
+                  onPress={() => setIncludeTransactions(!includeTransactions)}
+                >
+                  <Ionicons
+                    name={includeTransactions ? "checkbox" : "square-outline"}
+                    size={18}
+                    color={
+                      includeTransactions
+                        ? theme.colors.primary
+                        : theme.colors.text.tertiary
+                    }
+                  />
+                  <Text style={styles.toggleText}>Transaksi</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.toggleChip,
+                    includeCards && styles.toggleChipActive,
+                  ]}
+                  onPress={() => setIncludeCards(!includeCards)}
+                >
+                  <Ionicons
+                    name={includeCards ? "checkbox" : "square-outline"}
+                    size={18}
+                    color={
+                      includeCards
+                        ? theme.colors.primary
+                        : theme.colors.text.tertiary
+                    }
+                  />
+                  <Text style={styles.toggleText}>Kartu</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.toggleRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleChip,
+                    includeSubscriptions && styles.toggleChipActive,
+                  ]}
+                  onPress={() => setIncludeSubscriptions(!includeSubscriptions)}
+                >
+                  <Ionicons
+                    name={includeSubscriptions ? "checkbox" : "square-outline"}
+                    size={18}
+                    color={
+                      includeSubscriptions
+                        ? theme.colors.primary
+                        : theme.colors.text.tertiary
+                    }
+                  />
+                  <Text style={styles.toggleText}>Langganan</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.toggleChip,
+                    includeInstallments && styles.toggleChipActive,
+                  ]}
+                  onPress={() => setIncludeInstallments(!includeInstallments)}
+                >
+                  <Ionicons
+                    name={includeInstallments ? "checkbox" : "square-outline"}
+                    size={18}
+                    color={
+                      includeInstallments
+                        ? theme.colors.primary
+                        : theme.colors.text.tertiary
+                    }
+                  />
+                  <Text style={styles.toggleText}>Cicilan</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.toggleChip,
+                  includePayments && styles.toggleChipActive,
+                  { alignSelf: "flex-start" },
+                ]}
+                onPress={() => setIncludePayments(!includePayments)}
+              >
+                <Ionicons
+                  name={includePayments ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={
+                    includePayments
+                      ? theme.colors.primary
+                      : theme.colors.text.tertiary
+                  }
+                />
+                <Text style={styles.toggleText}>Riwayat Bayar</Text>
+              </TouchableOpacity>
+
+              {/* Export Button */}
+              <TouchableOpacity
+                style={styles.inlineExportButton}
+                onPress={handleInlineExport}
+                disabled={isExporting && exportType === "custom"}
+              >
+                {isExporting && exportType === "custom" ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="download-outline"
+                      size={20}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.inlineExportButtonText}>
+                      Export Sekarang
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Info */}
@@ -1160,15 +1634,6 @@ export const BackupExportScreen = () => {
           </Text>
         </View>
       </ScrollView>
-
-      {/* Flexible Export Modal */}
-      <ExportOptionsModal
-        visible={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onExport={handleCustomExport}
-        cards={cards}
-        categories={allCategories}
-      />
     </SafeAreaView>
   );
 };
@@ -1288,5 +1753,147 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     flex: 1,
     lineHeight: 18,
+  },
+  // Inline export section styles
+  inlineExportSection: {
+    paddingTop: theme.spacing.m,
+    paddingHorizontal: theme.spacing.m,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  inlineLabel: {
+    ...theme.typography.caption,
+    fontWeight: "600",
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.s,
+  },
+  formatRow: {
+    flexDirection: "row",
+    gap: theme.spacing.s,
+  },
+  formatChip: {
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginRight: theme.spacing.s,
+  },
+  formatChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  formatChipText: {
+    ...theme.typography.caption,
+    fontWeight: "600",
+    color: theme.colors.text.secondary,
+  },
+  formatChipTextActive: {
+    color: "#FFFFFF",
+  },
+  toggleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.s,
+    rowGap: theme.spacing.m,
+    marginBottom: theme.spacing.s,
+  },
+  toggleChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.s,
+    paddingVertical: theme.spacing.s,
+    paddingHorizontal: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    backgroundColor: theme.colors.background,
+  },
+  toggleChipActive: {
+    backgroundColor: theme.colors.primary + "10",
+  },
+  toggleText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.primary,
+  },
+  inlineExportButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.s,
+    backgroundColor: "#EC4899",
+    paddingVertical: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    marginTop: theme.spacing.m,
+  },
+  inlineExportButtonText: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  presetScroll: {
+    marginBottom: theme.spacing.s,
+  },
+  selectionChip: {
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
+    borderRadius: theme.borderRadius.m,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginRight: theme.spacing.s,
+  },
+  selectionChipActive: {
+    backgroundColor: theme.colors.primary + "15",
+    borderColor: theme.colors.primary,
+  },
+  selectionChipText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+  },
+  selectionChipTextActive: {
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  categoriesWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.s,
+  },
+  // Custom date input styles
+  customDateSection: {
+    marginTop: theme.spacing.s,
+  },
+  dateInputLabel: {
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.s,
+  },
+  dateInputRow: {
+    flexDirection: "row",
+    gap: theme.spacing.m,
+  },
+  dateInputColumn: {
+    flex: 1,
+    alignItems: "center",
+  },
+  dateInputHeader: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    marginBottom: theme.spacing.xs,
+  },
+  dateInputField: {
+    width: "100%",
+    textAlign: "center",
+    ...theme.typography.body,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+    paddingVertical: theme.spacing.s,
+    paddingHorizontal: theme.spacing.m,
+    borderRadius: theme.borderRadius.m,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + "40",
   },
 });

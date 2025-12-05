@@ -18,6 +18,7 @@ import { colors } from "../constants/colors";
 import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
 import { CardFormData, CARD_THEMES } from "../types/card";
+import { BANKS } from "../constants/banks";
 import { formatNumberInput, parseAmount } from "../utils/formatters";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,31 +28,7 @@ import { scale, moderateScale } from "../utils/responsive";
 type AddEditCardScreenRouteProp = RouteProp<RootStackParamList, "AddEditCard">;
 type AddEditCardScreenNavigationProp = any; // Placeholder for navigation type
 
-// Indonesian banks with credit card services
-const INDONESIAN_BANKS: string[] = [
-  "BCA",
-  "BNI",
-  "BRI",
-  "Mandiri",
-  "CIMB Niaga",
-  "Danamon",
-  "Permata",
-  "OCBC NISP",
-  "Panin",
-  "Maybank",
-  "HSBC",
-  "Standard Chartered",
-  "UOB",
-  "DBS",
-  "Bank Mega",
-  "BTN",
-  "Bukopin",
-  "Sinarmas",
-  "Jenius",
-  "Digibank",
-  "Other",
-];
-
+// Networks available
 const networks = ["Visa", "Mastercard", "JCB", "Amex", "Other"];
 
 export const AddEditCardScreen = () => {
@@ -67,13 +44,13 @@ export const AddEditCardScreen = () => {
   const [formData, setFormData] = useState<Partial<CardFormData>>({
     alias: "",
     bankName: "",
+    bankId: undefined,
     network: "Visa", // Keep a default for network as it's a selection
     colorTheme: theme.colors.primary,
     themeId: "blue",
     billingCycleDay: undefined,
     dueDay: undefined,
     creditLimit: undefined,
-    currentUsage: undefined,
     monthlyBudget: undefined,
     notes: "",
     last4: "",
@@ -86,6 +63,8 @@ export const AddEditCardScreen = () => {
     limitIncreaseFrequency: 6,
     nextLimitIncreaseDate: undefined,
     isLimitIncreaseReminderEnabled: false,
+    // Shared Limit
+    useSharedLimit: false,
   });
   const [tagInput, setTagInput] = useState("");
   const [monthError, setMonthError] = useState("");
@@ -95,13 +74,13 @@ export const AddEditCardScreen = () => {
       setFormData({
         alias: existingCard.alias,
         bankName: existingCard.bankName,
+        bankId: existingCard.bankId,
         network: existingCard.network,
         colorTheme: existingCard.colorTheme,
         themeId: existingCard.themeId || "blue",
         billingCycleDay: existingCard.billingCycleDay,
         dueDay: existingCard.dueDay,
         creditLimit: existingCard.creditLimit,
-        currentUsage: existingCard.currentUsage,
         monthlyBudget: existingCard.monthlyBudget || 0,
         notes: existingCard.notes || "",
         last4: existingCard.last4 || "",
@@ -115,6 +94,8 @@ export const AddEditCardScreen = () => {
         nextLimitIncreaseDate: existingCard.nextLimitIncreaseDate,
         isLimitIncreaseReminderEnabled:
           existingCard.isLimitIncreaseReminderEnabled,
+        // Shared Limit
+        useSharedLimit: existingCard.useSharedLimit || false,
       });
     }
   }, [isEditing, existingCard]);
@@ -217,7 +198,7 @@ export const AddEditCardScreen = () => {
     id: "preview",
     ...formData,
     creditLimit: Number(formData.creditLimit) || 0,
-    currentUsage: Number(formData.currentUsage) || 0,
+    currentUsage: existingCard?.currentUsage || 0,
     billingCycleDay: Number(formData.billingCycleDay) || 1,
     dueDay: Number(formData.dueDay) || 1,
   };
@@ -284,23 +265,32 @@ export const AddEditCardScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.networkContainer}
               >
-                {INDONESIAN_BANKS.map((bank) => (
+                {BANKS.map((bank) => (
                   <TouchableOpacity
-                    key={bank}
+                    key={bank.id}
                     style={[
                       styles.networkOption,
-                      formData.bankName === bank && styles.selectedNetwork,
+                      (formData.bankId === bank.id ||
+                        formData.bankName === bank.name) &&
+                        styles.selectedNetwork,
                     ]}
-                    onPress={() => setFormData({ ...formData, bankName: bank })}
+                    onPress={() =>
+                      setFormData({
+                        ...formData,
+                        bankName: bank.name,
+                        bankId: bank.id,
+                      })
+                    }
                   >
                     <Text
                       style={[
                         styles.networkText,
-                        formData.bankName === bank &&
+                        (formData.bankId === bank.id ||
+                          formData.bankName === bank.name) &&
                           styles.selectedNetworkText,
                       ]}
                     >
-                      {bank}
+                      {bank.code}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -467,6 +457,33 @@ export const AddEditCardScreen = () => {
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={theme.colors.text.tertiary}
+                />
+              </View>
+            </View>
+
+            {/* Shared Limit Toggle */}
+            <View style={styles.inputGroup}>
+              <View style={styles.switchRow}>
+                <View style={styles.switchInfo}>
+                  <Text style={styles.label}>Limit Gabungan</Text>
+                  <Text style={styles.helperText}>
+                    Gabungkan limit dengan kartu lain dari bank yang sama
+                  </Text>
+                </View>
+                <Switch
+                  value={formData.useSharedLimit || false}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, useSharedLimit: value })
+                  }
+                  trackColor={{
+                    false: theme.colors.border,
+                    true: theme.colors.primary + "60",
+                  }}
+                  thumbColor={
+                    formData.useSharedLimit
+                      ? theme.colors.primary
+                      : theme.colors.text.tertiary
+                  }
                 />
               </View>
             </View>
@@ -1086,6 +1103,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: theme.spacing.s,
+  },
+  switchInfo: {
+    flex: 1,
+    marginRight: theme.spacing.m,
   },
   indentedContent: {
     marginLeft: theme.spacing.s,
