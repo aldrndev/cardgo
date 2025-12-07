@@ -12,6 +12,8 @@ import {
   Platform,
   Alert,
   useWindowDimensions,
+  ScrollView,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -30,9 +32,9 @@ const SLIDES = [
   },
   {
     id: "2",
-    title: "Lebih Terorganisir",
+    title: "Pengingat Otomatis",
     description:
-      "Jangan lewatkan pembayaran. Dapatkan ringkasan status keuangan dan tagihan yang akan datang.",
+      "Jangan lewatkan pembayaran. Dapatkan pengingat untuk tagihan, kenaikan limit dan annual fee yang akan datang.",
     image: require("../assets/generated/onboarding_organization.png"),
   },
   {
@@ -54,8 +56,26 @@ export const OnboardingScreen = () => {
   const navigation = useNavigation<OnboardingScreenNavigationProp>();
   const [activeIndex, setActiveIndex] = useState(0);
   const [nickname, setNickname] = useState("");
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // Listen for keyboard show/hide
+  React.useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setIsKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const allSlides = [
     ...SLIDES,
@@ -132,38 +152,53 @@ export const OnboardingScreen = () => {
             if (item.id === "input") {
               return (
                 <View style={[styles.slide, { width }]}>
-                  <View
-                    style={[
-                      styles.imageContainer,
-                      {
-                        width: width * 0.8,
-                        height: width * 0.8,
-                        maxHeight: 300,
-                        maxWidth: 300,
-                      },
-                    ]}
+                  <ScrollView
+                    contentContainerStyle={styles.inputSlideContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                   >
-                    <Image
-                      source={item.image}
-                      style={styles.image}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <View style={[styles.inputWrapper, { width }]}>
-                    <Text style={styles.title}>Halo!</Text>
+                    {/* Image & Title - hide when keyboard is visible */}
+                    {!isKeyboardVisible && (
+                      <>
+                        <View style={styles.inputSlideImage}>
+                          <Image
+                            source={item.image}
+                            style={styles.image}
+                            resizeMode="contain"
+                          />
+                        </View>
+                        <Text style={styles.title}>Satu Langkah Lagi!</Text>
+                      </>
+                    )}
+
+                    {/* Subtitle - always visible */}
                     <Text style={styles.description}>
-                      Boleh kami tahu nama panggilanmu?
+                      Siapa nama panggilanmu?
                     </Text>
-                    <TextInput
-                      ref={inputRef}
-                      style={styles.input}
-                      placeholder="Masukkan nama panggilan"
-                      value={nickname}
-                      onChangeText={setNickname}
-                      maxLength={20}
-                      placeholderTextColor={theme.colors.text.tertiary}
-                    />
-                  </View>
+
+                    {/* Input Field */}
+                    <View style={styles.nameInputContainer}>
+                      <TextInput
+                        ref={inputRef}
+                        style={styles.nameInput}
+                        placeholder="Masukkan namamu..."
+                        value={nickname}
+                        onChangeText={setNickname}
+                        maxLength={20}
+                        placeholderTextColor={theme.colors.text.tertiary}
+                        returnKeyType="done"
+                        onSubmitEditing={handleNext}
+                        autoCapitalize="words"
+                      />
+                    </View>
+
+                    {/* Preview greeting */}
+                    {nickname.trim() && (
+                      <Text style={styles.greetingPreview}>
+                        Halo, {nickname}! 👋
+                      </Text>
+                    )}
+                  </ScrollView>
                 </View>
               );
             }
@@ -244,10 +279,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: theme.spacing.xl,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.xl,
-    ...theme.shadows.medium,
-    overflow: "hidden",
   },
   image: {
     width: "100%",
@@ -317,5 +348,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     ...theme.shadows.small,
+  },
+  inputSlideContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl,
+  },
+  inputSlideImage: {
+    width: 200,
+    height: 200,
+    marginBottom: theme.spacing.l,
+  },
+  nameInputContainer: {
+    width: "100%",
+    marginTop: theme.spacing.xl,
+  },
+  nameInput: {
+    width: "100%",
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.m,
+    paddingHorizontal: theme.spacing.l,
+    borderRadius: theme.borderRadius.l,
+    fontSize: 18,
+    color: theme.colors.text.primary,
+    textAlign: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    ...theme.shadows.small,
+  },
+  greetingPreview: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontWeight: "600",
+    marginTop: theme.spacing.l,
+    fontSize: 18,
   },
 });

@@ -31,7 +31,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/icon-new2.png",
       "bundler": "metro"
     },
     "plugins": ["expo-font"],

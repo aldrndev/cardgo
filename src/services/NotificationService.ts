@@ -88,21 +88,21 @@ export const NotificationService = {
     await schedule(
       7,
       "Pengingat Tagihan",
-      `Tagihan ${card.alias} jatuh tempo dalam 7 hari (Tgl ${card.dueDay}).`
+      `Tagihan ${card.alias} (${card.bankName}) jatuh tempo dalam 7 hari (Tgl ${card.dueDay}).`
     );
 
     // Schedule 3 days before
     await schedule(
       3,
       "Pengingat Tagihan",
-      `Tagihan ${card.alias} jatuh tempo dalam 3 hari (Tgl ${card.dueDay}).`
+      `Tagihan ${card.alias} (${card.bankName}) jatuh tempo dalam 3 hari (Tgl ${card.dueDay}).`
     );
 
     // Schedule 1 day before
     await schedule(
       1,
       "Tagihan Jatuh Tempo Besok!",
-      `Jangan lupa bayar tagihan ${card.alias} besok (Tgl ${card.dueDay}).`
+      `Jangan lupa bayar tagihan ${card.alias} (${card.bankName}) besok (Tgl ${card.dueDay}).`
     );
 
     // Schedule on due date
@@ -113,7 +113,7 @@ export const NotificationService = {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: "Tagihan Jatuh Tempo Hari Ini!",
-          body: `Segera bayar tagihan ${card.alias} hari ini untuk menghindari denda.`,
+          body: `Segera bayar tagihan ${card.alias} (${card.bankName}) hari ini untuk menghindari denda.`,
           data: { cardId: card.id, type: "payment" },
         },
         trigger: {
@@ -153,7 +153,7 @@ export const NotificationService = {
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Pengingat Kenaikan Limit",
-            body: `Anda bisa mengajukan kenaikan limit untuk ${card.alias} dalam ${daysBefore} hari lagi.`,
+            body: `Kamu bisa mengajukan kenaikan limit untuk ${card.alias} (${card.bankName}) dalam ${daysBefore} hari lagi.`,
             data: { cardId: card.id, type: "limit" },
           },
           trigger: {
@@ -168,6 +168,25 @@ export const NotificationService = {
     await schedule(7);
     await schedule(3);
     await schedule(1);
+
+    // Schedule on the day
+    const onTargetDate = new Date(targetDate);
+    onTargetDate.setHours(10, 0, 0, 0);
+
+    if (onTargetDate > today) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Hari Ini: Ajukan Kenaikan Limit!",
+          body: `Yeayy hari ini kamu sudah bisa mengajukan kenaikan limit ${card.alias} (${card.bankName}).`,
+          data: { cardId: card.id, type: "limit" },
+        },
+        trigger: {
+          type: "date",
+          date: onTargetDate,
+        } as any,
+        identifier: `limit-${card.id}-today`,
+      });
+    }
   },
 
   async scheduleAnnualFeeReminder(card: Card) {
@@ -203,7 +222,7 @@ export const NotificationService = {
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Pengingat Annual Fee",
-            body: `Annual Fee untuk ${card.alias} akan di tagihkan dalam ${daysBefore} hari.`,
+            body: `Annual Fee untuk ${card.alias} (${card.bankName}) akan ditagihkan dalam ${daysBefore} hari.`,
             data: { cardId: card.id, type: "annual" },
           },
           trigger: {
@@ -218,6 +237,25 @@ export const NotificationService = {
     await schedule(7);
     await schedule(3);
     await schedule(1);
+
+    // Schedule on the day
+    const onTargetDate = new Date(targetDate);
+    onTargetDate.setHours(11, 0, 0, 0);
+
+    if (onTargetDate > today) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Annual Fee Ditagihkan Hari Ini",
+          body: `Annual Fee untuk ${card.alias} (${card.bankName}) akan ditagihkan hari ini.`,
+          data: { cardId: card.id, type: "annual" },
+        },
+        trigger: {
+          type: "date",
+          date: onTargetDate,
+        } as any,
+        identifier: `annual-${card.id}-today`,
+      });
+    }
   },
 
   async scheduleLimitIncreaseStatusReminder(
@@ -278,6 +316,9 @@ export const NotificationService = {
     await Notifications.cancelScheduledNotificationAsync(
       `limit-${cardId}-1day`
     );
+    await Notifications.cancelScheduledNotificationAsync(
+      `limit-${cardId}-today`
+    );
   },
 
   async cancelAnnualFeeReminders(cardId: string) {
@@ -289,6 +330,9 @@ export const NotificationService = {
     );
     await Notifications.cancelScheduledNotificationAsync(
       `annual-${cardId}-1day`
+    );
+    await Notifications.cancelScheduledNotificationAsync(
+      `annual-${cardId}-today`
     );
   },
 

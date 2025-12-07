@@ -782,7 +782,7 @@ export const BackupExportScreen = () => {
           });
         }
       } else if (format === "pdf") {
-        // Generate PDF with HTML
+        // Generate PDF with enhanced HTML design
         let html = `
           <!DOCTYPE html>
           <html>
@@ -791,30 +791,138 @@ export const BackupExportScreen = () => {
             <title>Laporan CardGo</title>
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
-              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3B82F6; padding-bottom: 20px; }
-              .header h1 { color: #3B82F6; font-size: 28px; margin-bottom: 8px; }
-              .header p { color: #666; font-size: 14px; }
-              .section { margin-bottom: 30px; }
-              .section-title { background: #3B82F6; color: white; padding: 10px 15px; font-size: 16px; font-weight: 600; border-radius: 8px 8px 0 0; }
-              .section-content { border: 1px solid #e0e0e0; border-top: none; padding: 15px; background: #fafafa; border-radius: 0 0 8px 8px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-              th { background: #f0f0f0; text-align: left; padding: 10px; font-size: 12px; color: #555; }
-              td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+              body { 
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+                padding: 40px; 
+                color: #333;
+                font-size: 12px;
+                line-height: 1.5;
+              }
+              
+              /* Header */
+              .header {
+                text-align: center;
+                border-bottom: 3px solid #6366F1;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+              }
+              .logo {
+                font-size: 28px;
+                font-weight: 800;
+                color: #6366F1;
+              }
+              .logo-icon { font-size: 24px; }
+              .header-subtitle { color: #666; font-size: 13px; margin-top: 8px; }
+              .header-date { color: #999; font-size: 11px; margin-top: 4px; }
+              
+              /* Summary Cards */
+              .summary-grid {
+                display: flex;
+                gap: 15px;
+                margin-bottom: 25px;
+              }
+              .summary-card {
+                flex: 1;
+                background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+                color: white;
+                padding: 18px;
+                border-radius: 12px;
+                text-align: center;
+              }
+              .summary-card.success {
+                background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+              }
+              .summary-card.warning {
+                background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+              }
+              .summary-label { font-size: 10px; opacity: 0.9; text-transform: uppercase; }
+              .summary-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+              .summary-sub { font-size: 10px; opacity: 0.8; margin-top: 4px; }
+              
+              /* Sections */
+              .section { margin-bottom: 25px; }
+              .section-title { 
+                background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+                color: white; 
+                padding: 12px 16px; 
+                font-size: 14px; 
+                font-weight: 600; 
+                border-radius: 10px 10px 0 0;
+              }
+              .section-content { 
+                border: 1px solid #E5E7EB; 
+                border-top: none; 
+                padding: 15px; 
+                background: #FAFAFA;
+                border-radius: 0 0 10px 10px;
+              }
+              
+              /* Tables */
+              table { width: 100%; border-collapse: collapse; font-size: 11px; }
+              th { 
+                background: #F3F4F6; 
+                text-align: left; 
+                padding: 10px 8px; 
+                font-size: 10px;
+                font-weight: 600;
+                color: #6B7280;
+                text-transform: uppercase;
+              }
+              td { padding: 10px 8px; border-bottom: 1px solid #E5E7EB; }
               tr:last-child td { border-bottom: none; }
-              .amount { font-weight: 600; color: #1f2937; }
-              .summary-box { display: flex; justify-content: space-between; padding: 15px; background: #EFF6FF; border-radius: 8px; margin-bottom: 15px; }
-              .summary-item { text-align: center; }
-              .summary-value { font-size: 24px; font-weight: 700; color: #3B82F6; }
-              .summary-label { font-size: 12px; color: #666; margin-top: 4px; }
-              .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
+              .amount { font-weight: 600; color: #1F2937; text-align: right; font-family: monospace; }
+              .expense { color: #EF4444; }
+              .payment { color: #10B981; }
+              
+              /* Progress bar */
+              .progress-bar {
+                background: #E5E7EB;
+                height: 6px;
+                border-radius: 3px;
+                overflow: hidden;
+                width: 60px;
+                display: inline-block;
+                vertical-align: middle;
+                margin-right: 6px;
+              }
+              .progress-fill {
+                height: 100%;
+                border-radius: 3px;
+              }
+              .progress-low { background: #10B981; }
+              .progress-medium { background: #F59E0B; }
+              .progress-high { background: #EF4444; }
+              
+              /* Badges */
+              .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 9px;
+                font-weight: 600;
+              }
+              .badge-success { background: #D1FAE5; color: #059669; }
+              .badge-warning { background: #FEF3C7; color: #D97706; }
+              .badge-danger { background: #FEE2E2; color: #DC2626; }
+              
+              /* Footer */
+              .footer { 
+                text-align: center; 
+                margin-top: 40px; 
+                padding-top: 20px; 
+                border-top: 1px solid #E5E7EB; 
+                color: #9CA3AF; 
+                font-size: 10px; 
+              }
             </style>
           </head>
           <body>
             <div class="header">
-              <h1>📊 Laporan CardGo</h1>
-              <p>Periode: ${startStr} - ${endStr}</p>
-              <p>Generated: ${new Date().toLocaleString("id-ID")}</p>
+              <div class="logo"><span class="logo-icon">💳</span> Card Go</div>
+              <div class="header-subtitle">Laporan Keuangan Kartu Kredit</div>
+              <div class="header-date">Periode: ${startStr} - ${endStr} • Generated: ${new Date().toLocaleString(
+          "id-ID"
+        )}</div>
             </div>
         `;
 
@@ -870,26 +978,85 @@ export const BackupExportScreen = () => {
           html += `</table></div></div>`;
         }
 
-        // Cards section
+        // Cards section with progress bars and badges
         if (includeCards && filteredCards.length > 0) {
+          const totalLimit = filteredCards.reduce(
+            (sum, c) => sum + (c.creditLimit || 0),
+            0
+          );
+          const totalUsage = filteredCards.reduce(
+            (sum, c) => sum + (c.currentUsage || 0),
+            0
+          );
+
           html += `
             <div class="section">
-              <div class="section-title">🏦 Status Kartu (${filteredCards.length})</div>
+              <div class="section-title">🏦 Status Kartu (${
+                filteredCards.length
+              })</div>
               <div class="section-content">
+                <div class="summary-grid">
+                  <div class="summary-card">
+                    <div class="summary-label">Total Limit</div>
+                    <div class="summary-value">${formatCurrencyExact(
+                      totalLimit
+                    )}</div>
+                  </div>
+                  <div class="summary-card ${
+                    (totalUsage / totalLimit) * 100 > 80 ? "warning" : "success"
+                  }">
+                    <div class="summary-label">Total Pemakaian</div>
+                    <div class="summary-value">${formatCurrencyExact(
+                      totalUsage
+                    )}</div>
+                    <div class="summary-sub">${(
+                      (totalUsage / totalLimit) *
+                      100
+                    ).toFixed(1)}% terpakai</div>
+                  </div>
+                  <div class="summary-card success">
+                    <div class="summary-label">Sisa Limit</div>
+                    <div class="summary-value">${formatCurrencyExact(
+                      totalLimit - totalUsage
+                    )}</div>
+                  </div>
+                </div>
                 <table>
-                  <tr><th>Nama Kartu</th><th>Bank</th><th>Limit</th><th>Pemakaian</th><th>%</th><th>Status</th></tr>
+                  <tr><th>Nama Kartu</th><th>Bank</th><th>Limit</th><th>Pemakaian</th><th>Penggunaan</th><th>Status</th></tr>
           `;
 
           filteredCards.forEach((c) => {
-            const pct = ((c.currentUsage / c.creditLimit) * 100).toFixed(1);
-            const status = c.isArchived ? "Archived" : "Active";
-            html += `<tr><td>${c.alias}</td><td>${
-              c.bankName
-            }</td><td class="amount">${formatCurrencyExact(
-              c.creditLimit
-            )}</td><td class="amount">${formatCurrencyExact(
-              c.currentUsage
-            )}</td><td>${pct}%</td><td>${status}</td></tr>`;
+            const pct = (c.currentUsage / c.creditLimit) * 100;
+            const pctFixed = pct.toFixed(1);
+            const progressClass =
+              pct > 80
+                ? "progress-high"
+                : pct > 50
+                ? "progress-medium"
+                : "progress-low";
+            const badgeClass = c.isPaid
+              ? "badge-success"
+              : pct > 80
+              ? "badge-danger"
+              : "badge-success";
+            const badgeText = c.isPaid ? "Lunas" : pct > 80 ? "Tinggi" : "Aman";
+
+            html += `<tr>
+              <td><strong>${c.alias}</strong></td>
+              <td>${c.bankName}</td>
+              <td class="amount">${formatCurrencyExact(c.creditLimit)}</td>
+              <td class="amount expense">${formatCurrencyExact(
+                c.currentUsage
+              )}</td>
+              <td>
+                <div class="progress-bar"><div class="progress-fill ${progressClass}" style="width: ${Math.min(
+              pct,
+              100
+            )}%"></div></div>
+                ${pctFixed}%
+              </td>
+              <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+            </tr>`;
           });
 
           html += `</table></div></div>`;
