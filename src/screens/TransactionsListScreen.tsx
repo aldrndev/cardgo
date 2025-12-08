@@ -15,7 +15,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
 import { Transaction } from "../types/card";
@@ -69,6 +69,11 @@ export const TransactionsListScreen = () => {
   const route = useRoute<TransactionsListScreenRouteProp>();
   const { cardId } = route.params;
   const { cards, transactions, deleteTransaction } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<
     "all" | "month" | "custom"
@@ -603,6 +608,8 @@ export const TransactionsListScreen = () => {
                 setShowCategoryPicker(false);
               }}
               onClose={() => setShowCategoryPicker(false)}
+              styles={styles}
+              theme={theme}
             />
           </View>
         </View>
@@ -620,10 +627,14 @@ const CategoryPickerContent = ({
   currentCategory,
   onSelect,
   onClose,
+  styles,
+  theme,
 }: {
   currentCategory: string | null;
   onSelect: (cat: string | null) => void;
   onClose: () => void;
+  styles: ReturnType<typeof getStyles>;
+  theme: Theme;
 }) => {
   const [tempCategory, setTempCategory] = useState<string | null>(
     currentCategory
@@ -715,422 +726,423 @@ const CategoryPickerContent = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.m,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: 12,
-    borderRadius: 16,
-    ...theme.shadows.small,
-    marginTop: 20,
-    marginBottom: 16,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    padding: 0,
-  },
-  summaryWrapper: {
-    paddingHorizontal: theme.spacing.m,
-    marginTop: theme.spacing.m, // ADDED: spacing from header
-    marginBottom: theme.spacing.m,
-  },
-  summaryCard: {
-    padding: 20,
-    borderRadius: 20,
-    ...theme.shadows.medium,
-  },
-  summaryContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  summaryLabel: {
-    ...theme.typography.caption,
-    color: "rgba(255,255,255,0.8)",
-    marginBottom: 4,
-  },
-  summaryAmount: {
-    ...theme.typography.h2,
-    color: "white",
-    fontSize: moderateScale(28),
-  },
-  summaryBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 6,
-  },
-  summaryBadgeText: {
-    ...theme.typography.caption,
-    color: "white",
-    fontWeight: "600",
-  },
-  summaryFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  summaryPeriod: {
-    ...theme.typography.caption,
-    color: "rgba(255,255,255,0.9)",
-    fontWeight: "600",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  filtersContainer: {
-    paddingVertical: theme.spacing.s,
-    // borderBottomWidth: 1,
-    // borderBottomColor: theme.colors.border,
-  },
-  filtersContent: {
-    paddingHorizontal: theme.spacing.l,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  filterTextActive: {
-    color: theme.colors.text.inverse,
-  },
-  verticalDivider: {
-    width: 1,
-    height: scale(20),
-    backgroundColor: theme.colors.border,
-    alignSelf: "center",
-    marginHorizontal: 8,
-  },
-  listContent: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  dayCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    marginBottom: 20,
-    ...theme.shadows.small,
-    overflow: "hidden",
-  },
-  dayHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  dayTitle: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    fontSize: moderateScale(11),
-  },
-  dayTotal: {
-    ...theme.typography.caption,
-    fontWeight: "700",
-    color: theme.colors.text.secondary,
-  },
-  dayContent: {
-    paddingVertical: 4,
-  },
-  transactionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.surface,
-  },
-  rowSeparator: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border + "40",
-  },
-  iconSquircle: {
-    width: theme.containerSizes.iconLarge,
-    height: theme.containerSizes.iconLarge,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  rowContent: {
-    flex: 1,
-    gap: 4,
-  },
-  rowTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  rowTitle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    fontSize: moderateScale(16), // UPDATED: was 15, now matches CardDetail
-    flex: 1,
-    marginRight: 8,
-  },
-  rowAmount: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    fontSize: moderateScale(14), // UPDATED: now uses moderateScale like CardDetail
-  },
-  rowBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  rowSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(12), // UPDATED: was 14, now matches CardDetail
-    flex: 1,
-    marginRight: 8,
-  },
-  miniBadge: {
-    backgroundColor: theme.colors.primary + "15",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  miniBadgeText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontSize: moderateScale(12),
-    fontWeight: "600",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.s,
-    marginTop: theme.spacing.m,
-    marginBottom: theme.spacing.xs,
-  },
-  sectionTitle: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginRight: 12,
-  },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  swipeHintContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  swipeHintText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(10),
-  },
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      marginHorizontal: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: 12,
+      borderRadius: 16,
+      ...theme.shadows.small,
+      marginTop: 20,
+      marginBottom: 16,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      padding: 0,
+    },
+    summaryWrapper: {
+      paddingHorizontal: theme.spacing.m,
+      marginTop: theme.spacing.m, // ADDED: spacing from header
+      marginBottom: theme.spacing.m,
+    },
+    summaryCard: {
+      padding: 20,
+      borderRadius: 20,
+      ...theme.shadows.medium,
+    },
+    summaryContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 12,
+    },
+    summaryLabel: {
+      ...theme.typography.caption,
+      color: "rgba(255,255,255,0.8)",
+      marginBottom: 4,
+    },
+    summaryAmount: {
+      ...theme.typography.h2,
+      color: "white",
+      fontSize: moderateScale(28),
+    },
+    summaryBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(255,255,255,0.2)",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+      gap: 6,
+    },
+    summaryBadgeText: {
+      ...theme.typography.caption,
+      color: "white",
+      fontWeight: "600",
+    },
+    summaryFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    summaryPeriod: {
+      ...theme.typography.caption,
+      color: "rgba(255,255,255,0.9)",
+      fontWeight: "600",
+      backgroundColor: "rgba(255,255,255,0.1)",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      overflow: "hidden",
+    },
+    filtersContainer: {
+      paddingVertical: theme.spacing.s,
+      // borderBottomWidth: 1,
+      // borderBottomColor: theme.colors.border,
+    },
+    filtersContent: {
+      paddingHorizontal: theme.spacing.l,
+      gap: 8,
+    },
+    filterChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    filterChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    filterText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    filterTextActive: {
+      color: theme.colors.text.inverse,
+    },
+    verticalDivider: {
+      width: 1,
+      height: scale(20),
+      backgroundColor: theme.colors.border,
+      alignSelf: "center",
+      marginHorizontal: 8,
+    },
+    listContent: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    dayCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      marginBottom: 20,
+      ...theme.shadows.small,
+      overflow: "hidden",
+    },
+    dayHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 4,
+      paddingVertical: 8,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    dayTitle: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      fontSize: moderateScale(11),
+    },
+    dayTotal: {
+      ...theme.typography.caption,
+      fontWeight: "700",
+      color: theme.colors.text.secondary,
+    },
+    dayContent: {
+      paddingVertical: 4,
+    },
+    transactionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: theme.colors.surface,
+    },
+    rowSeparator: {
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border + "40",
+    },
+    iconSquircle: {
+      width: theme.containerSizes.iconLarge,
+      height: theme.containerSizes.iconLarge,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 16,
+    },
+    rowContent: {
+      flex: 1,
+      gap: 4,
+    },
+    rowTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    rowTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      fontSize: moderateScale(16), // UPDATED: was 15, now matches CardDetail
+      flex: 1,
+      marginRight: 8,
+    },
+    rowAmount: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      fontSize: moderateScale(14), // UPDATED: now uses moderateScale like CardDetail
+    },
+    rowBottom: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    rowSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(12), // UPDATED: was 14, now matches CardDetail
+      flex: 1,
+      marginRight: 8,
+    },
+    miniBadge: {
+      backgroundColor: theme.colors.primary + "15",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      marginLeft: 8,
+    },
+    miniBadgeText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontSize: moderateScale(12),
+      fontWeight: "600",
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: theme.spacing.s,
+      marginTop: theme.spacing.m,
+      marginBottom: theme.spacing.xs,
+    },
+    sectionTitle: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginRight: 12,
+    },
+    sectionLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.colors.border,
+    },
+    swipeHintContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    swipeHintText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(10),
+    },
 
-  deleteAction: {
-    backgroundColor: theme.colors.status.error,
-    justifyContent: "center",
-    alignItems: "center",
-    width: theme.containerSizes.iconLarge,
-    height: theme.containerSizes.iconLarge,
-    borderRadius: 12,
-    alignSelf: "center",
-    marginLeft: 12,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 60,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.m,
-  },
+    deleteAction: {
+      backgroundColor: theme.colors.status.error,
+      justifyContent: "center",
+      alignItems: "center",
+      width: theme.containerSizes.iconLarge,
+      height: theme.containerSizes.iconLarge,
+      borderRadius: 12,
+      alignSelf: "center",
+      marginLeft: 12,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      marginTop: 60,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.m,
+    },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  monthPickerModal: {
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: theme.spacing.l,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-    textAlign: "center",
-  },
-  yearScroll: {
-    marginBottom: theme.spacing.m,
-  },
-  yearScrollContent: {
-    gap: 8,
-  },
-  yearChip: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  yearChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  yearText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  yearTextActive: {
-    color: theme.colors.text.inverse,
-  },
-  monthGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: theme.spacing.l,
-  },
-  monthChip: {
-    width: "30%",
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-  },
-  monthChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  monthText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  monthTextActive: {
-    color: theme.colors.text.inverse,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  cancelButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  confirmButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-  },
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    justifyContent: "flex-start",
-  },
-  categoryItem: {
-    width: "29%", // 3 columns
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  categoryIcon: {
-    width: scale(50),
-    height: scale(50),
-    borderRadius: scale(25),
-    backgroundColor: theme.colors.background,
-    ...theme.shadows.small,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  categoryIconActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  categoryLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-    fontSize: 11,
-  },
-  categoryLabelActive: {
-    color: theme.colors.primary,
-    fontWeight: "bold",
-  },
-});
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    monthPickerModal: {
+      backgroundColor: theme.colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: theme.spacing.l,
+      paddingBottom: 40,
+    },
+    modalTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+      textAlign: "center",
+    },
+    yearScroll: {
+      marginBottom: theme.spacing.m,
+    },
+    yearScrollContent: {
+      gap: 8,
+    },
+    yearChip: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    yearChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    yearText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    yearTextActive: {
+      color: theme.colors.text.inverse,
+    },
+    monthGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: theme.spacing.l,
+    },
+    monthChip: {
+      width: "30%",
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+    },
+    monthChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    monthText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    monthTextActive: {
+      color: theme.colors.text.inverse,
+    },
+    modalActions: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+    },
+    cancelButton: {
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    confirmButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    cancelButtonText: {
+      ...theme.typography.button,
+      color: theme.colors.text.secondary,
+    },
+    confirmButtonText: {
+      ...theme.typography.button,
+      color: theme.colors.text.inverse,
+    },
+    categoryGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 16,
+      justifyContent: "flex-start",
+    },
+    categoryItem: {
+      width: "29%", // 3 columns
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    categoryIcon: {
+      width: scale(50),
+      height: scale(50),
+      borderRadius: scale(25),
+      backgroundColor: theme.colors.background,
+      ...theme.shadows.small,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    categoryIconActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    categoryLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      fontSize: 11,
+    },
+    categoryLabelActive: {
+      color: theme.colors.primary,
+      fontWeight: "bold",
+    },
+  });

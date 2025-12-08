@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 interface PaymentStatusBadgeProps {
   isPaid: boolean;
@@ -12,6 +12,9 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({
   isPaid,
   daysUntilDue,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   // Don't show badge if payment is done
   if (isPaid) {
     return (
@@ -36,32 +39,33 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({
   return null;
 };
 
-const styles = StyleSheet.create({
-  badge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  paidBadge: {
-    backgroundColor: "#10B981", // Green
-  },
-  urgentBadge: {
-    backgroundColor: "#EF4444", // Red
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    badge: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    paidBadge: {
+      backgroundColor: theme.colors.status.success,
+    },
+    urgentBadge: {
+      backgroundColor: theme.colors.status.error,
+    },
+    badgeText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+  });

@@ -16,7 +16,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import * as Print from "expo-print";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { formatCurrencyExact } from "../utils/formatters";
@@ -28,6 +28,10 @@ export const BackupExportScreen = () => {
   const { cards, transactions, subscriptions, installmentPlans, restoreData } =
     useCards();
   const { records: limitRecords, getRecordsByCardId } = useLimitIncrease();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<string | null>(null);
@@ -1805,262 +1809,263 @@ export const BackupExportScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: theme.spacing.xl,
-  },
-  summaryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  summaryTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-  },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  summaryItem: {
-    width: "33.33%",
-    alignItems: "center",
-    paddingVertical: theme.spacing.s,
-  },
-  summaryValue: {
-    ...theme.typography.h2,
-    color: theme.colors.primary,
-    fontWeight: "700",
-  },
-  summaryLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-  },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  sectionTitle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  sectionDesc: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.m,
-  },
-  exportButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  exportIcon: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(22),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  exportContent: {
-    flex: 1,
-    marginLeft: theme.spacing.m,
-  },
-  exportTitle: {
-    ...theme.typography.body,
-    fontWeight: "500",
-    color: theme.colors.text.primary,
-  },
-  exportSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  infoBox: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.primary + "10",
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    gap: theme.spacing.s,
-  },
-  infoText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    flex: 1,
-    lineHeight: 18,
-  },
-  // Inline export section styles
-  inlineExportSection: {
-    paddingTop: theme.spacing.m,
-    paddingHorizontal: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  inlineLabel: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.s,
-  },
-  formatRow: {
-    flexDirection: "row",
-    gap: theme.spacing.s,
-  },
-  formatChip: {
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.round,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginRight: theme.spacing.s,
-  },
-  formatChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  formatChipText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-  },
-  formatChipTextActive: {
-    color: "#FFFFFF",
-  },
-  toggleRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.s,
-    rowGap: theme.spacing.m,
-    marginBottom: theme.spacing.s,
-  },
-  toggleChip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.s,
-    paddingVertical: theme.spacing.s,
-    paddingHorizontal: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.background,
-  },
-  toggleChipActive: {
-    backgroundColor: theme.colors.primary + "10",
-  },
-  toggleText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.primary,
-  },
-  inlineExportButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.s,
-    backgroundColor: "#EC4899",
-    paddingVertical: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginTop: theme.spacing.m,
-  },
-  inlineExportButtonText: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  presetScroll: {
-    marginBottom: theme.spacing.s,
-  },
-  selectionChip: {
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginRight: theme.spacing.s,
-  },
-  selectionChipActive: {
-    backgroundColor: theme.colors.primary + "15",
-    borderColor: theme.colors.primary,
-  },
-  selectionChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  selectionChipTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  categoriesWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.s,
-  },
-  // Custom date input styles
-  customDateSection: {
-    marginTop: theme.spacing.s,
-  },
-  dateInputLabel: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  dateInputRow: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-  },
-  dateInputColumn: {
-    flex: 1,
-    alignItems: "center",
-  },
-  dateInputHeader: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.xs,
-  },
-  dateInputField: {
-    width: "100%",
-    textAlign: "center",
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    paddingVertical: theme.spacing.s,
-    paddingHorizontal: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primary + "40",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: theme.spacing.xl,
+    },
+    summaryCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    summaryTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+    summaryGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+    },
+    summaryItem: {
+      width: "33.33%",
+      alignItems: "center",
+      paddingVertical: theme.spacing.s,
+    },
+    summaryValue: {
+      ...theme.typography.h2,
+      color: theme.colors.primary,
+      fontWeight: "700",
+    },
+    summaryLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: 2,
+    },
+    section: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    sectionTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    sectionDesc: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: theme.spacing.m,
+    },
+    exportButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    exportIcon: {
+      width: scale(44),
+      height: scale(44),
+      borderRadius: scale(22),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    exportContent: {
+      flex: 1,
+      marginLeft: theme.spacing.m,
+    },
+    exportTitle: {
+      ...theme.typography.body,
+      fontWeight: "500",
+      color: theme.colors.text.primary,
+    },
+    exportSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: 2,
+    },
+    infoBox: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.primary + "10",
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      gap: theme.spacing.s,
+    },
+    infoText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      flex: 1,
+      lineHeight: 18,
+    },
+    // Inline export section styles
+    inlineExportSection: {
+      paddingTop: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    inlineLabel: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.s,
+    },
+    formatRow: {
+      flexDirection: "row",
+      gap: theme.spacing.s,
+    },
+    formatChip: {
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.round,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginRight: theme.spacing.s,
+    },
+    formatChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    formatChipText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+    },
+    formatChipTextActive: {
+      color: "#FFFFFF",
+    },
+    toggleRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.s,
+      rowGap: theme.spacing.m,
+      marginBottom: theme.spacing.s,
+    },
+    toggleChip: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.s,
+      paddingVertical: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.background,
+    },
+    toggleChipActive: {
+      backgroundColor: theme.colors.primary + "10",
+    },
+    toggleText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.primary,
+    },
+    inlineExportButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.s,
+      backgroundColor: "#EC4899",
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginTop: theme.spacing.m,
+    },
+    inlineExportButtonText: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: "#FFFFFF",
+    },
+    presetScroll: {
+      marginBottom: theme.spacing.s,
+    },
+    selectionChip: {
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginRight: theme.spacing.s,
+    },
+    selectionChipActive: {
+      backgroundColor: theme.colors.primary + "15",
+      borderColor: theme.colors.primary,
+    },
+    selectionChipText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    selectionChipTextActive: {
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    categoriesWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.s,
+    },
+    // Custom date input styles
+    customDateSection: {
+      marginTop: theme.spacing.s,
+    },
+    dateInputLabel: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+    },
+    dateInputRow: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+    },
+    dateInputColumn: {
+      flex: 1,
+      alignItems: "center",
+    },
+    dateInputHeader: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: theme.spacing.xs,
+    },
+    dateInputField: {
+      width: "100%",
+      textAlign: "center",
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      paddingVertical: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.primary + "40",
+    },
+  });

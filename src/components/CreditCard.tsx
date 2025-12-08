@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { Card, CARD_THEMES } from "../types/card";
 import { colors } from "../constants/colors";
 import { formatCurrency } from "../utils/formatters";
@@ -25,6 +25,9 @@ interface CreditCardProps {
 
 export const CreditCard = React.memo(
   ({ card, onPress, compact = false, containerStyle }: CreditCardProps) => {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
+
     // Parse colorTheme if it's a gradient array or single string
     let gradientColors = [colors.primary, colors.primaryDark];
     let textColor = "#ffffff";
@@ -145,108 +148,110 @@ export const CreditCard = React.memo(
   }
 );
 
-const styles = StyleSheet.create({
-  container: {
-    width: width - scale(32) * 2,
-    height: verticalScale(200),
-    marginRight: theme.spacing.m,
-    ...theme.shadows.medium,
-  },
-  compactContainer: {
-    width: "100%",
-    height: verticalScale(80),
-    marginRight: 0,
-    marginBottom: theme.spacing.s,
-  },
-  card: {
-    flex: 1,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    justifyContent: "space-between",
-  },
-  compactCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.m,
-  },
-  topSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  bankName: {
-    ...theme.typography.h3,
-    color: theme.colors.text.inverse,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  cardType: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  chip: {
-    width: 40,
-    height: 30,
-    backgroundColor: "#FFD700",
-    borderRadius: 6,
-    overflow: "hidden",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  chipLine: {
-    height: 1,
-    backgroundColor: "#333",
-    marginVertical: 2,
-  },
-  middleSection: {
-    justifyContent: "center",
-    marginTop: theme.spacing.xs,
-  },
-  cardNumber: {
-    ...theme.typography.body,
-    color: theme.colors.text.inverse,
-    opacity: 0.8,
-    fontFamily: "monospace",
-    letterSpacing: 2,
-  },
-  hiddenNumber: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    letterSpacing: 2,
-  },
-  bottomSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  label: {
-    ...theme.typography.caption,
-    color: theme.colors.text.inverse,
-    opacity: 0.7,
-    marginBottom: 2,
-    textTransform: "uppercase",
-  },
-  value: {
-    ...theme.typography.body,
-    color: theme.colors.text.inverse,
-    fontWeight: "600",
-  },
-  network: {
-    ...theme.typography.caption,
-    color: theme.colors.text.inverse,
-    opacity: 0.8,
-    textTransform: "uppercase",
-  },
-  alias: {
-    ...theme.typography.h2,
-    color: theme.colors.text.inverse,
-    marginBottom: theme.spacing.xs,
-  },
-  tagText: {
-    fontSize: 10,
-    fontWeight: "500",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      width: width - scale(32) * 2,
+      height: verticalScale(200),
+      marginRight: theme.spacing.m,
+      ...theme.shadows.medium,
+    },
+    compactContainer: {
+      width: "100%",
+      height: verticalScale(80),
+      marginRight: 0,
+      marginBottom: theme.spacing.s,
+    },
+    card: {
+      flex: 1,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      justifyContent: "space-between",
+    },
+    compactCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: theme.spacing.m,
+    },
+    topSection: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    bankName: {
+      ...theme.typography.h3,
+      color: "#FFFFFF",
+      fontWeight: "700",
+      letterSpacing: 1,
+      textTransform: "uppercase",
+    },
+    cardType: {
+      color: "rgba(255, 255, 255, 0.8)",
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    chip: {
+      width: 40,
+      height: 30,
+      backgroundColor: "#FFD700",
+      borderRadius: 6,
+      overflow: "hidden",
+      justifyContent: "center",
+      paddingHorizontal: 4,
+    },
+    chipLine: {
+      height: 1,
+      backgroundColor: "#333",
+      marginVertical: 2,
+      ...theme.shadows.small,
+    },
+    middleSection: {
+      justifyContent: "center",
+      marginTop: theme.spacing.xs,
+    },
+    cardNumber: {
+      ...theme.typography.body,
+      color: "#FFFFFF",
+      opacity: 0.8,
+      fontFamily: "monospace",
+      letterSpacing: 2,
+    },
+    hiddenNumber: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      letterSpacing: 2,
+    },
+    bottomSection: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
+    },
+    label: {
+      ...theme.typography.caption,
+      color: "#FFFFFF",
+      opacity: 0.7,
+      marginBottom: 2,
+      textTransform: "uppercase",
+    },
+    value: {
+      ...theme.typography.body,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    network: {
+      ...theme.typography.caption,
+      color: "#FFFFFF",
+      opacity: 0.8,
+      textTransform: "uppercase",
+    },
+    alias: {
+      ...theme.typography.h2,
+      color: "#FFFFFF",
+      marginBottom: theme.spacing.xs,
+    },
+    tagText: {
+      fontSize: 10,
+      fontWeight: "500",
+    },
+  });

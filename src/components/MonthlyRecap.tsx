@@ -1,9 +1,8 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
-import { theme } from "../constants/theme";
-// const { colors } = useAppTheme(); // Removed invalid hook usage
 import { useCards } from "../context/CardsContext";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 interface MonthlyRecapProps {
   visible: boolean;
@@ -12,6 +11,9 @@ interface MonthlyRecapProps {
 
 export const MonthlyRecap = ({ visible, onClose }: MonthlyRecapProps) => {
   const { transactions, cards } = useCards();
+  const { theme } = useTheme();
+
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const recapData = useMemo(() => {
     const today = new Date();
@@ -104,57 +106,58 @@ export const MonthlyRecap = ({ visible, onClose }: MonthlyRecapProps) => {
   );
 };
 
-const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: theme.spacing.l,
-  },
-  modalContent: {
-    borderRadius: theme.borderRadius.xl,
-    overflow: "hidden",
-    width: "90%",
-    maxWidth: 400,
-    ...theme.shadows.large,
-  },
-  gradientBg: {
-    padding: theme.spacing.xl,
-    alignItems: "center",
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.inverse,
-    marginBottom: theme.spacing.xl,
-    textAlign: "center",
-  },
-  statItem: {
-    marginBottom: theme.spacing.l,
-    alignItems: "center",
-  },
-  label: {
-    ...theme.typography.body,
-    color: theme.colors.text.inverse,
-    opacity: 0.8,
-    marginBottom: theme.spacing.xs,
-  },
-  value: {
-    ...theme.typography.h1,
-    color: theme.colors.text.inverse,
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  closeButton: {
-    marginTop: theme.spacing.l,
-    paddingVertical: theme.spacing.m,
-    paddingHorizontal: theme.spacing.xl,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: theme.borderRadius.round,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  closeButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    modalContainer: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      padding: theme.spacing.l,
+    },
+    modalContent: {
+      borderRadius: theme.borderRadius.xl,
+      overflow: "hidden",
+      width: "90%",
+      maxWidth: 400,
+      ...theme.shadows.large,
+    },
+    gradientBg: {
+      padding: theme.spacing.xl,
+      alignItems: "center",
+    },
+    title: {
+      ...theme.typography.h2,
+      color: "#FFFFFF",
+      marginBottom: theme.spacing.xl,
+      textAlign: "center",
+    },
+    statItem: {
+      marginBottom: theme.spacing.l,
+      alignItems: "center",
+    },
+    label: {
+      ...theme.typography.body,
+      color: "#FFFFFF",
+      opacity: 0.8,
+      marginBottom: theme.spacing.xs,
+    },
+    value: {
+      ...theme.typography.h1,
+      color: "#FFFFFF",
+      fontSize: 24,
+      fontWeight: "bold",
+    },
+    closeButton: {
+      marginTop: theme.spacing.l,
+      paddingVertical: theme.spacing.m,
+      paddingHorizontal: theme.spacing.xl,
+      backgroundColor: "rgba(255,255,255,0.2)",
+      borderRadius: theme.borderRadius.round,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.3)",
+    },
+    closeButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
+  });

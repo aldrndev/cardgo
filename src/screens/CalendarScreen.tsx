@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Calendar, DateData } from "react-native-calendars";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { Card } from "../types/card";
@@ -26,6 +26,10 @@ export const CalendarScreen = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const jumpToToday = () => {
     setSelectedDate(new Date().toISOString().split("T")[0]);
@@ -305,7 +309,7 @@ export const CalendarScreen = () => {
           calendarBackground: theme.colors.background,
           textSectionTitleColor: theme.colors.text.tertiary,
           selectedDayBackgroundColor: theme.colors.primary,
-          selectedDayTextColor: theme.colors.text.inverse,
+          selectedDayTextColor: "#FFFFFF", // White on purple selection
           todayTextColor: theme.colors.primary,
           dayTextColor: theme.colors.text.primary,
           textDisabledColor: theme.colors.text.tertiary + "40",
@@ -424,209 +428,210 @@ export const CalendarScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.l,
-    paddingVertical: theme.spacing.m,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  todayButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: theme.colors.primary + "10",
-    borderRadius: 16,
-  },
-  todayButtonText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  eventsContainer: {
-    flex: 1,
-    padding: theme.spacing.m,
-  },
-  dateTitle: {
-    ...theme.typography.h3,
-    marginBottom: theme.spacing.m,
-    color: theme.colors.text.primary,
-    textTransform: "capitalize",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.xl,
-    gap: theme.spacing.s,
-  },
-  noEventsText: {
-    ...theme.typography.body,
-    color: theme.colors.text.tertiary,
-  },
-  eventItem: {
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-    overflow: "hidden",
-  },
-  eventContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: theme.spacing.m,
-  },
-  eventLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-    flex: 1,
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardName: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    fontSize: 15,
-  },
-  eventType: {
-    ...theme.typography.caption,
-    color: "rgba(255, 255, 255, 0.9)",
-    marginTop: 2,
-  },
-  amountContainer: {
-    alignItems: "flex-end",
-  },
-  amountLabel: {
-    ...theme.typography.caption,
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 10,
-    marginBottom: 2,
-    textTransform: "uppercase",
-  },
-  amount: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    fontSize: 16,
-  },
-  eventSection: {
-    marginBottom: theme.spacing.l,
-  },
-  sectionTitle: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.s,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  summaryContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.status.error,
-    ...theme.shadows.small,
-  },
-  summaryLabel: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  summaryValue: {
-    ...theme.typography.h3,
-    color: theme.colors.status.error,
-  },
-  legendContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: theme.spacing.l,
-    gap: theme.spacing.m,
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.m,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  dayWrapper: {
-    alignItems: "center",
-    justifyContent: "flex-start",
-    height: 48,
-    width: 32,
-  },
-  dayNumberContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  selectedDayNumberContainer: {
-    backgroundColor: theme.colors.primary,
-  },
-  dayText: {
-    ...theme.typography.body,
-    fontSize: 14,
-    color: theme.colors.text.primary,
-    fontWeight: "500",
-  },
-  selectedDayText: {
-    color: theme.colors.text.inverse,
-    fontWeight: "600",
-  },
-  todayText: {
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  disabledText: {
-    color: theme.colors.text.tertiary + "40",
-  },
-  dotsRow: {
-    flexDirection: "row",
-    gap: 2,
-    justifyContent: "center",
-    flexWrap: "wrap",
-    width: "100%",
-  },
-  customDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.m,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    todayButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.primary + "10",
+      borderRadius: 16,
+    },
+    todayButtonText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    eventsContainer: {
+      flex: 1,
+      padding: theme.spacing.m,
+    },
+    dateTitle: {
+      ...theme.typography.h3,
+      marginBottom: theme.spacing.m,
+      color: theme.colors.text.primary,
+      textTransform: "capitalize",
+    },
+    emptyState: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.xl,
+      gap: theme.spacing.s,
+    },
+    noEventsText: {
+      ...theme.typography.body,
+      color: theme.colors.text.tertiary,
+    },
+    eventItem: {
+      borderRadius: theme.borderRadius.m,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+      overflow: "hidden",
+    },
+    eventContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: theme.spacing.m,
+    },
+    eventLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+      flex: 1,
+    },
+    iconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cardName: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: "#FFFFFF", // White on gradient - same in light and dark mode
+      fontSize: 15,
+    },
+    eventType: {
+      ...theme.typography.caption,
+      color: "rgba(255, 255, 255, 0.9)",
+      marginTop: 2,
+    },
+    amountContainer: {
+      alignItems: "flex-end",
+    },
+    amountLabel: {
+      ...theme.typography.caption,
+      color: "rgba(255, 255, 255, 0.8)",
+      fontSize: 10,
+      marginBottom: 2,
+      textTransform: "uppercase",
+    },
+    amount: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: "#FFFFFF", // White on gradient - same in light and dark mode
+      fontSize: 16,
+    },
+    eventSection: {
+      marginBottom: theme.spacing.l,
+    },
+    sectionTitle: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.s,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    summaryContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginBottom: theme.spacing.m,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.status.error,
+      ...theme.shadows.small,
+    },
+    summaryLabel: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    summaryValue: {
+      ...theme.typography.h3,
+      color: theme.colors.status.error,
+    },
+    legendContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginBottom: theme.spacing.l,
+      gap: theme.spacing.m,
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.m,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    legendText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    dayWrapper: {
+      alignItems: "center",
+      justifyContent: "flex-start",
+      height: 48,
+      width: 32,
+    },
+    dayNumberContainer: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 4,
+    },
+    selectedDayNumberContainer: {
+      backgroundColor: theme.colors.primary,
+    },
+    dayText: {
+      ...theme.typography.body,
+      fontSize: 14,
+      color: theme.colors.text.primary,
+      fontWeight: "500",
+    },
+    selectedDayText: {
+      color: theme.colors.text.inverse,
+      fontWeight: "600",
+    },
+    todayText: {
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    disabledText: {
+      color: theme.colors.text.tertiary + "40",
+    },
+    dotsRow: {
+      flexDirection: "row",
+      gap: 2,
+      justifyContent: "center",
+      flexWrap: "wrap",
+      width: "100%",
+    },
+    customDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+    },
+  });

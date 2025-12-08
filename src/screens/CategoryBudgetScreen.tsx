@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { storage } from "../utils/storage";
 import { formatCurrency } from "../utils/formatters";
@@ -27,6 +27,11 @@ interface CategoryBudget {
 export const CategoryBudgetScreen = () => {
   const navigation = useNavigation();
   const { transactions } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [budgetInput, setBudgetInput] = useState("");
@@ -346,218 +351,219 @@ export const CategoryBudgetScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  placeholder: {
-    width: 32,
-  },
-  content: {
-    padding: theme.spacing.m,
-  },
-  infoCard: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.primary + "10",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
-    gap: theme.spacing.s,
-  },
-  infoText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    flex: 1,
-    lineHeight: 18,
-  },
-  categoryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  categoryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  categoryInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + "15",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryName: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  categorySpent: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary + "10",
-  },
-  addButtonText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  removeButton: {
-    padding: theme.spacing.s,
-  },
-  budgetSection: {
-    marginTop: theme.spacing.m,
-    paddingTop: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  budgetRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.s,
-  },
-  budgetLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  budgetPercentage: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  textWarning: {
-    color: theme.colors.status.warning,
-  },
-  textDanger: {
-    color: theme.colors.status.error,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  thresholdHint: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
-    fontSize: 10,
-  },
-  editForm: {
-    marginTop: theme.spacing.m,
-    paddingTop: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    gap: theme.spacing.m,
-  },
-  inputRow: {
-    gap: theme.spacing.xs,
-  },
-  inputLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  input: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.s,
-    padding: theme.spacing.m,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  formButtons: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-  },
-  cancelButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.border,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-  },
-  saveButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-  },
-  saveButtonText: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: "#FFF",
-  },
-  editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.m,
-  },
-  editButtonText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: theme.spacing.xxl,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-  },
-  emptyTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.m,
-  },
-  emptyDesc: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.s,
-    textAlign: "center",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    backButton: {
+      padding: theme.spacing.xs,
+    },
+    title: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    placeholder: {
+      width: 32,
+    },
+    content: {
+      padding: theme.spacing.m,
+    },
+    infoCard: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.primary + "10",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginBottom: theme.spacing.m,
+      gap: theme.spacing.s,
+    },
+    infoText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      flex: 1,
+      lineHeight: 18,
+    },
+    categoryCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    categoryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    categoryInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+    },
+    iconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.primary + "15",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    categoryName: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    categorySpent: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: 2,
+    },
+    addButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary + "10",
+    },
+    addButtonText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    removeButton: {
+      padding: theme.spacing.s,
+    },
+    budgetSection: {
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    budgetRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.s,
+    },
+    budgetLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    budgetPercentage: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.primary,
+    },
+    textWarning: {
+      color: theme.colors.status.warning,
+    },
+    textDanger: {
+      color: theme.colors.status.error,
+    },
+    progressBar: {
+      height: 8,
+      backgroundColor: theme.colors.border,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 4,
+    },
+    thresholdHint: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.xs,
+      fontSize: 10,
+    },
+    editForm: {
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      gap: theme.spacing.m,
+    },
+    inputRow: {
+      gap: theme.spacing.xs,
+    },
+    inputLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    input: {
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.s,
+      padding: theme.spacing.m,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    formButtons: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+    },
+    cancelButton: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.border,
+      alignItems: "center",
+    },
+    cancelButtonText: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+    },
+    saveButton: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+    },
+    saveButtonText: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: "#FFF",
+    },
+    editButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.xs,
+      marginTop: theme.spacing.m,
+    },
+    editButtonText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+    },
+    emptyState: {
+      alignItems: "center",
+      padding: theme.spacing.xxl,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+    },
+    emptyTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.m,
+    },
+    emptyDesc: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.s,
+      textAlign: "center",
+    },
+  });

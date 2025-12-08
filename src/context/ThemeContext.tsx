@@ -18,6 +18,7 @@ const lightColors = {
   secondary: "#10B981",
   background: "#F8FAFC",
   surface: "#FFFFFF",
+  surfaceElevated: "#FFFFFF", // Same as surface in light mode
   error: "#EF4444",
   text: {
     primary: "#1E293B",
@@ -46,11 +47,12 @@ const lightColors = {
 
 // Dark colors
 const darkColors = {
-  primary: "#818CF8",
+  primary: "#4F46E5", // Same royal purple as light mode
   secondary: "#34D399",
   background: "#0F172A",
   surface: "#1E293B",
-  error: "#F87171",
+  surfaceElevated: "#0F172A", // Darker elevated surface (same as background)
+  error: "#EF4444", // Same red as light mode
   text: {
     primary: "#F1F5F9",
     secondary: "#94A3B8",
@@ -63,7 +65,7 @@ const darkColors = {
   status: {
     success: "#34D399",
     warning: "#FBBF24",
-    error: "#F87171",
+    error: "#EF4444", // Same red as light mode
     info: "#60A5FA",
   },
   cardGradients: [

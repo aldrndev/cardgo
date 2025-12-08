@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { colors } from "../constants/colors";
 import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
@@ -36,6 +36,10 @@ export const AddEditCardScreen = () => {
   const route = useRoute<AddEditCardScreenRouteProp>();
   const { addCard, updateCard, cards } = useCards();
   const { cardId } = route.params || {};
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const isEditing = !!cardId;
   const existingCard = cards.find((c) => c.id === cardId);
@@ -894,265 +898,266 @@ export const AddEditCardScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.l,
-    paddingVertical: theme.spacing.m,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.small,
-    zIndex: 10,
-  },
-  headerTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  scrollContent: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  previewContainer: {
-    marginBottom: theme.spacing.l,
-  },
-  previewLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.s,
-    textAlign: "center",
-  },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-    fontSize: moderateScale(18),
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.m,
-  },
-  label: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 8,
-    fontWeight: "600",
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.m,
-  },
-  inputIcon: {
-    marginRight: theme.spacing.s,
-  },
-  currencyPrefix: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-    marginRight: theme.spacing.s,
-  },
-  input: {
-    flex: 1,
-    height: scale(48),
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  textArea: {
-    height: scale(100),
-    paddingVertical: theme.spacing.s,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.m,
-  },
-  networkContainer: {
-    gap: theme.spacing.s,
-  },
-  networkOption: {
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: 8,
-    borderRadius: 100,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginRight: theme.spacing.s,
-  },
-  selectedNetwork: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  networkText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  selectedNetworkText: {
-    color: "#FFF",
-  },
-  themeContainer: {
-    paddingVertical: theme.spacing.s,
-  },
-  themeOption: {
-    marginRight: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    padding: 2,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  selectedTheme: {
-    borderColor: theme.colors.primary,
-  },
-  themePreview: {
-    width: scale(60),
-    height: scale(40),
-    borderRadius: theme.borderRadius.s,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  row: {
-    flexDirection: "row",
-  },
-  helperText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: 4,
-    fontSize: moderateScale(11),
-  },
-  tagInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.s,
-    marginBottom: theme.spacing.s,
-  },
-  addTagButton: {
-    width: theme.containerSizes.buttonHeight,
-    height: theme.containerSizes.buttonHeight,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.s,
-    marginBottom: theme.spacing.s,
-  },
-  tagChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: 6,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: 4,
-  },
-  tagText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.primary,
-  },
-  suggestedTags: {
-    flexDirection: "row",
-  },
-  suggestedTagChip: {
-    marginRight: theme.spacing.s,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: 6,
-    borderRadius: 100,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderStyle: "dashed",
-  },
-  suggestedTagText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-    marginTop: theme.spacing.m,
-    ...theme.shadows.medium,
-  },
-  saveButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-  },
-  switchRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.s,
-  },
-  switchInfo: {
-    flex: 1,
-    marginRight: theme.spacing.m,
-  },
-  indentedContent: {
-    marginLeft: theme.spacing.s,
-    paddingLeft: theme.spacing.m,
-    borderLeftWidth: 2,
-    borderLeftColor: theme.colors.border,
-    marginTop: theme.spacing.s,
-  },
-  chipOption: {
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: 8,
-    borderRadius: 100,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginRight: theme.spacing.s,
-  },
-  chipOptionSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  chipTextSelected: {
-    color: "#FFF",
-  },
-  infoBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.primary + "15",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginTop: theme.spacing.s,
-    gap: theme.spacing.s,
-  },
-  infoText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  errorText: {
-    ...theme.typography.caption,
-    color: theme.colors.status.error,
-    marginTop: 4,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.m,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.small,
+      zIndex: 10,
+    },
+    headerTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    scrollContent: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    previewContainer: {
+      marginBottom: theme.spacing.l,
+    },
+    previewLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.s,
+      textAlign: "center",
+    },
+    section: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+      fontSize: moderateScale(18),
+    },
+    inputGroup: {
+      marginBottom: theme.spacing.m,
+    },
+    label: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 8,
+      fontWeight: "600",
+    },
+    inputWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      paddingHorizontal: theme.spacing.m,
+    },
+    inputIcon: {
+      marginRight: theme.spacing.s,
+    },
+    currencyPrefix: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+      marginRight: theme.spacing.s,
+    },
+    input: {
+      flex: 1,
+      height: scale(48),
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    textArea: {
+      height: scale(100),
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      paddingHorizontal: theme.spacing.m,
+    },
+    networkContainer: {
+      gap: theme.spacing.s,
+    },
+    networkOption: {
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: 8,
+      borderRadius: 100,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginRight: theme.spacing.s,
+    },
+    selectedNetwork: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    networkText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    selectedNetworkText: {
+      color: "#FFF",
+    },
+    themeContainer: {
+      paddingVertical: theme.spacing.s,
+    },
+    themeOption: {
+      marginRight: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      padding: 2,
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    selectedTheme: {
+      borderColor: theme.colors.primary,
+    },
+    themePreview: {
+      width: scale(60),
+      height: scale(40),
+      borderRadius: theme.borderRadius.s,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    row: {
+      flexDirection: "row",
+    },
+    helperText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: 4,
+      fontSize: moderateScale(11),
+    },
+    tagInputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.s,
+      marginBottom: theme.spacing.s,
+    },
+    addTagButton: {
+      width: theme.containerSizes.buttonHeight,
+      height: theme.containerSizes.buttonHeight,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    tagsContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.s,
+      marginBottom: theme.spacing.s,
+    },
+    tagChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: 6,
+      borderRadius: 100,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      gap: 4,
+    },
+    tagText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.primary,
+    },
+    suggestedTags: {
+      flexDirection: "row",
+    },
+    suggestedTagChip: {
+      marginRight: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: 6,
+      borderRadius: 100,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      borderStyle: "dashed",
+    },
+    suggestedTagText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+    },
+    saveButton: {
+      backgroundColor: theme.colors.primary,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+      marginTop: theme.spacing.m,
+      ...theme.shadows.medium,
+    },
+    saveButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
+    switchRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.s,
+    },
+    switchInfo: {
+      flex: 1,
+      marginRight: theme.spacing.m,
+    },
+    indentedContent: {
+      marginLeft: theme.spacing.s,
+      paddingLeft: theme.spacing.m,
+      borderLeftWidth: 2,
+      borderLeftColor: theme.colors.border,
+      marginTop: theme.spacing.s,
+    },
+    chipOption: {
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: 8,
+      borderRadius: 100,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginRight: theme.spacing.s,
+    },
+    chipOptionSelected: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    chipText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    chipTextSelected: {
+      color: "#FFF",
+    },
+    infoBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary + "15",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginTop: theme.spacing.s,
+      gap: theme.spacing.s,
+    },
+    infoText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    errorText: {
+      ...theme.typography.caption,
+      color: theme.colors.status.error,
+      marginTop: 4,
+    },
+  });

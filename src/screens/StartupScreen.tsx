@@ -1,10 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
 import { storage } from "../utils/storage";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 type StartupScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -13,6 +13,10 @@ type StartupScreenNavigationProp = StackNavigationProp<
 
 export const StartupScreen = () => {
   const navigation = useNavigation<StartupScreenNavigationProp>();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -42,11 +46,12 @@ export const StartupScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+    },
+  });

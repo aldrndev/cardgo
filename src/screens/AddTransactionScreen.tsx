@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
 import { Transaction } from "../types/card";
@@ -47,6 +47,10 @@ export const AddTransactionScreen = () => {
   const route = useRoute<AddTransactionScreenRouteProp>();
   const { cardId: paramCardId } = route.params || {};
   const { cards, addTransaction, addInstallmentPlan } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   // If paramCardId is provided, use it. Otherwise default to first card.
   const [selectedCardId, setSelectedCardId] = useState(
@@ -860,467 +864,468 @@ export const AddTransactionScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-  },
-  amountCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.l,
-    alignItems: "center",
-    ...theme.shadows.medium,
-  },
-  amountLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.s,
-  },
-  amountInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  amountEquivalent: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    marginTop: theme.spacing.s,
-  },
-  currencyPrefix: {
-    fontSize: moderateScale(28),
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-    marginRight: theme.spacing.s,
-  },
-  amountInput: {
-    fontSize: moderateScale(42),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    minWidth: 100,
-    textAlign: "center",
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    ...theme.shadows.medium,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderRadius: 16, // Modern rounded corners
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: 8, // More padding for nicer feel
-    marginBottom: theme.spacing.l,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    height: 64, // Taller inputs for easier tapping
-  },
-  inputIcon: {
-    marginRight: theme.spacing.m,
-  },
-  textInput: {
-    flex: 1,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    height: "100%", // Fill container
-    textAlignVertical: "center",
-  },
-  sectionLabel: {
-    ...theme.typography.h3,
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-  },
-  categoryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  swipeHintText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(12),
-  },
-  categoryScrollContent: {
-    gap: theme.spacing.s,
-    paddingRight: theme.spacing.m,
-  },
-  categoryItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    height: 40,
-  },
-  categoryIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  categoryText: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.secondary,
-  },
-  mainSaveButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 16,
-    paddingHorizontal: theme.spacing.l,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: theme.spacing.xl,
-    minHeight: 52,
-    ...theme.shadows.medium,
-  },
-  mainSaveButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-    fontSize: moderateScale(16),
-  },
-  switchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.m,
-    paddingBottom: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  switchLabel: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  switchSubLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  // New Installment Summary Card
-  installmentSummaryCard: {
-    backgroundColor: theme.colors.primary + "10",
-    borderRadius: 16,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.l,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.primary + "30",
-  },
-  installmentSummaryLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    marginBottom: 4,
-  },
-  installmentSummaryAmount: {
-    ...theme.typography.h2,
-    color: theme.colors.primary,
-    fontWeight: "700",
-  },
-  installmentSummaryDetail: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 4,
-  },
-  // Input Group (Label outside, input inside)
-  inputGroup: {
-    marginBottom: theme.spacing.l,
-  },
-  inputGroupLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    paddingHorizontal: theme.spacing.m,
-    height: 56,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  inputField: {
-    flex: 1,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    height: "100%",
-  },
-  installmentOptions: {
-    marginBottom: theme.spacing.m,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.m,
-  },
-  cardSelectorContainer: {
-    marginBottom: theme.spacing.l,
-  },
-  cardSelectorContent: {
-    gap: theme.spacing.s,
-    paddingVertical: theme.spacing.s,
-  },
-  cardOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.round,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-    height: 48, // Consistent height for cards
-  },
-  cardOptionActive: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  cardOptionText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  cardOptionTextActive: {
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-  },
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      padding: theme.spacing.m,
+    },
+    amountCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.l,
+      alignItems: "center",
+      ...theme.shadows.medium,
+    },
+    amountLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.s,
+    },
+    amountInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    amountEquivalent: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      marginTop: theme.spacing.s,
+    },
+    currencyPrefix: {
+      fontSize: moderateScale(28),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+      marginRight: theme.spacing.s,
+    },
+    amountInput: {
+      fontSize: moderateScale(42),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      minWidth: 100,
+      textAlign: "center",
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      ...theme.shadows.medium,
+    },
+    inputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderRadius: 16, // Modern rounded corners
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: 8, // More padding for nicer feel
+      marginBottom: theme.spacing.l,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      height: 64, // Taller inputs for easier tapping
+    },
+    inputIcon: {
+      marginRight: theme.spacing.m,
+    },
+    textInput: {
+      flex: 1,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      height: "100%", // Fill container
+      textAlignVertical: "center",
+    },
+    sectionLabel: {
+      ...theme.typography.h3,
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+    categoryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    swipeHintText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(12),
+    },
+    categoryScrollContent: {
+      gap: theme.spacing.s,
+      paddingRight: theme.spacing.m,
+    },
+    categoryItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      height: 40,
+    },
+    categoryIconContainer: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 8,
+    },
+    categoryText: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+    },
+    mainSaveButton: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: 16,
+      paddingHorizontal: theme.spacing.l,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: theme.spacing.xl,
+      minHeight: 52,
+      ...theme.shadows.medium,
+    },
+    mainSaveButtonText: {
+      ...theme.typography.button,
+      color: theme.colors.text.inverse,
+      fontSize: moderateScale(16),
+    },
+    switchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.m,
+      paddingBottom: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    switchLabel: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    switchSubLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    // New Installment Summary Card
+    installmentSummaryCard: {
+      backgroundColor: theme.colors.primary + "10",
+      borderRadius: 16,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.l,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.primary + "30",
+    },
+    installmentSummaryLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      marginBottom: 4,
+    },
+    installmentSummaryAmount: {
+      ...theme.typography.h2,
+      color: theme.colors.primary,
+      fontWeight: "700",
+    },
+    installmentSummaryDetail: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: 4,
+    },
+    // Input Group (Label outside, input inside)
+    inputGroup: {
+      marginBottom: theme.spacing.l,
+    },
+    inputGroupLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderRadius: 16,
+      paddingHorizontal: theme.spacing.m,
+      height: 56,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    inputField: {
+      flex: 1,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      height: "100%",
+    },
+    installmentOptions: {
+      marginBottom: theme.spacing.m,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: theme.spacing.m,
+    },
+    cardSelectorContainer: {
+      marginBottom: theme.spacing.l,
+    },
+    cardSelectorContent: {
+      gap: theme.spacing.s,
+      paddingVertical: theme.spacing.s,
+    },
+    cardOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.round,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+      height: 48, // Consistent height for cards
+    },
+    cardOptionActive: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    cardOptionText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    cardOptionTextActive: {
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+    },
 
-  currencySelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 16,
-    paddingHorizontal: theme.spacing.m,
-    height: 64, // Match InputContainer
-  },
-  currencySelectorText: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    margin: theme.spacing.m,
-    paddingHorizontal: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    height: 52, // Standard height
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: theme.spacing.s,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    height: "100%",
-  },
-  currencyList: {
-    padding: theme.spacing.m,
-  },
-  currencyItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    height: 60,
-  },
-  currencyFlag: {
-    fontSize: 24,
-    marginRight: theme.spacing.m,
-  },
-  currencyCode: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  currencyName: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  helperText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 6,
-    marginLeft: 4,
-    lineHeight: 18,
-  },
-  input: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.m,
-    paddingHorizontal: theme.spacing.m,
-    height: 52, // Standard height
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  inputLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-  inputDisabled: {
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text.tertiary,
-  },
-  datePickerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.m,
-    height: 64, // Match InputContainer
-    borderRadius: 16,
-    marginBottom: theme.spacing.l,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  datePickerLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 2,
-  },
-  datePickerValue: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    fontWeight: "500",
-  },
-  datePickerModal: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  datePickerContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    width: "85%",
-    maxHeight: "80%",
-    ...theme.shadows.large,
-  },
-  datePickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  datePickerTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  dateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.l,
-    gap: theme.spacing.s,
-  },
-  dateColumn: {
-    flex: 1,
-  },
-  dateLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  dateInput: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    textAlign: "center",
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  datePickerActions: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-    marginTop: theme.spacing.m,
-  },
-  datePickerCancel: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-  },
-  datePickerConfirm: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-  },
-  datePickerCancelText: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  datePickerConfirmText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-  },
+    currencySelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 16,
+      paddingHorizontal: theme.spacing.m,
+      height: 64, // Match InputContainer
+    },
+    currencySelectorText: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      margin: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      height: 52, // Standard height
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: theme.spacing.s,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      height: "100%",
+    },
+    currencyList: {
+      padding: theme.spacing.m,
+    },
+    currencyItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      height: 60,
+    },
+    currencyFlag: {
+      fontSize: 24,
+      marginRight: theme.spacing.m,
+    },
+    currencyCode: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    currencyName: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    helperText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: 6,
+      marginLeft: 4,
+      lineHeight: 18,
+    },
+    input: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.m,
+      paddingHorizontal: theme.spacing.m,
+      height: 52, // Standard height
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    inputLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 6,
+      marginLeft: 4,
+    },
+    inputDisabled: {
+      backgroundColor: theme.colors.background,
+      color: theme.colors.text.tertiary,
+    },
+    datePickerButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      paddingHorizontal: theme.spacing.m,
+      height: 64, // Match InputContainer
+      borderRadius: 16,
+      marginBottom: theme.spacing.l,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    datePickerLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 2,
+    },
+    datePickerValue: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      fontWeight: "500",
+    },
+    datePickerModal: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0,0,0,0.5)",
+    },
+    datePickerContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      width: "85%",
+      maxHeight: "80%",
+      ...theme.shadows.large,
+    },
+    datePickerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    datePickerTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    dateRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.l,
+      gap: theme.spacing.s,
+    },
+    dateColumn: {
+      flex: 1,
+    },
+    dateLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    dateInput: {
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      textAlign: "center",
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    datePickerActions: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+      marginTop: theme.spacing.m,
+    },
+    datePickerCancel: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.background,
+      alignItems: "center",
+    },
+    datePickerConfirm: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+    },
+    datePickerCancelText: {
+      ...theme.typography.button,
+      color: theme.colors.text.secondary,
+    },
+    datePickerConfirmText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
 
-  tooltipContainer: {
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.s,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 8,
-  },
-  tooltipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-  },
-});
+    tooltipContainer: {
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.s,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: 8,
+    },
+    tooltipText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      lineHeight: 18,
+    },
+  });

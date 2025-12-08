@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 import { useCards } from "../context/CardsContext";
 
@@ -28,6 +28,10 @@ import { scale, moderateScale } from "../utils/responsive";
 export const SubscriptionListScreen = () => {
   const navigation = useNavigation();
   const { subscriptions, cards, deleteSubscription } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const activeSubscriptions = subscriptions.filter((s) => s.isActive);
   const totalMonthly = activeSubscriptions.reduce(
@@ -216,185 +220,186 @@ export const SubscriptionListScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    // borderBottomWidth: 1, // Removed border
-    // borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-    borderRadius: 20,
-  },
-  headerTitle: {
-    ...theme.typography.h3,
-    color: "#FFFFFF",
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  summaryContainer: {
-    marginHorizontal: theme.spacing.m,
-    marginTop: theme.spacing.m,
-    borderRadius: theme.borderRadius.l,
-    ...theme.shadows.medium,
-    overflow: "hidden",
-  },
-  summaryGradient: {
-    padding: theme.spacing.m,
-    alignItems: "center",
-  },
-  summaryLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
-  },
-  summaryAmount: {
-    ...theme.typography.h2,
-    color: theme.colors.primary,
-    marginBottom: 8,
-  },
-  countBadge: {
-    backgroundColor: theme.colors.primary + "15",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  activeText: {
-    ...theme.typography.caption,
-    color: "white",
-    fontSize: moderateScale(10),
-    fontWeight: "600",
-  },
-  countText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  listContent: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  itemContainer: {
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.l,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  itemTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  itemBottomRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.s,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: theme.spacing.m,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  itemName: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  cardBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: "flex-start",
-  },
-  cardIconContainer: {
-    width: scale(24),
-    height: scale(24),
-    borderRadius: scale(6),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 6,
-  },
-  activeIndicator: {
-    width: scale(24),
-    height: scale(24),
-    borderRadius: scale(12),
-    backgroundColor: theme.colors.status.success,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardBadgeText: {
-    fontSize: 10,
-    color: theme.colors.text.secondary,
-    fontWeight: "500",
-  },
-  dateContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  itemAmount: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    fontSize: moderateScale(15), // Reduced slightly
-  },
-  itemDate: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  convertedAmount: {
-    ...theme.typography.caption,
-    fontSize: 10,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  deleteButton: {
-    padding: 8,
-    backgroundColor: theme.colors.status.error + "15",
-    borderRadius: 20,
-    marginLeft: 8,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.xl,
-  },
-  emptyTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.l,
-    marginBottom: theme.spacing.s,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-    marginBottom: theme.spacing.xl,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      // borderBottomWidth: 1, // Removed border
+      // borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+      borderRadius: 20,
+    },
+    headerTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    summaryContainer: {
+      marginHorizontal: theme.spacing.m,
+      marginTop: theme.spacing.m,
+      borderRadius: theme.borderRadius.l,
+      ...theme.shadows.medium,
+      overflow: "hidden",
+    },
+    summaryGradient: {
+      padding: theme.spacing.m,
+      alignItems: "center",
+    },
+    summaryLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 4,
+    },
+    summaryAmount: {
+      ...theme.typography.h2,
+      color: theme.colors.primary,
+      marginBottom: 8,
+    },
+    countBadge: {
+      backgroundColor: theme.colors.primary + "15",
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    activeText: {
+      ...theme.typography.caption,
+      color: "white",
+      fontSize: moderateScale(10),
+      fontWeight: "600",
+    },
+    countText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    listContent: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    itemContainer: {
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    itemTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    itemBottomRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    divider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: theme.spacing.s,
+    },
+    iconContainer: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: theme.spacing.m,
+    },
+    textContainer: {
+      flex: 1,
+    },
+    itemName: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    cardBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      alignSelf: "flex-start",
+    },
+    cardIconContainer: {
+      width: scale(24),
+      height: scale(24),
+      borderRadius: scale(6),
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 6,
+    },
+    activeIndicator: {
+      width: scale(24),
+      height: scale(24),
+      borderRadius: scale(12),
+      backgroundColor: theme.colors.status.success,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    cardBadgeText: {
+      fontSize: 10,
+      color: theme.colors.text.secondary,
+      fontWeight: "500",
+    },
+    dateContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    itemAmount: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      fontSize: moderateScale(15), // Reduced slightly
+    },
+    itemDate: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    convertedAmount: {
+      ...theme.typography.caption,
+      fontSize: 10,
+      color: theme.colors.text.tertiary,
+      marginTop: 2,
+    },
+    deleteButton: {
+      padding: 8,
+      backgroundColor: theme.colors.status.error + "15",
+      borderRadius: 20,
+      marginLeft: 8,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: theme.spacing.xl,
+    },
+    emptyTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.l,
+      marginBottom: theme.spacing.s,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      marginBottom: theme.spacing.xl,
+    },
+  });

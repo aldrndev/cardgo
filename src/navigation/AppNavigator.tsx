@@ -15,7 +15,7 @@ import { InsightsScreen } from "../screens/InsightsScreen";
 import { CalendarScreen } from "../screens/CalendarScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { TabNavigator } from "./TabNavigator";
-import { theme } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
 
 import { StartupScreen } from "../screens/StartupScreen";
 import { AddSubscriptionScreen } from "../screens/AddSubscriptionScreen";
@@ -35,6 +35,8 @@ import { NotificationController } from "../components/NotificationController";
 // ... existing imports
 
 export const AppNavigator = () => {
+  const { theme } = useTheme();
+
   return (
     <>
       <NotificationController />

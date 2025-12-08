@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,13 +12,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { moderateScale } from "../utils/responsive";
 import { storage } from "../utils/storage";
 import { CATEGORIES } from "../utils/categorizer";
 
 export const CustomizationScreen = () => {
   const navigation = useNavigation();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
@@ -245,174 +250,175 @@ export const CustomizationScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  placeholder: {
-    width: moderateScale(40),
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    backgroundColor: theme.colors.surface,
-    marginTop: theme.spacing.m,
-    padding: theme.spacing.l,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  sectionDescription: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.m,
-  },
-  addButton: {
-    padding: theme.spacing.xs,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.s,
-  },
-  categoriesList: {
-    gap: theme.spacing.s,
-  },
-  categoryItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-  },
-  categoryName: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  currencyOptions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.s,
-  },
-  currencyChip: {
-    paddingHorizontal: theme.spacing.l,
-    paddingVertical: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  currencyChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  currencyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-  },
-  currencyTextActive: {
-    color: "#FFFFFF",
-  },
-  infoCard: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-    backgroundColor: theme.colors.primary + "10",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-  },
-  infoText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    flex: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    width: "85%",
-    ...theme.shadows.large,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  modalTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  input: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: theme.spacing.l,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-  },
-  modalButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.background,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  cancelButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  confirmButtonText: {
-    ...theme.typography.button,
-    color: "#FFFFFF",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    headerTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    placeholder: {
+      width: moderateScale(40),
+    },
+    content: {
+      flex: 1,
+    },
+    section: {
+      backgroundColor: theme.colors.surface,
+      marginTop: theme.spacing.m,
+      padding: theme.spacing.l,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.xs,
+    },
+    sectionDescription: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.m,
+    },
+    addButton: {
+      padding: theme.spacing.xs,
+    },
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: theme.spacing.xl,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.s,
+    },
+    categoriesList: {
+      gap: theme.spacing.s,
+    },
+    categoryItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+    },
+    categoryName: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    currencyOptions: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.s,
+    },
+    currencyChip: {
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    currencyChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    currencyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+    },
+    currencyTextActive: {
+      color: theme.colors.text.inverse,
+    },
+    infoCard: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+      backgroundColor: theme.colors.primary + "10",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+    },
+    infoText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      flex: 1,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      width: "85%",
+      ...theme.shadows.large,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    modalTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    input: {
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: theme.spacing.l,
+    },
+    modalActions: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+    },
+    modalButton: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+    },
+    cancelButton: {
+      backgroundColor: theme.colors.background,
+    },
+    confirmButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    cancelButtonText: {
+      ...theme.typography.button,
+      color: theme.colors.text.secondary,
+    },
+    confirmButtonText: {
+      ...theme.typography.button,
+      color: theme.colors.text.inverse,
+    },
+  });

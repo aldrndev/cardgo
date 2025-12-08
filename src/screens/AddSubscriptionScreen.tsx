@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { scale, moderateScale } from "../utils/responsive";
@@ -28,6 +28,10 @@ export const AddSubscriptionScreen = () => {
   const route = useRoute<any>();
   const { cardId: paramCardId } = route.params || {};
   const { cards, addSubscription } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -381,7 +385,7 @@ export const AddSubscriptionScreen = () => {
                     <Ionicons
                       name={iconName}
                       size={moderateScale(18)}
-                      color={isSelected ? theme.colors.text.inverse : iconColor}
+                      color={isSelected ? "#FFFFFF" : iconColor}
                     />
                   </View>
                   <Text
@@ -409,207 +413,208 @@ export const AddSubscriptionScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-  },
-  amountContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: theme.spacing.xl,
-  },
-  currencyPrefix: {
-    fontSize: moderateScale(32),
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-    marginRight: theme.spacing.s,
-  },
-  amountInput: {
-    fontSize: moderateScale(48),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    minWidth: 100,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    ...theme.shadows.medium,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    marginBottom: theme.spacing.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  inputIcon: {
-    marginRight: theme.spacing.m,
-  },
-  textInput: {
-    flex: 1,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    height: theme.containerSizes.iconMedium,
-  },
-  inputLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: 2,
-  },
-  cycleContainer: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-    marginBottom: theme.spacing.l,
-  },
-  cycleButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.s,
-    alignItems: "center",
-  },
-  cycleButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  cycleText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  cycleTextActive: {
-    color: theme.colors.text.inverse,
-    fontWeight: "600",
-  },
-  sectionLabel: {
-    ...theme.typography.h3,
-    fontSize: moderateScale(16),
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-    marginTop: theme.spacing.s,
-  },
-  horizontalScroll: {
-    gap: theme.spacing.s,
-    paddingBottom: theme.spacing.m,
-  },
-  cardOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.round,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  cardOptionActive: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-  },
-  cardOptionText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  cardOptionTextActive: {
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-  },
-  categoryOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  categoryIconContainer: {
-    width: theme.containerSizes.iconSmall,
-    height: theme.containerSizes.iconSmall,
-    borderRadius: scale(14),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-    ...theme.shadows.small,
-  },
-  categoryText: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.secondary,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-    marginTop: theme.spacing.l,
-    ...theme.shadows.medium,
-  },
-  saveButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-    fontSize: moderateScale(16),
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.m,
-  },
-  currencyChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  activeCurrencyChip: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  currencyChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  activeCurrencyChipText: {
-    color: theme.colors.text.inverse,
-  },
-  helperText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: 4,
-  },
-  swipeHintContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  swipeHintText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(12),
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      padding: theme.spacing.m,
+    },
+    amountContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginVertical: theme.spacing.xl,
+    },
+    currencyPrefix: {
+      fontSize: moderateScale(32),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+      marginRight: theme.spacing.s,
+    },
+    amountInput: {
+      fontSize: moderateScale(48),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      minWidth: 100,
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      ...theme.shadows.medium,
+    },
+    inputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      marginBottom: theme.spacing.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    inputIcon: {
+      marginRight: theme.spacing.m,
+    },
+    textInput: {
+      flex: 1,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      height: theme.containerSizes.iconMedium,
+    },
+    inputLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: 2,
+    },
+    cycleContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      overflow: "hidden",
+      marginBottom: theme.spacing.l,
+    },
+    cycleButton: {
+      flex: 1,
+      paddingVertical: theme.spacing.s,
+      alignItems: "center",
+    },
+    cycleButtonActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    cycleText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    cycleTextActive: {
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    sectionLabel: {
+      ...theme.typography.h3,
+      fontSize: moderateScale(16),
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+      marginTop: theme.spacing.s,
+    },
+    horizontalScroll: {
+      gap: theme.spacing.s,
+      paddingBottom: theme.spacing.m,
+    },
+    cardOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.round,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    cardOptionActive: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+    },
+    cardOptionText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    cardOptionTextActive: {
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+    },
+    categoryOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    categoryIconContainer: {
+      width: theme.containerSizes.iconSmall,
+      height: theme.containerSizes.iconSmall,
+      borderRadius: scale(14),
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 8,
+      ...theme.shadows.small,
+    },
+    categoryText: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+    },
+    saveButton: {
+      backgroundColor: theme.colors.primary,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+      marginTop: theme.spacing.l,
+      ...theme.shadows.medium,
+    },
+    saveButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontSize: moderateScale(16),
+    },
+    inputGroup: {
+      marginBottom: theme.spacing.m,
+    },
+    currencyChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    activeCurrencyChip: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    currencyChipText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    activeCurrencyChipText: {
+      color: "#FFFFFF",
+    },
+    helperText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: 4,
+    },
+    swipeHintContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    swipeHintText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(12),
+    },
+  });

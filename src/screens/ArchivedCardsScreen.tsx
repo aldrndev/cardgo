@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 import { useCards } from "../context/CardsContext";
 import { CreditCard } from "../components/CreditCard";
@@ -23,6 +23,10 @@ import { Card } from "../types/card";
 export const ArchivedCardsScreen = () => {
   const navigation = useNavigation();
   const { cards, archiveCard, deleteCard } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
   const [isLayoutAnimationEnabled, setIsLayoutAnimationEnabled] =
     React.useState(false);
 
@@ -162,98 +166,99 @@ export const ArchivedCardsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    marginRight: theme.spacing.m,
-  },
-  headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  listContent: {
-    padding: theme.spacing.m,
-  },
-  cardWrapper: {
-    marginBottom: theme.spacing.l,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.s,
-    ...theme.shadows.small,
-  },
-  cardInner: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-  },
-  archivedOverlay: {
-    position: "relative",
-  },
-  overlayBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: theme.borderRadius.l,
-  },
-  badgeContainer: {
-    position: "absolute",
-    top: theme.spacing.m,
-    right: theme.spacing.m,
-    backgroundColor: theme.colors.text.primary,
-    paddingHorizontal: theme.spacing.s,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  badgeText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.inverse,
-    fontWeight: "bold",
-    fontSize: 10,
-  },
-  actionsContainer: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.s,
-    paddingTop: theme.spacing.s,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.s,
-    gap: 8,
-  },
-  restoreButton: {},
-  deleteButton: {},
-  divider: {
-    width: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.xs,
-  },
-  actionText: {
-    ...theme.typography.button,
-    fontSize: 14,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.m,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    backButton: {
+      marginRight: theme.spacing.m,
+    },
+    headerTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    listContent: {
+      padding: theme.spacing.m,
+    },
+    cardWrapper: {
+      marginBottom: theme.spacing.l,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.s,
+      ...theme.shadows.small,
+    },
+    cardInner: {
+      opacity: 0.8,
+      transform: [{ scale: 0.98 }],
+    },
+    archivedOverlay: {
+      position: "relative",
+    },
+    overlayBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(255,255,255,0.3)",
+      borderRadius: theme.borderRadius.l,
+    },
+    badgeContainer: {
+      position: "absolute",
+      top: theme.spacing.m,
+      right: theme.spacing.m,
+      backgroundColor: theme.colors.text.primary,
+      paddingHorizontal: theme.spacing.s,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    badgeText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.inverse,
+      fontWeight: "bold",
+      fontSize: 10,
+    },
+    actionsContainer: {
+      flexDirection: "row",
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      marginTop: theme.spacing.s,
+      paddingTop: theme.spacing.s,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.s,
+      gap: 8,
+    },
+    restoreButton: {},
+    deleteButton: {},
+    divider: {
+      width: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: theme.spacing.xs,
+    },
+    actionText: {
+      ...theme.typography.button,
+      fontSize: 14,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.m,
+    },
+  });

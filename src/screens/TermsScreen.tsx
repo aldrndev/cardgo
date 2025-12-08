@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,30 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 export const TermsScreen = () => {
   const navigation = useNavigation();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
+  // Bullet Point Component (defined inside to access styles)
+  const BulletPoint = ({
+    text,
+    isDanger = false,
+  }: {
+    text: string;
+    isDanger?: boolean;
+  }) => (
+    <View style={styles.bulletItem}>
+      <Text style={[styles.bullet, isDanger && styles.dangerBullet]}>•</Text>
+      <Text style={[styles.bulletText, isDanger && styles.dangerText]}>
+        {text}
+      </Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -388,162 +408,147 @@ export const TermsScreen = () => {
   );
 };
 
-// Bullet Point Component
-const BulletPoint = ({
-  text,
-  isDanger = false,
-}: {
-  text: string;
-  isDanger?: boolean;
-}) => (
-  <View style={styles.bulletItem}>
-    <Text style={[styles.bullet, isDanger && styles.dangerBullet]}>•</Text>
-    <Text style={[styles.bulletText, isDanger && styles.dangerText]}>
-      {text}
-    </Text>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    padding: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  placeholder: {
-    width: 40,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-    flex: 1,
-    textAlign: "center",
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  warningSection: {
-    backgroundColor: theme.colors.status.warning + "08",
-    borderWidth: 1,
-    borderColor: theme.colors.status.warning + "30",
-  },
-  iconHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.primary + "15",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.m,
-  },
-  warningIconContainer: {
-    backgroundColor: theme.colors.status.warning + "15",
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  warningTitle: {
-    color: theme.colors.status.warning,
-  },
-  text: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    lineHeight: 24,
-    marginBottom: theme.spacing.m,
-  },
-  bold: {
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  boldText: {
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  bulletList: {
-    marginVertical: theme.spacing.s,
-  },
-  bulletItem: {
-    flexDirection: "row",
-    marginBottom: theme.spacing.s,
-    paddingLeft: theme.spacing.s,
-  },
-  bullet: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    marginRight: theme.spacing.s,
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-  dangerBullet: {
-    color: theme.colors.status.error,
-  },
-  bulletText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    flex: 1,
-    lineHeight: 22,
-  },
-  dangerText: {
-    color: theme.colors.status.error,
-    fontWeight: "500",
-  },
-  contactText: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.s,
-    fontWeight: "500",
-  },
-  footer: {
-    marginTop: theme.spacing.l,
-    paddingTop: theme.spacing.l,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    alignItems: "center",
-  },
-  footerText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.xs,
-    textAlign: "center",
-  },
-  acknowledgement: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: theme.spacing.m,
-    paddingHorizontal: theme.spacing.m,
-  },
-  acknowledgementText: {
-    ...theme.typography.body,
-    color: theme.colors.status.success,
-    fontWeight: "500",
-    marginLeft: theme.spacing.s,
-    flex: 1,
-    textAlign: "center",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      padding: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    placeholder: {
+      width: 40,
+    },
+    title: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+      flex: 1,
+      textAlign: "center",
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    section: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    warningSection: {
+      backgroundColor: theme.colors.status.warning + "08",
+      borderWidth: 1,
+      borderColor: theme.colors.status.warning + "30",
+    },
+    iconHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.primary + "15",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: theme.spacing.m,
+    },
+    warningIconContainer: {
+      backgroundColor: theme.colors.status.warning + "15",
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    warningTitle: {
+      color: theme.colors.status.warning,
+    },
+    text: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      lineHeight: 24,
+      marginBottom: theme.spacing.m,
+    },
+    bold: {
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    boldText: {
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    bulletList: {
+      marginVertical: theme.spacing.s,
+    },
+    bulletItem: {
+      flexDirection: "row",
+      marginBottom: theme.spacing.s,
+      paddingLeft: theme.spacing.s,
+    },
+    bullet: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      marginRight: theme.spacing.s,
+      fontWeight: "bold",
+      fontSize: 18,
+    },
+    dangerBullet: {
+      color: theme.colors.status.error,
+    },
+    bulletText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      flex: 1,
+      lineHeight: 22,
+    },
+    dangerText: {
+      color: theme.colors.status.error,
+      fontWeight: "500",
+    },
+    contactText: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      marginBottom: theme.spacing.s,
+      fontWeight: "500",
+    },
+    footer: {
+      marginTop: theme.spacing.l,
+      paddingTop: theme.spacing.l,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      alignItems: "center",
+    },
+    footerText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: theme.spacing.xs,
+      textAlign: "center",
+    },
+    acknowledgement: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+    },
+    acknowledgementText: {
+      ...theme.typography.body,
+      color: theme.colors.status.success,
+      fontWeight: "500",
+      marginLeft: theme.spacing.s,
+      flex: 1,
+      textAlign: "center",
+    },
+  });

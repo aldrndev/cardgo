@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,6 +22,8 @@ export const EmptyState = ({
   message?: string;
 }) => {
   const navigation = useNavigation<EmptyStateNavigationProp>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   return (
     <View style={styles.container}>
@@ -73,7 +75,7 @@ export const EmptyState = ({
           <Ionicons
             name="add-circle"
             size={moderateScale(20)}
-            color="#FFFFFF"
+            color={theme.colors.text.inverse}
             style={{ marginRight: scale(8) }}
           />
           <Text style={styles.buttonText}>Tambah Kartu Pertama</Text>
@@ -93,109 +95,110 @@ export const EmptyState = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: scale(24),
-    paddingTop: verticalScale(16),
-    paddingBottom: verticalScale(100),
-  },
-  decorativeCircle1: {
-    position: "absolute",
-    top: verticalScale(0),
-    right: scale(-30),
-    width: scale(100),
-    height: scale(100),
-    borderRadius: scale(50),
-    backgroundColor: theme.colors.primary + "10",
-  },
-  decorativeCircle2: {
-    position: "absolute",
-    bottom: verticalScale(20),
-    left: scale(-20),
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(40),
-    backgroundColor: theme.colors.primary + "08",
-  },
-  iconContainer: {
-    width: scale(100),
-    height: scale(100),
-    borderRadius: scale(50),
-    backgroundColor: theme.colors.primary + "15",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: verticalScale(24),
-  },
-  title: {
-    ...theme.typography.h2,
-    fontSize: moderateScale(20),
-    color: theme.colors.text.primary,
-    marginBottom: verticalScale(8),
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  subtitle: {
-    ...theme.typography.body,
-    fontSize: moderateScale(14),
-    textAlign: "center",
-    color: theme.colors.text.secondary,
-    marginBottom: verticalScale(24),
-    lineHeight: moderateScale(20),
-    paddingHorizontal: scale(16),
-  },
-  featuresRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    gap: scale(8),
-    marginBottom: verticalScale(24),
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.primary + "10",
-    paddingVertical: verticalScale(6),
-    paddingHorizontal: scale(10),
-    borderRadius: scale(16),
-    gap: scale(4),
-  },
-  featureText: {
-    ...theme.typography.caption,
-    fontSize: moderateScale(12),
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  button: {
-    width: "100%",
-    borderRadius: scale(14),
-    overflow: "hidden",
-    ...theme.shadows.medium,
-  },
-  buttonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: verticalScale(14),
-    paddingHorizontal: scale(20),
-  },
-  buttonText: {
-    ...theme.typography.button,
-    color: "#FFFFFF",
-    fontSize: moderateScale(15),
-    fontWeight: "700",
-  },
-  hintContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: verticalScale(24),
-    gap: scale(6),
-  },
-  hintText: {
-    ...theme.typography.caption,
-    fontSize: moderateScale(12),
-    color: theme.colors.text.tertiary,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: scale(24),
+      paddingTop: verticalScale(16),
+      paddingBottom: verticalScale(100),
+    },
+    decorativeCircle1: {
+      position: "absolute",
+      top: verticalScale(0),
+      right: scale(-30),
+      width: scale(100),
+      height: scale(100),
+      borderRadius: scale(50),
+      backgroundColor: theme.colors.primary + "10",
+    },
+    decorativeCircle2: {
+      position: "absolute",
+      bottom: verticalScale(20),
+      left: scale(-20),
+      width: scale(80),
+      height: scale(80),
+      borderRadius: scale(40),
+      backgroundColor: theme.colors.primary + "08",
+    },
+    iconContainer: {
+      width: scale(100),
+      height: scale(100),
+      borderRadius: scale(50),
+      backgroundColor: theme.colors.primary + "15",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: verticalScale(24),
+    },
+    title: {
+      ...theme.typography.h2,
+      fontSize: moderateScale(20),
+      color: theme.colors.text.primary,
+      marginBottom: verticalScale(8),
+      textAlign: "center",
+      fontWeight: "700",
+    },
+    subtitle: {
+      ...theme.typography.body,
+      fontSize: moderateScale(14),
+      textAlign: "center",
+      color: theme.colors.text.secondary,
+      marginBottom: verticalScale(24),
+      lineHeight: moderateScale(20),
+      paddingHorizontal: scale(16),
+    },
+    featuresRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      flexWrap: "wrap",
+      gap: scale(8),
+      marginBottom: verticalScale(24),
+    },
+    featureItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary + "10",
+      paddingVertical: verticalScale(6),
+      paddingHorizontal: scale(10),
+      borderRadius: scale(16),
+      gap: scale(4),
+    },
+    featureText: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(12),
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    button: {
+      width: "100%",
+      borderRadius: scale(14),
+      overflow: "hidden",
+      ...theme.shadows.medium,
+    },
+    buttonGradient: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: verticalScale(14),
+      paddingHorizontal: scale(20),
+    },
+    buttonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontSize: moderateScale(15),
+      fontWeight: "700",
+    },
+    hintContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: verticalScale(24),
+      gap: scale(6),
+    },
+    hintText: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(12),
+      color: theme.colors.text.tertiary,
+    },
+  });

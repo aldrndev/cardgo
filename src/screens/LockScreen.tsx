@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { moderateScale } from "../utils/responsive";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,6 +22,11 @@ export const LockScreen = () => {
     hasBiometrics,
     isBiometricEnabled,
   } = useAuth();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
@@ -122,76 +127,79 @@ export const LockScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.xl,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing.l,
-    ...theme.shadows.medium,
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xl,
-  },
-  pinContainer: {
-    flexDirection: "row",
-    marginBottom: theme.spacing.xl * 2,
-  },
-  pinDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.text.secondary,
-    marginHorizontal: theme.spacing.s,
-  },
-  pinDotFilled: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  pinDotError: {
-    borderColor: theme.colors.status.error,
-    backgroundColor: theme.colors.status.error,
-  },
-  keypad: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    width: width * 0.8,
-  },
-  key: {
-    width: width * 0.2,
-    height: width * 0.2,
-    justifyContent: "center",
-    alignItems: "center",
-    margin: theme.spacing.s,
-    borderRadius: width * 0.1,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.small,
-  },
-  keyText: {
-    fontSize: 28,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-});
+const getStyles = (theme: Theme) => {
+  const { width } = Dimensions.get("window");
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.xl,
+    },
+    iconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: theme.spacing.l,
+      ...theme.shadows.medium,
+    },
+    title: {
+      ...theme.typography.h1,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+    },
+    subtitle: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xl,
+    },
+    pinContainer: {
+      flexDirection: "row",
+      marginBottom: theme.spacing.xl * 2,
+    },
+    pinDot: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.text.secondary,
+      marginHorizontal: theme.spacing.s,
+    },
+    pinDotFilled: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    pinDotError: {
+      borderColor: theme.colors.status.error,
+      backgroundColor: theme.colors.status.error,
+    },
+    keypad: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      width: width * 0.8,
+    },
+    key: {
+      width: width * 0.2,
+      height: width * 0.2,
+      justifyContent: "center",
+      alignItems: "center",
+      margin: theme.spacing.s,
+      borderRadius: width * 0.1,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.small,
+    },
+    keyText: {
+      fontSize: 28,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+  });
+};

@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { PieChart, LineChart } from "react-native-chart-kit";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
@@ -37,6 +37,11 @@ const COLOR_PALETTE = [
 export const InsightsScreen = () => {
   const { cards, transactions } = useCards();
   const navigation = useNavigation();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [selectedPeriod, setSelectedPeriod] = useState<"month" | "year">(
     "month"
   );
@@ -239,13 +244,16 @@ export const InsightsScreen = () => {
   // For short display in charts, use same format as formatCurrency
   const formatCompactCurrency = (amount: number) => {
     if (isNaN(amount) || amount === 0) return "Rp 0";
-    if (amount >= 1_000_000_000) {
-      const val = (amount / 1_000_000_000).toFixed(2).replace(/\.00$/, "");
-      return `Rp ${val} M`;
+    const absAmount = Math.abs(amount);
+    const sign = amount < 0 ? "-" : "";
+
+    if (absAmount >= 1_000_000_000) {
+      const val = (absAmount / 1_000_000_000).toFixed(2).replace(/\.00$/, "");
+      return `${sign}Rp ${val} M`;
     }
-    if (amount >= 1_000_000) {
-      const val = (amount / 1_000_000).toFixed(2).replace(/\.00$/, "");
-      return `Rp ${val} Jt`;
+    if (absAmount >= 1_000_000) {
+      const val = (absAmount / 1_000_000).toFixed(2).replace(/\.00$/, "");
+      return `${sign}Rp ${val} Jt`;
     }
     // For < 1 million, show full format
     return new Intl.NumberFormat("id-ID", {
@@ -457,7 +465,7 @@ export const InsightsScreen = () => {
         {monthlyTrend.some((m) => m.amount > 0) && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Tren Pengeluaran 6 Bulan</Text>
-            <View style={{ marginLeft: -16 }}>
+            <View style={{ paddingRight: 8 }}>
               <LineChart
                 data={{
                   labels: monthlyTrend.map((m) => m.label),
@@ -468,12 +476,15 @@ export const InsightsScreen = () => {
                     },
                   ],
                 }}
-                width={width - 32}
+                width={width - 48}
                 height={180}
                 chartConfig={{
                   ...chartConfig,
                   backgroundGradientFrom: theme.colors.surface,
                   backgroundGradientTo: theme.colors.surface,
+                  propsForLabels: {
+                    fontSize: 10,
+                  },
                 }}
                 bezier
                 style={{
@@ -483,9 +494,15 @@ export const InsightsScreen = () => {
                 withOuterLines={false}
                 formatYLabel={(value) => {
                   const num = parseFloat(value);
-                  if (num >= 1000000) return `${(num / 1000000).toFixed(0)}jt`;
-                  if (num >= 1000) return `${(num / 1000).toFixed(0)}rb`;
-                  return value;
+                  const absNum = Math.abs(num);
+                  const sign = num < 0 ? "-" : "";
+                  if (absNum >= 1000000000)
+                    return `${sign}Rp ${(absNum / 1000000000).toFixed(1)} M`;
+                  if (absNum >= 1000000)
+                    return `${sign}Rp ${(absNum / 1000000).toFixed(0)} Jt`;
+                  if (absNum >= 1000)
+                    return `${sign}Rp ${(absNum / 1000).toFixed(0)} Rb`;
+                  return `${sign}Rp ${absNum}`;
                 }}
               />
             </View>
@@ -641,10 +658,22 @@ export const InsightsScreen = () => {
                     ]}
                   />
                 </View>
-                <Text style={styles.usageText}>
-                  {item.usagePercent.toFixed(0)}% limit • {item.txCount}{" "}
-                  transaksi
-                </Text>
+                <View style={styles.usageInfoContainer}>
+                  <View>
+                    <Text style={styles.usageLabel}>Sisa Limit</Text>
+                    <Text style={styles.usageValue}>
+                      {formatCompactCurrency(
+                        item.card.creditLimit - item.card.currentUsage
+                      )}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={styles.usageLabel}>Total Transaksi</Text>
+                    <Text style={styles.usageValue}>
+                      {item.txCount} transaksi
+                    </Text>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
@@ -671,324 +700,342 @@ export const InsightsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  periodSelector: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    margin: theme.spacing.m,
-    padding: 4,
-    borderRadius: theme.borderRadius.l,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.m,
-    alignItems: "center",
-    borderRadius: theme.borderRadius.m,
-  },
-  periodButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  periodText: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-  },
-  periodTextActive: {
-    color: "#FFF",
-  },
-  dateNavigator: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-  },
-  navButton: {
-    padding: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-  },
-  dateLabel: {
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  content: {
-    paddingHorizontal: theme.spacing.m,
-  },
-  summaryCard: {
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-  },
-  summaryLabel: {
-    fontSize: moderateScale(13),
-    color: "rgba(255,255,255,0.8)",
-  },
-  summaryAmount: {
-    fontSize: moderateScale(28),
-    fontWeight: "700",
-    color: "#FFF",
-    marginTop: theme.spacing.xs,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginVertical: theme.spacing.m,
-  },
-  summaryStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  statLabel: {
-    fontSize: moderateScale(11),
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-  },
-  changeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-  },
-  cardTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-  },
-  chartBars: {
-    flexDirection: "row",
-    height: scale(130),
-    gap: 4,
-  },
-  barColumn: {
-    flex: 1,
-    alignItems: "center",
-  },
-  barValue: {
-    fontSize: moderateScale(8),
-    color: theme.colors.text.tertiary,
-    marginBottom: 4,
-    height: 20,
-    textAlign: "center",
-  },
-  barWrapper: {
-    flex: 1,
-    width: "75%",
-    justifyContent: "flex-end",
-  },
-  bar: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-    minHeight: 4,
-  },
-  barLabel: {
-    fontSize: moderateScale(11),
-    color: theme.colors.text.secondary,
-    marginTop: 6,
-    fontWeight: "500",
-  },
-  legendList: {
-    gap: theme.spacing.s,
-  },
-  legendRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: theme.spacing.xs,
-  },
-  legendLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: theme.spacing.s,
-  },
-  legendName: {
-    fontSize: moderateScale(14),
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  legendRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-  },
-  legendAmount: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    minWidth: 65,
-    textAlign: "right",
-  },
-  legendPercent: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.secondary,
-    minWidth: 30,
-    textAlign: "right",
-  },
-  cardUsageItem: {
-    marginBottom: theme.spacing.m,
-    paddingBottom: theme.spacing.s,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  cardUsageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-  },
-  cardNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  cardDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: theme.spacing.s,
-  },
-  cardUsageName: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  cardUsageSpending: {
-    fontSize: moderateScale(14),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  usageBarBg: {
-    height: 6,
-    backgroundColor: theme.colors.border,
-    borderRadius: 3,
-    marginVertical: theme.spacing.xs,
-  },
-  usageBarFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  usageText: {
-    fontSize: moderateScale(11),
-    color: theme.colors.text.tertiary,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: theme.spacing.xxl,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-  },
-  emptyTitle: {
-    fontSize: moderateScale(18),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.m,
-  },
-  emptyDesc: {
-    fontSize: moderateScale(14),
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.s,
-    textAlign: "center",
-  },
-  trendSummary: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: theme.spacing.m,
-    paddingTop: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  trendItem: {
-    alignItems: "center",
-  },
-  trendLabel: {
-    fontSize: moderateScale(11),
-    color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.xs,
-  },
-  trendValue: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  seeAllText: {
-    fontSize: moderateScale(13),
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  budgetItem: {
-    marginBottom: theme.spacing.m,
-  },
-  budgetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-  },
-  budgetCategory: {
-    fontSize: moderateScale(14),
-    fontWeight: "500",
-    color: theme.colors.text.primary,
-  },
-  budgetPercentage: {
-    fontSize: moderateScale(14),
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  budgetProgressBg: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  budgetProgressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  budgetDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: theme.spacing.xs,
-  },
-  budgetSpent: {
-    fontSize: moderateScale(12),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  budgetLimit: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.tertiary,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    periodSelector: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.surface,
+      margin: theme.spacing.m,
+      padding: 4,
+      borderRadius: theme.borderRadius.l,
+    },
+    periodButton: {
+      flex: 1,
+      paddingVertical: theme.spacing.m,
+      alignItems: "center",
+      borderRadius: theme.borderRadius.m,
+    },
+    periodButtonActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    periodText: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+    },
+    periodTextActive: {
+      color: "#FFF",
+    },
+    dateNavigator: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+    },
+    navButton: {
+      padding: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+    },
+    dateLabel: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    content: {
+      paddingHorizontal: theme.spacing.m,
+    },
+    summaryCard: {
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+    },
+    summaryLabel: {
+      fontSize: moderateScale(13),
+      color: "rgba(255,255,255,0.8)",
+    },
+    summaryAmount: {
+      fontSize: moderateScale(28),
+      fontWeight: "700",
+      color: "#FFF",
+      marginTop: theme.spacing.xs,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: "rgba(255,255,255,0.2)",
+      marginVertical: theme.spacing.m,
+    },
+    summaryStats: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    statItem: {
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: "#FFF",
+    },
+    statLabel: {
+      fontSize: moderateScale(11),
+      color: "rgba(255,255,255,0.7)",
+      marginTop: 2,
+    },
+    changeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+    },
+    cardTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+    chartBars: {
+      flexDirection: "row",
+      height: scale(130),
+      gap: 4,
+    },
+    barColumn: {
+      flex: 1,
+      alignItems: "center",
+    },
+    barValue: {
+      fontSize: moderateScale(8),
+      color: theme.colors.text.tertiary,
+      marginBottom: 4,
+      height: 20,
+      textAlign: "center",
+    },
+    barWrapper: {
+      flex: 1,
+      width: "75%",
+      justifyContent: "flex-end",
+    },
+    bar: {
+      width: "100%",
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+      minHeight: 4,
+    },
+    barLabel: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+      marginTop: 6,
+      fontWeight: "500",
+    },
+    legendList: {
+      gap: theme.spacing.s,
+    },
+    legendRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: theme.spacing.xs,
+    },
+    legendLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: theme.spacing.s,
+    },
+    legendName: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    legendRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+    },
+    legendAmount: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      minWidth: 65,
+      textAlign: "right",
+    },
+    legendPercent: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+      minWidth: 30,
+      textAlign: "right",
+    },
+    cardUsageItem: {
+      marginBottom: theme.spacing.m,
+      paddingBottom: theme.spacing.s,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    cardUsageHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    cardNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    cardDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: theme.spacing.s,
+    },
+    cardUsageName: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    cardUsageSpending: {
+      fontSize: moderateScale(14),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    usageBarBg: {
+      height: 6,
+      backgroundColor: theme.colors.border,
+      borderRadius: 3,
+      marginVertical: theme.spacing.xs,
+    },
+    usageBarFill: {
+      height: "100%",
+      borderRadius: 3,
+    },
+    usageText: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+      fontWeight: "500",
+    },
+    usageInfoContainer: {
+      marginTop: 4,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    usageLabel: {
+      fontSize: moderateScale(10),
+      color: theme.colors.text.tertiary,
+      marginBottom: 2,
+    },
+    usageValue: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+      fontWeight: "500",
+    },
+    emptyState: {
+      alignItems: "center",
+      padding: theme.spacing.xxl,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+    },
+    emptyTitle: {
+      fontSize: moderateScale(18),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.m,
+    },
+    emptyDesc: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.s,
+      textAlign: "center",
+    },
+    trendSummary: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    trendItem: {
+      alignItems: "center",
+    },
+    trendLabel: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.tertiary,
+      marginBottom: theme.spacing.xs,
+    },
+    trendValue: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    seeAllText: {
+      fontSize: moderateScale(13),
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    budgetItem: {
+      marginBottom: theme.spacing.m,
+    },
+    budgetHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    budgetCategory: {
+      fontSize: moderateScale(14),
+      fontWeight: "500",
+      color: theme.colors.text.primary,
+    },
+    budgetPercentage: {
+      fontSize: moderateScale(14),
+      fontWeight: "700",
+      color: theme.colors.primary,
+    },
+    budgetProgressBg: {
+      height: 8,
+      backgroundColor: theme.colors.border,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    budgetProgressFill: {
+      height: "100%",
+      borderRadius: 4,
+    },
+    budgetDetails: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: theme.spacing.xs,
+    },
+    budgetSpent: {
+      fontSize: moderateScale(12),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    budgetLimit: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.tertiary,
+    },
+  });
