@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useNavigation } from "@react-navigation/native";
 import { theme } from "../constants/theme";
+import { useTheme, ThemeMode } from "../context/ThemeContext";
 import { storage } from "../utils/storage";
 import { moderateScale } from "../utils/responsive";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
@@ -108,6 +109,7 @@ export const SettingsScreen = () => {
   } = useCards();
   const { getRecordsByCardId } = useLimitIncrease();
   const { hasPin, removePin, refreshBiometricStatus } = useAuth();
+  const { themeMode, isDark, setThemeMode } = useTheme();
 
   const [biometricEnabled, setBiometricEnabled] = React.useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = React.useState(false);
@@ -571,11 +573,100 @@ export const SettingsScreen = () => {
             onPress={() => navigation.navigate("Customization")}
           />
           <SettingsItem
+            icon="wallet-outline"
+            label="Budget per Kategori"
+            sublabel="Atur batas pengeluaran per kategori"
+            onPress={() => navigation.navigate("CategoryBudget")}
+          />
+          <SettingsItem
             icon="link-outline"
             label="Limit Gabungan"
             sublabel="Kelola kartu dengan limit bersama"
             onPress={() => navigation.navigate("LinkedLimits")}
           />
+        </View>
+
+        {/* Theme Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tampilan</Text>
+          <View style={styles.themeSelector}>
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeMode === "light" && styles.themeOptionActive,
+              ]}
+              onPress={() => setThemeMode("light")}
+            >
+              <Ionicons
+                name="sunny"
+                size={moderateScale(20)}
+                color={
+                  themeMode === "light" ? "#FFF" : theme.colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.themeOptionText,
+                  themeMode === "light" && styles.themeOptionTextActive,
+                ]}
+              >
+                Terang
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeMode === "dark" && styles.themeOptionActive,
+              ]}
+              onPress={() => setThemeMode("dark")}
+            >
+              <Ionicons
+                name="moon"
+                size={moderateScale(20)}
+                color={
+                  themeMode === "dark" ? "#FFF" : theme.colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.themeOptionText,
+                  themeMode === "dark" && styles.themeOptionTextActive,
+                ]}
+              >
+                Gelap
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeMode === "system" && styles.themeOptionActive,
+              ]}
+              onPress={() => setThemeMode("system")}
+            >
+              <Ionicons
+                name="phone-portrait"
+                size={moderateScale(20)}
+                color={
+                  themeMode === "system" ? "#FFF" : theme.colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.themeOptionText,
+                  themeMode === "system" && styles.themeOptionTextActive,
+                ]}
+              >
+                Sistem
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.themeHint}>
+            {themeMode === "system"
+              ? `Mengikuti pengaturan sistem (${isDark ? "Gelap" : "Terang"})`
+              : themeMode === "dark"
+              ? "Mode gelap aktif"
+              : "Mode terang aktif"}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -790,5 +881,38 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: "#fff",
     fontWeight: "600",
+  },
+  themeSelector: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.border + "40",
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  themeOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.m,
+    borderRadius: theme.borderRadius.s,
+    gap: theme.spacing.xs,
+  },
+  themeOptionActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  themeOptionText: {
+    ...theme.typography.caption,
+    fontWeight: "600",
+    color: theme.colors.text.secondary,
+  },
+  themeOptionTextActive: {
+    color: "#FFFFFF",
+  },
+  themeHint: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    textAlign: "center",
+    marginTop: theme.spacing.s,
   },
 });

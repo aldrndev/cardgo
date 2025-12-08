@@ -345,4 +345,89 @@ export const NotificationService = {
   async cancelAll() {
     await Notifications.cancelAllScheduledNotificationsAsync();
   },
+
+  // Category Budget Alerts
+  async checkCategoryBudgetAlerts(
+    transactions: any[],
+    showNotification: boolean = true
+  ) {
+    const budgets = await storage.getCategoryBudgets();
+    if (budgets.length === 0) return [];
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const alertsTriggered: { category: string; percentage: number }[] = [];
+
+    for (const budget of budgets) {
+      // Calculate current month spending for this category
+      const monthSpending = transactions
+        .filter((t) => {
+          const tDate = new Date(t.date);
+          return (
+            t.category === budget.category &&
+            tDate.getMonth() === currentMonth &&
+            tDate.getFullYear() === currentYear
+          );
+        })
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const percentage =
+        budget.budget > 0 ? (monthSpending / budget.budget) * 100 : 0;
+
+      // Check if threshold exceeded
+      if (percentage >= budget.alertThreshold) {
+        alertsTriggered.push({
+          category: budget.category,
+          percentage: Math.round(percentage),
+        });
+
+        if (showNotification) {
+          // Check if we already sent notification for this category this month
+          const notifKey = `budget-alert-${budget.category}-${currentYear}-${currentMonth}`;
+          const alreadySent = await storage.getNotificationSent(notifKey);
+
+          if (!alreadySent) {
+            const isOverBudget = percentage >= 100;
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: isOverBudget
+                  ? `⚠️ Budget ${budget.category} Terlampaui!`
+                  : `📊 Budget ${budget.category} Hampir Habis`,
+                body: isOverBudget
+                  ? `Pengeluaran ${budget.category} sudah ${Math.round(
+                      percentage
+                    )}% dari budget. Pertimbangkan untuk mengurangi pengeluaran.`
+                  : `Pengeluaran ${budget.category} sudah ${Math.round(
+                      percentage
+                    )}% dari budget (threshold: ${budget.alertThreshold}%).`,
+                data: { type: "budget-alert", category: budget.category },
+              },
+              trigger: null, // Immediate notification
+            });
+
+            // Mark as sent for this month
+            await storage.setNotificationSent(notifKey, true);
+          }
+        }
+      }
+    }
+
+    return alertsTriggered;
+  },
+
+  // Reset budget notification flags at start of new month
+  async resetMonthlyBudgetAlerts() {
+    const budgets = await storage.getCategoryBudgets();
+    const now = new Date();
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    for (const budget of budgets) {
+      const notifKey = `budget-alert-${
+        budget.category
+      }-${prevMonth.getFullYear()}-${prevMonth.getMonth()}`;
+      await storage.setNotificationSent(notifKey, false);
+    }
+  },
 };

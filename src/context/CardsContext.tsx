@@ -374,6 +374,9 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
       setCards(updatedCards);
       await storage.saveCards(updatedCards);
     }
+
+    // Check category budget alerts after adding transaction
+    await NotificationService.checkCategoryBudgetAlerts(updatedTransactions);
   };
 
   const addInstallmentPlan = async (

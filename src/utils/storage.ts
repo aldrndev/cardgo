@@ -270,4 +270,50 @@ export const storage = {
       return [];
     }
   },
+
+  // Category Budgets
+  async saveCategoryBudgets(
+    budgets: { category: string; budget: number; alertThreshold: number }[]
+  ): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(budgets);
+      await AsyncStorage.setItem("@card_go_category_budgets", jsonValue);
+    } catch (e) {
+      console.error("Failed to save category budgets", e);
+    }
+  },
+
+  async getCategoryBudgets(): Promise<
+    { category: string; budget: number; alertThreshold: number }[]
+  > {
+    try {
+      const jsonValue = await AsyncStorage.getItem("@card_go_category_budgets");
+      return jsonValue != null ? JSON.parse(jsonValue) : [];
+    } catch (e) {
+      console.error("Failed to fetch category budgets", e);
+      return [];
+    }
+  },
+
+  // Notification sent tracking (to avoid duplicate notifications)
+  async getNotificationSent(key: string): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem(`@card_go_notif_${key}`);
+      return value === "true";
+    } catch (e) {
+      console.error("Failed to get notification status", e);
+      return false;
+    }
+  },
+
+  async setNotificationSent(key: string, sent: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem(
+        `@card_go_notif_${key}`,
+        sent ? "true" : "false"
+      );
+    } catch (e) {
+      console.error("Failed to set notification status", e);
+    }
+  },
 };

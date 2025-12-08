@@ -21,6 +21,7 @@ export type RootStackParamList = {
   BackupExport: undefined;
   Customization: undefined;
   LinkedLimits: undefined;
+  CategoryBudget: undefined;
 };
 
 export type TabParamList = {

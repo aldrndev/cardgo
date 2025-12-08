@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { PieChart } from "react-native-chart-kit";
+import { PieChart, LineChart } from "react-native-chart-kit";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../constants/theme";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
+import { storage } from "../utils/storage";
+import { useNavigation } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
@@ -34,10 +36,23 @@ const COLOR_PALETTE = [
 
 export const InsightsScreen = () => {
   const { cards, transactions } = useCards();
+  const navigation = useNavigation();
   const [selectedPeriod, setSelectedPeriod] = useState<"month" | "year">(
     "month"
   );
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [categoryBudgets, setCategoryBudgets] = useState<
+    { category: string; budget: number; alertThreshold: number }[]
+  >([]);
+
+  // Load category budgets
+  useEffect(() => {
+    const loadBudgets = async () => {
+      const budgets = await storage.getCategoryBudgets();
+      setCategoryBudgets(budgets);
+    };
+    loadBudgets();
+  }, []);
 
   const navigateDate = (direction: -1 | 1) => {
     const newDate = new Date(selectedDate);
@@ -167,17 +182,80 @@ export const InsightsScreen = () => {
       .sort((a, b) => b.spending - a.spending);
   }, [cards, filteredTransactions]);
 
+  // Monthly spending trend (last 6 months)
+  const monthlyTrend = useMemo(() => {
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "Mei",
+      "Jun",
+      "Jul",
+      "Agu",
+      "Sep",
+      "Okt",
+      "Nov",
+      "Des",
+    ];
+    const trend: { label: string; amount: number }[] = [];
+    const today = new Date();
+
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+
+      const monthTx = transactions.filter((t) => {
+        const tDate = new Date(t.date);
+        return (
+          tDate.getMonth() === targetMonth && tDate.getFullYear() === targetYear
+        );
+      });
+
+      trend.push({
+        label: monthNames[targetMonth],
+        amount: monthTx.reduce((sum, t) => sum + t.amount, 0),
+      });
+    }
+    return trend;
+  }, [transactions]);
+
   const chartConfig = {
     backgroundGradientFrom: theme.colors.surface,
     backgroundGradientTo: theme.colors.surface,
-    color: () => theme.colors.primary,
+    color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
     labelColor: () => theme.colors.text.secondary,
+    strokeWidth: 2,
+    decimalPlaces: 0,
+    propsForDots: {
+      r: "4",
+      strokeWidth: "2",
+      stroke: theme.colors.primary,
+    },
   };
 
-  const formatShortCurrency = (amount: number) => {
-    if (amount >= 1000000) return `Rp ${(amount / 1000000).toFixed(1)}jt`;
-    if (amount >= 1000) return `Rp ${(amount / 1000).toFixed(0)}rb`;
-    return `Rp ${amount}`;
+  // Use formatCurrency from utils for consistency
+  // For short display in charts, use same format as formatCurrency
+  const formatCompactCurrency = (amount: number) => {
+    if (isNaN(amount) || amount === 0) return "Rp 0";
+    if (amount >= 1_000_000_000) {
+      const val = (amount / 1_000_000_000).toFixed(2).replace(/\.00$/, "");
+      return `Rp ${val} M`;
+    }
+    if (amount >= 1_000_000) {
+      const val = (amount / 1_000_000).toFixed(2).replace(/\.00$/, "");
+      return `Rp ${val} Jt`;
+    }
+    // For < 1 million, show full format
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+      .format(amount)
+      .replace(/Rp\s?/, "Rp ");
   };
 
   return (
@@ -277,7 +355,7 @@ export const InsightsScreen = () => {
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {formatShortCurrency(avgTransaction)}
+                {formatCompactCurrency(avgTransaction)}
               </Text>
               <Text style={styles.statLabel}>Rata-rata</Text>
             </View>
@@ -304,7 +382,7 @@ export const InsightsScreen = () => {
             {weeklyTrend.map((item, index) => (
               <View key={index} style={styles.barColumn}>
                 <Text style={styles.barValue}>
-                  {item.amount > 0 ? formatShortCurrency(item.amount) : "-"}
+                  {item.amount > 0 ? formatCompactCurrency(item.amount) : "-"}
                 </Text>
                 <View style={styles.barWrapper}>
                   <View
@@ -363,7 +441,7 @@ export const InsightsScreen = () => {
                   </View>
                   <View style={styles.legendRight}>
                     <Text style={styles.legendAmount}>
-                      {formatShortCurrency(item.population)}
+                      {formatCompactCurrency(item.population)}
                     </Text>
                     <Text style={styles.legendPercent}>
                       {item.percentage.toFixed(0)}%
@@ -372,6 +450,153 @@ export const InsightsScreen = () => {
                 </View>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* Monthly Spending Trend */}
+        {monthlyTrend.some((m) => m.amount > 0) && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Tren Pengeluaran 6 Bulan</Text>
+            <View style={{ marginLeft: -16 }}>
+              <LineChart
+                data={{
+                  labels: monthlyTrend.map((m) => m.label),
+                  datasets: [
+                    {
+                      data: monthlyTrend.map((m) => m.amount || 0),
+                      strokeWidth: 2,
+                    },
+                  ],
+                }}
+                width={width - 32}
+                height={180}
+                chartConfig={{
+                  ...chartConfig,
+                  backgroundGradientFrom: theme.colors.surface,
+                  backgroundGradientTo: theme.colors.surface,
+                }}
+                bezier
+                style={{
+                  borderRadius: theme.borderRadius.m,
+                }}
+                withInnerLines={false}
+                withOuterLines={false}
+                formatYLabel={(value) => {
+                  const num = parseFloat(value);
+                  if (num >= 1000000) return `${(num / 1000000).toFixed(0)}jt`;
+                  if (num >= 1000) return `${(num / 1000).toFixed(0)}rb`;
+                  return value;
+                }}
+              />
+            </View>
+            <View style={styles.trendSummary}>
+              <View style={styles.trendItem}>
+                <Text style={styles.trendLabel}>Tertinggi</Text>
+                <Text style={styles.trendValue}>
+                  {formatCompactCurrency(
+                    Math.max(...monthlyTrend.map((m) => m.amount))
+                  )}
+                </Text>
+              </View>
+              <View style={styles.trendItem}>
+                <Text style={styles.trendLabel}>Rata-rata</Text>
+                <Text style={styles.trendValue}>
+                  {formatCompactCurrency(
+                    monthlyTrend.reduce((sum, m) => sum + m.amount, 0) / 6
+                  )}
+                </Text>
+              </View>
+              <View style={styles.trendItem}>
+                <Text style={styles.trendLabel}>Terendah</Text>
+                <Text style={styles.trendValue}>
+                  {formatCompactCurrency(
+                    Math.min(
+                      ...monthlyTrend
+                        .filter((m) => m.amount > 0)
+                        .map((m) => m.amount)
+                    ) || 0
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Budget per Kategori */}
+        {categoryBudgets.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Budget Kategori</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("CategoryBudget" as never)}
+              >
+                <Text style={styles.seeAllText}>Kelola</Text>
+              </TouchableOpacity>
+            </View>
+            {categoryBudgets.slice(0, 5).map((budget) => {
+              // Calculate current month spending for this category
+              const now = new Date();
+              const currentMonthSpending = transactions
+                .filter((t) => {
+                  const tDate = new Date(t.date);
+                  return (
+                    t.category === budget.category &&
+                    tDate.getMonth() === now.getMonth() &&
+                    tDate.getFullYear() === now.getFullYear()
+                  );
+                })
+                .reduce((sum, t) => sum + t.amount, 0);
+
+              const percentage =
+                budget.budget > 0
+                  ? (currentMonthSpending / budget.budget) * 100
+                  : 0;
+              const isOverThreshold = percentage >= budget.alertThreshold;
+              const isOverBudget = percentage >= 100;
+
+              return (
+                <View key={budget.category} style={styles.budgetItem}>
+                  <View style={styles.budgetHeader}>
+                    <Text style={styles.budgetCategory}>{budget.category}</Text>
+                    <Text
+                      style={[
+                        styles.budgetPercentage,
+                        isOverBudget && { color: theme.colors.status.error },
+                        isOverThreshold &&
+                          !isOverBudget && {
+                            color: theme.colors.status.warning,
+                          },
+                      ]}
+                    >
+                      {percentage.toFixed(0)}%
+                    </Text>
+                  </View>
+                  <View style={styles.budgetProgressBg}>
+                    <View
+                      style={[
+                        styles.budgetProgressFill,
+                        {
+                          width: `${Math.min(percentage, 100)}%`,
+                          backgroundColor: isOverBudget
+                            ? theme.colors.status.error
+                            : isOverThreshold
+                            ? theme.colors.status.warning
+                            : theme.colors.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.budgetDetails}>
+                    <Text style={styles.budgetSpent}>
+                      {formatCompactCurrency(currentMonthSpending)}
+                    </Text>
+                    <Text style={styles.budgetLimit}>
+                      dari {formatCompactCurrency(budget.budget)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -397,7 +622,7 @@ export const InsightsScreen = () => {
                     </Text>
                   </View>
                   <Text style={styles.cardUsageSpending}>
-                    {formatShortCurrency(item.spending)}
+                    {formatCompactCurrency(item.spending)}
                   </Text>
                 </View>
                 <View style={styles.usageBarBg}>
@@ -690,5 +915,80 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginTop: theme.spacing.s,
     textAlign: "center",
+  },
+  trendSummary: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: theme.spacing.m,
+    paddingTop: theme.spacing.m,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  trendItem: {
+    alignItems: "center",
+  },
+  trendLabel: {
+    fontSize: moderateScale(11),
+    color: theme.colors.text.tertiary,
+    marginBottom: theme.spacing.xs,
+  },
+  trendValue: {
+    fontSize: moderateScale(14),
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.m,
+  },
+  seeAllText: {
+    fontSize: moderateScale(13),
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  budgetItem: {
+    marginBottom: theme.spacing.m,
+  },
+  budgetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.xs,
+  },
+  budgetCategory: {
+    fontSize: moderateScale(14),
+    fontWeight: "500",
+    color: theme.colors.text.primary,
+  },
+  budgetPercentage: {
+    fontSize: moderateScale(14),
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  budgetProgressBg: {
+    height: 8,
+    backgroundColor: theme.colors.border,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  budgetProgressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  budgetDetails: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: theme.spacing.xs,
+  },
+  budgetSpent: {
+    fontSize: moderateScale(12),
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  budgetLimit: {
+    fontSize: moderateScale(12),
+    color: theme.colors.text.tertiary,
   },
 });
