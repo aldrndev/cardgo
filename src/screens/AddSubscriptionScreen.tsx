@@ -806,8 +806,8 @@ const getStyles = (theme: Theme) =>
     searchInput: {
       flex: 1,
       marginLeft: theme.spacing.s,
-      color: theme.colors.text.primary,
       ...theme.typography.body,
+      color: theme.colors.text.primary,
     },
     currencyList: {
       padding: theme.spacing.m,
