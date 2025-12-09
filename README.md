@@ -2,7 +2,7 @@
 
 **Card Go** adalah aplikasi mobile berbasis React Native yang dirancang untuk membantu pengguna melacak penggunaan kartu kredit, tagihan, dan limit dengan mudah, aman, dan tanpa perlu koneksi internet (Offline-First).
 
-Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensitif seperti nomor kartu kredit lengkap atau CVV. Semua data tersimpan aman di perangkat (Local Storage).
+Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensitif seperti nomor kartu kredit lengkap atau CVV. Semua data **finansial** tersimpan aman secara lokal di perangkat. Koneksi internet hanya digunakan untuk layanan pendukung (seperti iklan di versi gratis).
 
 _Updated for 2025 - Version 1.2.0_
 

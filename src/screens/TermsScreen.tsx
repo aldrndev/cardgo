@@ -146,6 +146,29 @@ export const TermsScreen = () => {
           </View>
         </View>
 
+        {/* Fitur Premium & Iklan */}
+        <View style={styles.section}>
+          <View style={styles.iconHeader}>
+            <View style={styles.iconContainer}>
+              <Ionicons
+                name="star-outline"
+                size={28}
+                color={theme.colors.primary}
+              />
+            </View>
+            <Text style={styles.sectionTitle}>3. Versi Gratis & Premium</Text>
+          </View>
+          <Text style={styles.text}>
+            Card Go dapat menawarkan versi gratis yang didukung oleh iklan. Kami
+            juga dapat menawarkan pembelian dalam aplikasi (In-App Purchase)
+            untuk menghapus iklan atau membuka fitur premium.
+          </Text>
+          <Text style={styles.text}>
+            Pembayaran untuk fitur premium diproses melalui Google Play Store
+            atau Apple App Store dan tunduk pada syarat dan ketentuan mereka.
+          </Text>
+        </View>
+
         {/* Disclaimer */}
         <View style={[styles.section, styles.warningSection]}>
           <View style={styles.iconHeader}>
@@ -157,7 +180,7 @@ export const TermsScreen = () => {
               />
             </View>
             <Text style={[styles.sectionTitle, styles.warningTitle]}>
-              3. Disclaimer (Penafian)
+              4. Disclaimer (Penafian)
             </Text>
           </View>
           <Text style={styles.text}>
@@ -184,7 +207,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>4. Batasan Tanggung Jawab</Text>
+            <Text style={styles.sectionTitle}>5. Batasan Tanggung Jawab</Text>
           </View>
           <Text style={styles.text}>
             Card Go disediakan{" "}
@@ -218,7 +241,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>5. Keakuratan Data</Text>
+            <Text style={styles.sectionTitle}>6. Keakuratan Data</Text>
           </View>
           <Text style={styles.text}>
             Anda bertanggung jawab untuk memastikan bahwa semua informasi yang
@@ -241,7 +264,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>6. Hak Cipta & Kepemilikan</Text>
+            <Text style={styles.sectionTitle}>7. Hak Cipta & Kepemilikan</Text>
           </View>
           <Text style={styles.text}>
             <Text style={styles.bold}>© 2025 Card Go.</Text> All rights
@@ -269,7 +292,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>7. Privasi Data</Text>
+            <Text style={styles.sectionTitle}>8. Privasi Data</Text>
           </View>
           <Text style={styles.text}>
             Penggunaan data Anda diatur oleh{" "}
@@ -296,7 +319,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>8. Perubahan Ketentuan</Text>
+            <Text style={styles.sectionTitle}>9. Perubahan Ketentuan</Text>
           </View>
           <Text style={styles.text}>
             Kami berhak untuk mengubah, memodifikasi, atau memperbarui Syarat &
@@ -323,7 +346,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>9. Penghentian</Text>
+            <Text style={styles.sectionTitle}>10. Penghentian</Text>
           </View>
           <Text style={styles.text}>
             Kami berhak untuk menghentikan atau menangguhkan akses Anda ke
@@ -348,7 +371,7 @@ export const TermsScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>10. Hukum yang Berlaku</Text>
+            <Text style={styles.sectionTitle}>11. Hukum yang Berlaku</Text>
           </View>
           <Text style={styles.text}>
             Syarat & Ketentuan ini diatur dan ditafsirkan sesuai dengan hukum
