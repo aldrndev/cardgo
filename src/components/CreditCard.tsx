@@ -12,6 +12,7 @@ import { Card, CARD_THEMES } from "../types/card";
 import { colors } from "../constants/colors";
 import { formatCurrency } from "../utils/formatters";
 import { scale, verticalScale } from "../utils/responsive";
+import { useCards } from "../context/CardsContext";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 
 const { width } = Dimensions.get("window");
@@ -26,6 +27,7 @@ interface CreditCardProps {
 export const CreditCard = React.memo(
   ({ card, onPress, compact = false, containerStyle }: CreditCardProps) => {
     const { theme } = useTheme();
+    const { getSharedLimitInfo } = useCards(); // Access context for shared limit logic
     const styles = useMemo(() => getStyles(theme), [theme]);
 
     // Parse colorTheme if it's a gradient array or single string
@@ -47,6 +49,19 @@ export const CreditCard = React.memo(
         gradientColors = gradientEntry;
       } else if (card.colorTheme) {
         gradientColors = [card.colorTheme, card.colorTheme];
+      }
+    }
+
+    // Calculate limit logic
+    let displayLimit = card.creditLimit;
+    let displayUsage = card.currentUsage || 0;
+
+    // Override if shared limit is active
+    if (card.useSharedLimit && card.bankId) {
+      const sharedInfo = getSharedLimitInfo(card.bankId);
+      if (sharedInfo) {
+        displayLimit = sharedInfo.sharedLimit;
+        displayUsage = sharedInfo.totalUsage;
       }
     }
 
@@ -126,10 +141,18 @@ export const CreditCard = React.memo(
             {!compact && (
               <View style={{ alignItems: "flex-end" }}>
                 <Text style={[styles.label, { color: textColor + "CC" }]}>
-                  Limit
+                  Sisa Limit {card.useSharedLimit ? "(Gabungan)" : ""}
                 </Text>
                 <Text style={[styles.value, { color: textColor }]}>
-                  {formatCurrency(card.creditLimit, 1_000_000_000)}
+                  {formatCurrency(displayLimit - displayUsage, 1_000_000_000)}
+                </Text>
+                <Text
+                  style={[
+                    styles.label,
+                    { fontSize: 10, marginTop: 2, opacity: 0.8 },
+                  ]}
+                >
+                  dari {formatCurrency(displayLimit, 1_000_000_000)}
                 </Text>
               </View>
             )}

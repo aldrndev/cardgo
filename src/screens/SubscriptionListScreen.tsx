@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTheme, Theme } from "../context/ThemeContext";
 
 import { useCards } from "../context/CardsContext";
@@ -27,14 +27,24 @@ import { scale, moderateScale } from "../utils/responsive";
 
 export const SubscriptionListScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const { cardId } = route.params || {};
+
   const { subscriptions, cards, deleteSubscription } = useCards();
   const { theme, isDark } = useTheme();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const activeSubscriptions = subscriptions.filter((s) => s.isActive);
-  const totalMonthly = activeSubscriptions.reduce(
+  const filteredSubscriptions = useMemo(() => {
+    let subs = subscriptions.filter((s) => s.isActive);
+    if (cardId) {
+      subs = subs.filter((s) => s.cardId === cardId);
+    }
+    return subs;
+  }, [subscriptions, cardId]);
+
+  const totalMonthly = filteredSubscriptions.reduce(
     (sum, sub) => sum + sub.amount,
     0
   );
@@ -176,7 +186,7 @@ export const SubscriptionListScreen = () => {
             Total Tagihan Bulanan
           </Text>
           <Text style={[styles.summaryAmount, { color: "#FFF" }]}>
-            {formatCurrency(totalMonthly)}
+            {formatCurrency(totalMonthly, Number.MAX_SAFE_INTEGER)}
           </Text>
           <View
             style={[
@@ -185,13 +195,13 @@ export const SubscriptionListScreen = () => {
             ]}
           >
             <Text style={[styles.countText, { color: "#FFF" }]}>
-              {activeSubscriptions.length} Langganan Aktif
+              {filteredSubscriptions.length} Langganan Aktif
             </Text>
           </View>
         </LinearGradient>
       </View>
 
-      {activeSubscriptions.length === 0 ? (
+      {filteredSubscriptions.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons
             name="repeat-outline"
@@ -206,7 +216,7 @@ export const SubscriptionListScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={activeSubscriptions}
+          data={filteredSubscriptions}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -214,7 +224,7 @@ export const SubscriptionListScreen = () => {
       )}
 
       <FloatingActionButton
-        onPress={() => navigation.navigate("AddSubscription", {})}
+        onPress={() => navigation.navigate("AddSubscription", { cardId })}
       />
     </SafeAreaView>
   );

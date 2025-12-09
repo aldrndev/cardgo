@@ -27,6 +27,7 @@ import { PrivacyPolicyScreen } from "../screens/PrivacyPolicyScreen";
 import { TermsScreen } from "../screens/TermsScreen";
 import { BackupExportScreen } from "../screens/BackupExportScreen";
 import { CategoryBudgetScreen } from "../screens/CategoryBudgetScreen";
+import { LinkedLimitsScreen } from "../screens/LinkedLimitsScreen";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -124,6 +125,11 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="CategoryBudget"
           component={CategoryBudgetScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="LinkedLimits"
+          component={LinkedLimitsScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

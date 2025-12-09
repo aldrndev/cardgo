@@ -84,7 +84,10 @@ export const LinkedLimitsScreen = () => {
                   <View style={styles.groupHeader}>
                     <Text style={styles.groupName}>{bank?.code || bankId}</Text>
                     <Text style={styles.groupLimit}>
-                      {formatCurrency(info.sharedLimit)}
+                      {formatCurrency(
+                        info.sharedLimit,
+                        Number.MAX_SAFE_INTEGER
+                      )}
                     </Text>
                   </View>
 
@@ -107,6 +110,13 @@ export const LinkedLimitsScreen = () => {
                   <Text style={styles.cardsLabel}>
                     {info.cards.length} kartu dalam grup:
                   </Text>
+
+                  {/* Column Headers */}
+                  <View style={styles.columnHeaders}>
+                    <Text style={styles.columnHeaderName}>Nama Kartu</Text>
+                    <Text style={styles.columnHeaderUsage}>Penggunaan</Text>
+                  </View>
+
                   {info.cards.map((card) => (
                     <View key={card.id} style={styles.cardItem}>
                       <Text style={styles.cardName}>{card.alias}</Text>
@@ -236,6 +246,24 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text.secondary,
       marginBottom: theme.spacing.s,
     },
+    columnHeaders: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingBottom: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
+    },
+    columnHeaderName: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(13),
+      color: theme.colors.text.tertiary,
+      fontWeight: "600",
+    },
+    columnHeaderUsage: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(13),
+      color: theme.colors.text.tertiary,
+      fontWeight: "600",
+    },
     cardItem: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -245,10 +273,12 @@ const getStyles = (theme: Theme) =>
     },
     cardName: {
       ...theme.typography.body,
+      fontSize: moderateScale(14),
       color: theme.colors.text.primary,
     },
     cardUsage: {
       ...theme.typography.body,
+      fontSize: moderateScale(14),
       color: theme.colors.text.secondary,
     },
     emptyState: {

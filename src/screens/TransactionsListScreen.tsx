@@ -67,20 +67,25 @@ const monthNames = [
 export const TransactionsListScreen = () => {
   const navigation = useNavigation<TransactionsListScreenNavigationProp>();
   const route = useRoute<TransactionsListScreenRouteProp>();
-  const { cardId } = route.params;
+  const { cardId, initialCategory } = route.params;
   const { cards, transactions, deleteTransaction } = useCards();
   const { theme, isDark } = useTheme();
 
   // Dynamic styles based on theme
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getStyles(theme, isDark), [theme, isDark]);
 
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    initialCategory || null
+  );
   const [selectedPeriod, setSelectedPeriod] = useState<
     "all" | "month" | "custom"
   >("month");
   const [searchQuery, setSearchQuery] = useState("");
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [selectedCardFilter, setSelectedCardFilter] = useState<string | null>(
+    null
+  );
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -89,7 +94,11 @@ export const TransactionsListScreen = () => {
 
   const filteredTransactions = useMemo(() => {
     let filtered = transactions.filter((t) =>
-      cardId ? t.cardId === cardId : true
+      cardId
+        ? t.cardId === cardId
+        : selectedCardFilter
+        ? t.cardId === selectedCardFilter
+        : true
     );
 
     if (searchQuery) {
@@ -148,6 +157,7 @@ export const TransactionsListScreen = () => {
     card,
     selectedMonth,
     selectedYear,
+    selectedCardFilter,
   ]);
 
   const sections = useMemo(() => {
@@ -248,7 +258,7 @@ export const TransactionsListScreen = () => {
           >
             <Ionicons
               name={iconName}
-              size={moderateScale(28)}
+              size={moderateScale(24)}
               color={iconColor}
             />
           </View>
@@ -267,10 +277,34 @@ export const TransactionsListScreen = () => {
                 <Text style={styles.rowSubtitle}>
                   {new Date(item.date).toLocaleDateString("id-ID", {
                     day: "numeric",
-                    month: "long",
-                    year: "numeric",
+                    month: "short",
                   })}
                 </Text>
+                {/* Badges Row - Below Date */}
+                {(item.installmentId || (!cardId && itemCard)) && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 4,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {item.installmentId && (
+                      <View style={styles.miniBadge}>
+                        <Text style={styles.miniBadgeText}>Cicilan</Text>
+                      </View>
+                    )}
+                    {!cardId && itemCard && (
+                      <View style={styles.cardBadgeVisible}>
+                        <Text style={styles.cardBadgeTextVisible}>
+                          {itemCard.alias}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 {item.currency &&
@@ -303,11 +337,6 @@ export const TransactionsListScreen = () => {
                 )}
               </View>
             </View>
-            {item.installmentId && (
-              <View style={styles.miniBadge}>
-                <Text style={styles.miniBadgeText}>Cicilan</Text>
-              </View>
-            )}
           </View>
         </TouchableOpacity>
       </Swipeable>
@@ -319,14 +348,12 @@ export const TransactionsListScreen = () => {
   }: {
     item: { title: string; data: Transaction[] };
   }) => {
-    const dayTotal = item.data.reduce((sum, t) => sum + t.amount, 0);
-
     return (
       <View>
         <View style={styles.dayHeader}>
           <Text style={styles.dayTitle}>{item.title}</Text>
           <View style={styles.swipeHintContainer}>
-            <Text style={styles.swipeHintText}>Geser ke kiri untuk hapus</Text>
+            <Text style={styles.swipeHintText}>Geser kiri untuk hapus</Text>
             <Ionicons
               name="arrow-forward"
               size={12}
@@ -334,13 +361,9 @@ export const TransactionsListScreen = () => {
             />
           </View>
         </View>
-        <View style={styles.dayCard}>
-          <View style={styles.dayContent}>
-            {item.data.map((transaction, index) =>
-              renderTransactionRow(transaction, index, item.data)
-            )}
-          </View>
-        </View>
+        {item.data.map((transaction, index) =>
+          renderTransactionRow(transaction, index, item.data)
+        )}
       </View>
     );
   };
@@ -377,7 +400,7 @@ export const TransactionsListScreen = () => {
             <View>
               <Text style={styles.summaryLabel}>Total Pengeluaran</Text>
               <Text style={styles.summaryAmount}>
-                {formatCurrency(totalSpending)}
+                {formatCurrency(totalSpending, Number.MAX_SAFE_INTEGER)}
               </Text>
             </View>
             <View style={styles.summaryBadge}>
@@ -421,6 +444,7 @@ export const TransactionsListScreen = () => {
               selectedPeriod === "month" && styles.filterChipActive,
             ]}
             onPress={() => setSelectedPeriod("month")}
+            activeOpacity={0.8}
           >
             <Text
               style={[
@@ -437,6 +461,7 @@ export const TransactionsListScreen = () => {
               selectedPeriod === "custom" && styles.filterChipActive,
             ]}
             onPress={() => setShowMonthPicker(true)}
+            activeOpacity={0.8}
           >
             <Text
               style={[
@@ -453,6 +478,7 @@ export const TransactionsListScreen = () => {
               selectedPeriod === "all" && styles.filterChipActive,
             ]}
             onPress={() => setSelectedPeriod("all")}
+            activeOpacity={0.8}
           >
             <Text
               style={[
@@ -470,6 +496,7 @@ export const TransactionsListScreen = () => {
               selectedCategory !== null && styles.filterChipActive,
             ]}
             onPress={() => setShowCategoryPicker(true)}
+            activeOpacity={0.8}
           >
             <Text
               style={[
@@ -483,6 +510,65 @@ export const TransactionsListScreen = () => {
         </ScrollView>
       </View>
 
+      {/* Card Filter - Only when viewing All Transactions */}
+      {!cardId && cards.length > 1 && (
+        <View style={styles.cardFiltersContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cardFiltersContent}
+          >
+            <TouchableOpacity
+              style={[
+                styles.cardFilterChip,
+                selectedCardFilter === null && styles.cardFilterChipActive,
+              ]}
+              onPress={() => setSelectedCardFilter(null)}
+            >
+              <Ionicons
+                name="layers-outline"
+                size={14}
+                color={
+                  selectedCardFilter === null
+                    ? "#FFFFFF"
+                    : theme.colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.cardFilterText,
+                  selectedCardFilter === null && styles.cardFilterTextActive,
+                ]}
+              >
+                Semua Kartu
+              </Text>
+            </TouchableOpacity>
+            {cards
+              .filter((c) => !c.isArchived)
+              .map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[
+                    styles.cardFilterChip,
+                    selectedCardFilter === c.id && styles.cardFilterChipActive,
+                  ]}
+                  onPress={() => setSelectedCardFilter(c.id)}
+                >
+                  <Text
+                    style={[
+                      styles.cardFilterText,
+                      selectedCardFilter === c.id &&
+                        styles.cardFilterTextActive,
+                    ]}
+                  >
+                    {c.alias}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+          </ScrollView>
+        </View>
+      )}
+
       <FlatList
         data={sections}
         renderItem={renderDayCard}
@@ -490,12 +576,28 @@ export const TransactionsListScreen = () => {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons
-              name="receipt-outline"
-              size={64}
-              color={theme.colors.text.tertiary}
-            />
-            <Text style={styles.emptyText}>Belum ada transaksi</Text>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons
+                name="receipt-outline"
+                size={48}
+                color={theme.colors.text.tertiary}
+              />
+            </View>
+            <Text style={styles.emptyTitle}>Belum Ada Transaksi</Text>
+            <Text style={styles.emptyText}>
+              {cardId
+                ? "Kartu ini belum memiliki transaksi"
+                : "Tambahkan transaksi pertamamu"}
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() =>
+                navigation.navigate("AddTransaction", { cardId: cardId || "" })
+              }
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.emptyButtonText}>Tambah Transaksi</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -726,7 +828,7 @@ const CategoryPickerContent = ({
   );
 };
 
-const getStyles = (theme: Theme) =>
+const getStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -851,7 +953,7 @@ const getStyles = (theme: Theme) =>
       fontWeight: "600",
     },
     filterTextActive: {
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     verticalDivider: {
       width: 1,
@@ -897,17 +999,18 @@ const getStyles = (theme: Theme) =>
     transactionRow: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      backgroundColor: theme.colors.surface,
+      paddingVertical: 16,
+      paddingHorizontal: 0,
+      backgroundColor: "transparent",
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
     },
     rowSeparator: {
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border + "40",
+      borderBottomWidth: 0,
     },
     iconSquircle: {
-      width: theme.containerSizes.iconLarge,
-      height: theme.containerSizes.iconLarge,
+      width: 56,
+      height: 56,
       borderRadius: 20,
       justifyContent: "center",
       alignItems: "center",
@@ -948,16 +1051,17 @@ const getStyles = (theme: Theme) =>
       marginRight: 8,
     },
     miniBadge: {
-      backgroundColor: theme.colors.primary + "15",
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-      marginLeft: 8,
+      backgroundColor: isDark
+        ? theme.colors.primary + "30"
+        : theme.colors.primary + "15",
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 3,
     },
     miniBadgeText: {
       ...theme.typography.caption,
       color: theme.colors.primary,
-      fontSize: moderateScale(12),
+      fontSize: moderateScale(9),
       fontWeight: "600",
     },
     sectionHeader: {
@@ -1053,7 +1157,7 @@ const getStyles = (theme: Theme) =>
       fontWeight: "600",
     },
     yearTextActive: {
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     monthGrid: {
       flexDirection: "row",
@@ -1080,7 +1184,7 @@ const getStyles = (theme: Theme) =>
       fontWeight: "600",
     },
     monthTextActive: {
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     modalActions: {
       flexDirection: "row",
@@ -1106,7 +1210,7 @@ const getStyles = (theme: Theme) =>
     },
     confirmButtonText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     categoryGrid: {
       flexDirection: "row",
@@ -1144,5 +1248,108 @@ const getStyles = (theme: Theme) =>
     categoryLabelActive: {
       color: theme.colors.primary,
       fontWeight: "bold",
+    },
+    // Card Badge Styles
+    cardBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      gap: 4,
+    },
+    cardBadgeDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    cardBadgeText: {
+      fontSize: moderateScale(10),
+      fontWeight: "600",
+    },
+    cardBadgeVisible: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 3,
+      gap: 3,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    cardBadgeTextVisible: {
+      fontSize: moderateScale(9),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+    },
+    // Card Filter Styles
+    cardFiltersContainer: {
+      paddingVertical: theme.spacing.xs,
+      marginBottom: theme.spacing.s,
+    },
+    cardFiltersContent: {
+      paddingHorizontal: theme.spacing.m,
+      gap: 8,
+    },
+    cardFilterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      gap: 6,
+    },
+    cardFilterChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    cardFilterDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    cardFilterText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+      fontSize: moderateScale(11),
+    },
+    cardFilterTextActive: {
+      color: "#FFFFFF",
+    },
+    // Enhanced Empty State Styles
+    emptyIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    emptyTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.xs,
+    },
+    emptyButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginTop: theme.spacing.l,
+      gap: 8,
+    },
+    emptyButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontWeight: "600",
     },
   });

@@ -231,22 +231,31 @@ export const AddTransactionScreen = () => {
                     key={card.id}
                     style={[
                       styles.cardOption,
-                      selectedCardId === card.id && styles.cardOptionActive,
-                      { borderColor: card.colorTheme || theme.colors.primary },
+                      selectedCardId === card.id && {
+                        backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.primary,
+                        borderWidth: 2,
+                      },
                     ]}
                     onPress={() => setSelectedCardId(card.id)}
                   >
                     <Ionicons
                       name="card"
                       size={moderateScale(20)}
-                      color={card.colorTheme || theme.colors.primary}
+                      color={
+                        selectedCardId === card.id
+                          ? "#FFFFFF"
+                          : theme.colors.text.tertiary
+                      }
                       style={{ marginRight: 8 }}
                     />
                     <Text
                       style={[
                         styles.cardOptionText,
-                        selectedCardId === card.id &&
-                          styles.cardOptionTextActive,
+                        selectedCardId === card.id && {
+                          color: "#FFFFFF",
+                          fontWeight: "600",
+                        },
                       ]}
                     >
                       {card.alias}
@@ -312,6 +321,7 @@ export const AddTransactionScreen = () => {
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Cari mata uang..."
+                  placeholderTextColor={theme.colors.text.tertiary}
                   value={searchCurrency}
                   onChangeText={setSearchCurrency}
                   autoFocus={false}
@@ -379,25 +389,6 @@ export const AddTransactionScreen = () => {
           </View>
 
           {/* Installment Summary - Moved below Amount */}
-          {isInstallment && amount && installmentMonths ? (
-            <View style={styles.installmentSummaryCard}>
-              <Text style={styles.installmentSummaryLabel}>Total Cicilan</Text>
-              <Text style={styles.installmentSummaryAmount}>
-                {formatCurrency(
-                  finalMonthlyAmount * parseNumber(installmentMonths)
-                )}
-              </Text>
-              <Text style={styles.installmentSummaryDetail}>
-                {installmentMonths}x cicilan @{" "}
-                {formatCurrency(finalMonthlyAmount)}/bulan
-              </Text>
-              {adminFee ? (
-                <Text style={styles.installmentSummaryDetail}>
-                  + Biaya Admin: {formatCurrency(parseNumber(adminFee))}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
 
           {/* Exchange Rate Input (if not IDR) */}
           {currency !== "IDR" && (
@@ -495,7 +486,7 @@ export const AddTransactionScreen = () => {
                         setCustomMonthlyAmount("");
                       }}
                       keyboardType="numeric"
-                      placeholder="12"
+                      placeholder="Contoh: 12"
                       placeholderTextColor={theme.colors.text.tertiary}
                     />
                   </View>
@@ -541,7 +532,7 @@ export const AddTransactionScreen = () => {
                           setPaidInstallmentMonths(text.replace(/[^0-9]/g, ""));
                         }}
                         keyboardType="numeric"
-                        placeholder="3"
+                        placeholder="Contoh: 3"
                         placeholderTextColor={theme.colors.text.tertiary}
                       />
                     </View>
@@ -653,6 +644,31 @@ export const AddTransactionScreen = () => {
                     />
                   </View>
                 </View>
+
+                {/* Installment Summary - Moved Here */}
+                {amount && installmentMonths && (
+                  <View
+                    style={[styles.installmentSummaryCard, { marginTop: 12 }]}
+                  >
+                    <Text style={styles.installmentSummaryLabel}>
+                      Total Cicilan
+                    </Text>
+                    <Text style={styles.installmentSummaryAmount}>
+                      {formatCurrency(
+                        finalMonthlyAmount * parseNumber(installmentMonths)
+                      )}
+                    </Text>
+                    <Text style={styles.installmentSummaryDetail}>
+                      {installmentMonths}x cicilan @{" "}
+                      {formatCurrency(finalMonthlyAmount)}/bulan
+                    </Text>
+                    {adminFee ? (
+                      <Text style={styles.installmentSummaryDetail}>
+                        + Biaya Admin: {formatCurrency(parseNumber(adminFee))}
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
               </View>
             )}
 
@@ -749,9 +765,7 @@ export const AddTransactionScreen = () => {
                       <Ionicons
                         name={iconName}
                         size={moderateScale(18)}
-                        color={
-                          isSelected ? theme.colors.text.inverse : iconColor
-                        }
+                        color={isSelected ? "#FFFFFF" : iconColor}
                       />
                     </View>
                     <Text
@@ -1009,7 +1023,7 @@ const getStyles = (theme: Theme) =>
     },
     mainSaveButtonText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontSize: moderateScale(16),
     },
     switchContainer: {

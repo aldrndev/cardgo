@@ -25,7 +25,7 @@ export const CURRENCIES: Currency[] = [
   { code: "AED", name: "UAE Dirham", symbol: "د.إ", flag: "🇦🇪" },
   { code: "TWD", name: "New Taiwan Dollar", symbol: "NT$", flag: "🇹🇼" },
   { code: "CAD", name: "Canadian Dollar", symbol: "C$", flag: "🇨🇦" },
-  { code: "CHF", name: "Swiss Franc", symbol: "Fr", flag: "��🇭" },
+  { code: "CHF", name: "Swiss Franc", symbol: "Fr", flag: "🇨🇭" },
   { code: "NZD", name: "New Zealand Dollar", symbol: "NZ$", flag: "🇳🇿" },
   { code: "TRY", name: "Turkish Lira", symbol: "₺", flag: "🇹🇷" },
   { code: "RUB", name: "Russian Ruble", symbol: "₽", flag: "🇷🇺" },

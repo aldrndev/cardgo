@@ -445,7 +445,7 @@ const getStyles = (theme: Theme) =>
       fontWeight: "600",
     },
     segmentTextActive: {
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     chipsContainer: {
       flexDirection: "row",
@@ -487,7 +487,7 @@ const getStyles = (theme: Theme) =>
     },
     saveButtonText: {
       ...theme.typography.h3,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     modalOverlay: {
       flex: 1,

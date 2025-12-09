@@ -30,6 +30,7 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import { scale, moderateScale, isTablet, width } from "../utils/responsive";
 import { PaymentHistorySection } from "../components/PaymentHistorySection";
 import { ExpandableFAB } from "../components/FloatingActionButton";
+import { HealthScoreService } from "../services/HealthScoreService";
 import React, { useState, useMemo } from "react";
 
 type CardDetailScreenRouteProp = RouteProp<RootStackParamList, "CardDetail">;
@@ -84,6 +85,28 @@ export const CardDetailScreen = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
   }, [transactions, cardId]);
+
+  // Calculate per-card health score
+  const cardHealthScore = React.useMemo(() => {
+    if (!card) return null;
+    return HealthScoreService.calculateCardHealthScore(card, transactions);
+  }, [card, transactions]);
+
+  // Get color based on rating
+  const getScoreColor = (rating: string) => {
+    switch (rating) {
+      case "excellent":
+        return "#10B981";
+      case "good":
+        return "#3B82F6";
+      case "fair":
+        return "#F59E0B";
+      case "poor":
+        return "#EF4444";
+      default:
+        return theme.colors.text.secondary;
+    }
+  };
 
   if (!card) {
     return (
@@ -249,7 +272,7 @@ export const CardDetailScreen = () => {
                     <Ionicons
                       name="create-outline"
                       size={moderateScale(22)}
-                      color={theme.colors.text.inverse}
+                      color={"#FFFFFF"}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -259,7 +282,7 @@ export const CardDetailScreen = () => {
                     <Ionicons
                       name="archive-outline"
                       size={moderateScale(22)}
-                      color={theme.colors.text.inverse}
+                      color={"#FFFFFF"}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -269,7 +292,7 @@ export const CardDetailScreen = () => {
                     <Ionicons
                       name="trash-outline"
                       size={moderateScale(22)}
-                      color={theme.colors.text.inverse}
+                      color={"#FFFFFF"}
                     />
                   </TouchableOpacity>
                 </View>
@@ -419,6 +442,178 @@ export const CardDetailScreen = () => {
             </View>
 
             {/* Divider */}
+            <View style={styles.sectionDivider} />
+
+            {/* Card Health Score Widget */}
+            {cardHealthScore && (
+              <View
+                style={[
+                  styles.cardHealthScoreWidget,
+                  isDark && { shadowOpacity: 0, elevation: 0 },
+                ]}
+              >
+                <View style={styles.cardHealthScoreHeader}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={styles.cardHealthScoreTitle}>
+                      Card Health Score
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        Alert.alert(
+                          "Card Health Score",
+                          "Skor kesehatan kartu dihitung berdasarkan:\n\n" +
+                            (card.monthlyBudget && card.monthlyBudget > 0
+                              ? "• Penggunaan Limit (70 pts)\n• Riwayat Pembayaran (20 pts)\n• Disiplin Budget (10 pts)\n\n"
+                              : "• Penggunaan Limit (70 pts)\n• Riwayat Pembayaran (30 pts)\n\n") +
+                            "Total: 100 pts\n\n" +
+                            "Rating:\n" +
+                            "• Excellent (80-100)\n" +
+                            "• Good (60-79)\n" +
+                            "• Fair (40-59)\n" +
+                            "• Poor (0-39)",
+                          [{ text: "OK" }]
+                        )
+                      }
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={18}
+                        color={theme.colors.text.secondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <View
+                    style={[
+                      styles.cardHealthCircle,
+                      { borderColor: getScoreColor(cardHealthScore.rating) },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.cardHealthNumber,
+                        { color: getScoreColor(cardHealthScore.rating) },
+                      ]}
+                    >
+                      {cardHealthScore.totalScore}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.cardHealthBreakdown}>
+                  {/* Utilization */}
+                  <View style={styles.cardHealthItem}>
+                    <View style={styles.cardHealthItemHeader}>
+                      <Text style={styles.cardHealthItemLabel}>
+                        Penggunaan Limit
+                      </Text>
+                      <Text style={styles.cardHealthItemScore}>
+                        {cardHealthScore.breakdown.creditUtilization.score}/
+                        {card.monthlyBudget && card.monthlyBudget > 0
+                          ? "70"
+                          : "70"}
+                      </Text>
+                    </View>
+                    <View style={styles.cardHealthProgressBar}>
+                      <View
+                        style={[
+                          styles.cardHealthProgressFill,
+                          {
+                            width: `${
+                              (cardHealthScore.breakdown.creditUtilization
+                                .score /
+                                (card.monthlyBudget && card.monthlyBudget > 0
+                                  ? 70
+                                  : 70)) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              cardHealthScore.breakdown.creditUtilization.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Payment History */}
+                  <View style={styles.cardHealthItem}>
+                    <View style={styles.cardHealthItemHeader}>
+                      <Text style={styles.cardHealthItemLabel}>
+                        Riwayat Pembayaran
+                      </Text>
+                      <Text style={styles.cardHealthItemScore}>
+                        {cardHealthScore.breakdown.paymentHistory.score}/
+                        {card.monthlyBudget && card.monthlyBudget > 0
+                          ? "20"
+                          : "30"}
+                      </Text>
+                    </View>
+                    <View style={styles.cardHealthProgressBar}>
+                      <View
+                        style={[
+                          styles.cardHealthProgressFill,
+                          {
+                            width: `${
+                              (cardHealthScore.breakdown.paymentHistory.score /
+                                (card.monthlyBudget && card.monthlyBudget > 0
+                                  ? 20
+                                  : 30)) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              cardHealthScore.breakdown.paymentHistory.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Budget Discipline - Only show if card has budget */}
+                  {card.monthlyBudget && card.monthlyBudget > 0 && (
+                    <View style={styles.cardHealthItem}>
+                      <View style={styles.cardHealthItemHeader}>
+                        <Text style={styles.cardHealthItemLabel}>
+                          Disiplin Budget
+                        </Text>
+                        <Text style={styles.cardHealthItemScore}>
+                          {cardHealthScore.breakdown.spendingDiscipline.score}
+                          /10
+                        </Text>
+                      </View>
+                      <View style={styles.cardHealthProgressBar}>
+                        <View
+                          style={[
+                            styles.cardHealthProgressFill,
+                            {
+                              width: `${
+                                (cardHealthScore.breakdown.spendingDiscipline
+                                  .score /
+                                  10) *
+                                100
+                              }%`,
+                              backgroundColor: getScoreColor(
+                                cardHealthScore.breakdown.spendingDiscipline
+                                  .rating
+                              ),
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Divider before Payment Status */}
             <View style={styles.sectionDivider} />
 
             {/* Payment Status */}
@@ -653,18 +848,12 @@ export const CardDetailScreen = () => {
 
             {/* Notes */}
             {card.notes ? (
-              <>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { marginVertical: theme.spacing.s },
-                  ]}
-                />
-                <View style={styles.noteContainer}>
-                  <Text style={styles.label}>Catatan</Text>
-                  <Text style={styles.noteText}>{card.notes}</Text>
-                </View>
-              </>
+              <View
+                style={[styles.noteContainer, { marginTop: theme.spacing.m }]}
+              >
+                <Text style={styles.label}>Catatan</Text>
+                <Text style={styles.noteText}>{card.notes}</Text>
+              </View>
             ) : null}
           </View>
 
@@ -794,10 +983,17 @@ export const CardDetailScreen = () => {
                         <Text style={styles.transactionDate}>
                           {new Date(t.date).toLocaleDateString("id-ID", {
                             day: "numeric",
-                            month: "long",
-                            year: "numeric",
+                            month: "short",
                           })}
                         </Text>
+                        {/* Cicilan Badge Only */}
+                        {t.installmentId && (
+                          <View style={styles.badgesRow}>
+                            <View style={styles.miniBadge}>
+                              <Text style={styles.miniBadgeText}>Cicilan</Text>
+                            </View>
+                          </View>
+                        )}
                       </View>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
@@ -987,7 +1183,7 @@ const getStyles = (theme: Theme) =>
     },
     actionButtonText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontSize: moderateScale(16),
     },
     cardContainer: {
@@ -1314,7 +1510,7 @@ const getStyles = (theme: Theme) =>
     },
     buttonText: {
       ...theme.typography.caption,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       marginTop: 4,
       fontWeight: "600",
     },
@@ -1368,7 +1564,7 @@ const getStyles = (theme: Theme) =>
     },
     addSubscriptionText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontSize: moderateScale(16),
     },
     circleAddButton: {
@@ -1399,7 +1595,7 @@ const getStyles = (theme: Theme) =>
     },
     markPaidButtonText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "600",
     },
     circleCheckButton: {
@@ -1459,7 +1655,8 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text.secondary,
     },
     unpaidAmount: {
-      ...theme.typography.h3,
+      ...theme.typography.body,
+      fontSize: moderateScale(16),
       color: theme.colors.text.primary,
       fontWeight: "700",
     },
@@ -1476,7 +1673,7 @@ const getStyles = (theme: Theme) =>
     },
     payNowButtonText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "600",
     },
     // Paid Card Styles
@@ -1590,7 +1787,7 @@ const getStyles = (theme: Theme) =>
     },
     modalConfirmText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "600",
     },
     // Payment Type Selection Styles
@@ -1698,7 +1895,7 @@ const getStyles = (theme: Theme) =>
     },
     formConfirmText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "600",
     },
     datePickerButton: {
@@ -1794,6 +1991,85 @@ const getStyles = (theme: Theme) =>
     },
     datePickerConfirmText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
+    },
+    // Card Health Score Widget Styles
+    cardHealthScoreWidget: {
+      marginTop: theme.spacing.s,
+      marginBottom: theme.spacing.m,
+      // No paddingHorizontal - inherits from parent cardSection
+      // No background, border-radius, or shadow - blends with page
+    },
+    cardHealthScoreHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    cardHealthScoreTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    cardHealthCircle: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      borderWidth: 5,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.background,
+    },
+    cardHealthNumber: {
+      fontSize: moderateScale(24),
+      fontWeight: "700",
+    },
+    cardHealthBreakdown: {
+      gap: theme.spacing.m,
+    },
+    cardHealthItem: {
+      marginBottom: theme.spacing.xs,
+    },
+    cardHealthItemHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    cardHealthItemLabel: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+    },
+    cardHealthItemScore: {
+      fontSize: moderateScale(11),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    cardHealthProgressBar: {
+      height: 5,
+      backgroundColor: theme.colors.border,
+      borderRadius: 2.5,
+      overflow: "hidden",
+    },
+    cardHealthProgressFill: {
+      height: "100%",
+      borderRadius: 2.5,
+    },
+    // Transaction Badge Styles (for Cicilan badge)
+    badgesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
+    miniBadge: {
+      backgroundColor: theme.colors.primary + "30",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    miniBadgeText: {
+      fontSize: moderateScale(9),
+      fontWeight: "600",
+      color: theme.colors.primary,
     },
   });
