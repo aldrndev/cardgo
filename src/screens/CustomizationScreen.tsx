@@ -350,7 +350,7 @@ const getStyles = (theme: Theme) =>
       fontWeight: "600",
     },
     currencyTextActive: {
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     infoCard: {
       flexDirection: "row",
@@ -419,6 +419,6 @@ const getStyles = (theme: Theme) =>
     },
     confirmButtonText: {
       ...theme.typography.button,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
   });

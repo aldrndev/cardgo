@@ -31,6 +31,9 @@ type AddEditCardScreenNavigationProp = any; // Placeholder for navigation type
 // Networks available
 const networks = ["Visa", "Mastercard", "JCB", "Amex", "Other"];
 
+// Sort banks alphabetically
+const SORTED_BANKS = [...BANKS].sort((a, b) => a.code.localeCompare(b.code));
+
 export const AddEditCardScreen = () => {
   const navigation = useNavigation<AddEditCardScreenNavigationProp>();
   const route = useRoute<AddEditCardScreenRouteProp>();
@@ -166,10 +169,13 @@ export const AddEditCardScreen = () => {
       const dataToSave = formData as CardFormData; // Cast after validation
       if (isEditing && cardId) {
         await updateCard(cardId, dataToSave);
+        navigation.goBack();
       } else {
-        await addCard(dataToSave);
+        // Redirection logic: Go to CardDetail of the new card
+        const newCardId = await addCard(dataToSave);
+        // We use replace to prevent going back to "Add Card" screen
+        navigation.replace("CardDetail", { cardId: newCardId });
       }
-      navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "Gagal menyimpan kartu");
     }
@@ -269,19 +275,19 @@ export const AddEditCardScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.networkContainer}
               >
-                {BANKS.map((bank) => (
+                {SORTED_BANKS.map((bank) => (
                   <TouchableOpacity
                     key={bank.id}
                     style={[
                       styles.networkOption,
                       (formData.bankId === bank.id ||
-                        formData.bankName === bank.name) &&
+                        formData.bankName === bank.code) &&
                         styles.selectedNetwork,
                     ]}
                     onPress={() =>
                       setFormData({
                         ...formData,
-                        bankName: bank.name,
+                        bankName: bank.code, // Use short code (e.g. BCA) instead of full name
                         bankId: bank.id,
                       })
                     }
@@ -290,7 +296,7 @@ export const AddEditCardScreen = () => {
                       style={[
                         styles.networkText,
                         (formData.bankId === bank.id ||
-                          formData.bankName === bank.name) &&
+                          formData.bankName === bank.code) &&
                           styles.selectedNetworkText,
                       ]}
                     >

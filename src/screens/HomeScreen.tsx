@@ -30,6 +30,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { formatCurrency, formatForeignCurrency } from "../utils/formatters";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import { scale, moderateScale, isTablet } from "../utils/responsive";
+import { HealthScoreService } from "../services/HealthScoreService";
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, "HomeTab">,
@@ -62,7 +63,7 @@ export const HomeScreen = () => {
   const [isTotalBillVisible, setIsTotalBillVisible] = React.useState(true);
 
   // Dynamic styles based on theme
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getStyles(theme, isDark), [theme, isDark]);
 
   React.useEffect(() => {
     loadUserProfile();
@@ -297,6 +298,27 @@ export const HomeScreen = () => {
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   };
 
+  // Calculate Health Score
+  const healthScore = React.useMemo(() => {
+    return HealthScoreService.calculateHealthScore(cards, transactions);
+  }, [cards, transactions]);
+
+  // Get color based on rating
+  const getScoreColor = (rating: string) => {
+    switch (rating) {
+      case "excellent":
+        return "#10B981"; // green
+      case "good":
+        return "#3B82F6"; // blue
+      case "fair":
+        return "#F59E0B"; // orange
+      case "poor":
+        return "#EF4444"; // red
+      default:
+        return theme.colors.text.secondary;
+    }
+  };
+
   const today = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
@@ -404,7 +426,7 @@ export const HomeScreen = () => {
                 </View>
                 <Text style={styles.summaryAmount}>
                   {isTotalBillVisible
-                    ? formatCurrency(totalBill, 1_000_000_000)
+                    ? formatCurrency(totalBill, Number.MAX_SAFE_INTEGER)
                     : "Rp *******"}
                 </Text>
 
@@ -552,172 +574,299 @@ export const HomeScreen = () => {
             </ScrollView>
           </View>
 
-          {/* Upcoming Reminders */}
-          {(paymentReminders.length > 0 ||
-            upcomingReminders.length > 0 ||
-            limitIncreaseReminders.length > 0) && (
-            <View style={styles.remindersSection}>
-              <View style={styles.remindersHeader}>
-                <Text style={styles.remindersTitle}>Pengingat Mendatang</Text>
-                <View style={styles.tooltipContainer}>
-                  <Text style={styles.tooltipText}>
-                    Geser kiri untuk lainnya
+          {/* Unified Dashboard Card */}
+          <View style={styles.dashboardCard}>
+            {/* Credit Health Score Section */}
+            <TouchableOpacity
+              style={styles.healthScoreSection}
+              onPress={() => navigation.navigate("InsightsTab")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.healthScoreContent}>
+                <View style={styles.healthScoreLeft}>
+                  <Text style={styles.healthScoreTitle}>
+                    All Credit Health Score
                   </Text>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={moderateScale(12)}
-                    color={theme.colors.text.secondary}
-                  />
+                  <Text style={styles.healthScoreSubtitle}>
+                    {healthScore.rating === "excellent" && "🎉 Sangat Baik"}
+                    {healthScore.rating === "good" && "👍 Baik"}
+                    {healthScore.rating === "fair" && "⚠️ Cukup"}
+                    {healthScore.rating === "poor" && "📉 Perlu Perbaikan"}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.healthScoreButton}
+                    onPress={() => navigation.navigate("InsightsTab")}
+                  >
+                    <Text style={styles.healthScoreButtonText}>
+                      Lihat Detail
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={14}
+                      color={theme.colors.primary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.healthScoreRight}>
+                  <View
+                    style={[
+                      styles.healthScoreCircle,
+                      { borderColor: getScoreColor(healthScore.rating) },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.healthScoreNumber,
+                        { color: getScoreColor(healthScore.rating) },
+                      ]}
+                    >
+                      {healthScore.totalScore}
+                    </Text>
+                    <Text style={styles.healthScoreMax}>/100</Text>
+                  </View>
                 </View>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.remindersContent}
-              >
-                {/* Payment Reminders */}
-                {paymentReminders.map((reminder) => (
-                  <TouchableOpacity
-                    key={reminder.id}
-                    style={styles.reminderItem}
-                    onPress={() =>
-                      navigation.navigate("CardDetail", {
-                        cardId: reminder.cardId,
-                      })
-                    }
-                  >
-                    <LinearGradient
-                      colors={["#EF4444", "#DC2626"]} // Red gradient for payments
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.reminderGradient}
-                    >
-                      <View style={styles.reminderHeader}>
-                        <View style={styles.reminderIconContainer}>
-                          <Ionicons
-                            name="alert-circle"
-                            size={20}
-                            color={theme.colors.text.inverse}
-                          />
-                        </View>
-                        <View style={styles.daysLeftBadge}>
-                          <Text style={styles.daysLeftText}>
-                            {reminder.daysLeft} Hari
-                          </Text>
-                        </View>
-                      </View>
-                      <View>
-                        <Text style={styles.reminderTitle}>Jatuh Tempo</Text>
-                        <Text style={styles.reminderSubtitle}>
-                          {reminder.cardName}
-                        </Text>
-                        <Text style={styles.reminderDate}>
-                          {new Date(reminder.date).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "long",
-                          })}
-                        </Text>
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
+            </TouchableOpacity>
 
-                {/* Limit Increase Reminders */}
-                {limitIncreaseReminders.map((reminder) => (
-                  <TouchableOpacity
-                    key={reminder.id}
-                    style={styles.reminderItem}
-                    onPress={() =>
-                      navigation.navigate("LimitIncreaseHistory", {
-                        cardId: reminder.cardId,
-                      })
-                    }
-                  >
-                    <LinearGradient
-                      colors={["#10B981", "#059669"]} // Green gradient
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.reminderGradient}
+            {/* Upcoming Reminders Section */}
+            {(paymentReminders.length > 0 ||
+              upcomingReminders.length > 0 ||
+              limitIncreaseReminders.length > 0) && (
+              <>
+                <View style={styles.dashboardDivider} />
+                <View style={styles.remindersSectionEmbed}>
+                  <View style={styles.remindersHeaderEmbed}>
+                    <Text
+                      style={[
+                        styles.remindersTitle,
+                        isDark && { color: "#FFFFFF" },
+                      ]}
                     >
-                      <View style={styles.reminderHeader}>
-                        <View style={styles.reminderIconContainer}>
-                          <Ionicons
-                            name="trending-up"
-                            size={20}
-                            color={theme.colors.text.inverse}
-                          />
-                        </View>
-                        <View style={styles.daysLeftBadge}>
-                          <Text style={styles.daysLeftText}>
-                            {reminder.daysLeft} Hari
-                          </Text>
-                        </View>
-                      </View>
-                      <View>
-                        <Text style={styles.reminderTitle}>Kenaikan Limit</Text>
-                        <Text style={styles.reminderSubtitle}>
-                          {reminder.cardName}
-                        </Text>
-                        <Text style={styles.reminderDate}>
-                          {new Date(reminder.date).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "long",
-                          })}
-                        </Text>
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
+                      Pengingat Mendatang
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        color: theme.colors.text.secondary,
+                        marginLeft: 8,
+                      }}
+                    >
+                      Geser kiri untuk lainnya
+                    </Text>
+                  </View>
 
-                {/* Annual Fee Reminders */}
-                {upcomingReminders.map((reminder) => (
-                  <TouchableOpacity
-                    key={reminder.id}
-                    style={styles.reminderItem}
-                    onPress={() =>
-                      navigation.navigate("CardDetail", {
-                        cardId: reminder.cardId,
-                      })
-                    }
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.remindersContentEmbed}
                   >
-                    <LinearGradient
-                      colors={["#F59E0B", "#D97706"]} // Amber gradient
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.reminderGradient}
-                    >
-                      <View style={styles.reminderHeader}>
-                        <View style={styles.reminderIconContainer}>
-                          <Ionicons
-                            name="calendar"
-                            size={20}
-                            color={theme.colors.text.inverse}
-                          />
-                        </View>
-                        <View style={styles.daysLeftBadge}>
-                          <Text style={styles.daysLeftText}>
-                            {reminder.daysLeft} Hari
-                          </Text>
-                        </View>
-                      </View>
-                      <View>
-                        <Text style={styles.reminderTitle}>Iuran Tahunan</Text>
-                        <Text style={styles.reminderSubtitle}>
-                          {reminder.cardName}
-                        </Text>
-                        <Text style={styles.reminderDate}>
-                          {new Date(reminder.date).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "long",
-                          })}
-                        </Text>
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+                    {/* Payment Reminders */}
+                    {paymentReminders.map((reminder) => (
+                      <TouchableOpacity
+                        key={reminder.id}
+                        style={styles.reminderItem}
+                        onPress={() =>
+                          navigation.navigate("CardDetail", {
+                            cardId: reminder.cardId,
+                          })
+                        }
+                      >
+                        <LinearGradient
+                          colors={["#EF4444", "#DC2626"]} // Red gradient for payments
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.reminderGradient}
+                        >
+                          <View style={styles.reminderHeader}>
+                            <View style={styles.reminderIconContainer}>
+                              <Ionicons
+                                name="alert-circle"
+                                size={20}
+                                color={
+                                  isDark ? "#FFFFFF" : theme.colors.text.inverse
+                                }
+                              />
+                            </View>
+                            <View style={styles.daysLeftBadge}>
+                              <Text style={styles.daysLeftText}>
+                                {reminder.daysLeft} Hari
+                              </Text>
+                            </View>
+                          </View>
+                          <View>
+                            <Text
+                              style={[
+                                styles.reminderTitle,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              Jatuh Tempo
+                            </Text>
+                            <Text
+                              style={[
+                                styles.reminderSubtitle,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              {reminder.cardName}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.reminderDate,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              {new Date(reminder.date).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "numeric",
+                                  month: "long",
+                                }
+                              )}
+                            </Text>
+                          </View>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Limit Increase Reminders */}
+                    {limitIncreaseReminders.map((reminder) => (
+                      <TouchableOpacity
+                        key={reminder.id}
+                        style={styles.reminderItem}
+                        onPress={() =>
+                          navigation.navigate("LimitIncreaseHistory", {
+                            cardId: reminder.cardId,
+                          })
+                        }
+                      >
+                        <LinearGradient
+                          colors={["#10B981", "#059669"]} // Green gradient
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.reminderGradient}
+                        >
+                          <View style={styles.reminderHeader}>
+                            <View style={styles.reminderIconContainer}>
+                              <Ionicons
+                                name="trending-up"
+                                size={20}
+                                color={
+                                  isDark ? "#FFFFFF" : theme.colors.text.inverse
+                                }
+                              />
+                            </View>
+                            <View style={styles.daysLeftBadge}>
+                              <Text style={styles.daysLeftText}>
+                                {reminder.daysLeft} Hari
+                              </Text>
+                            </View>
+                          </View>
+                          <View>
+                            <Text
+                              style={[
+                                styles.reminderTitle,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              Naik Limit
+                            </Text>
+                            <Text
+                              style={[
+                                styles.reminderSubtitle,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              {reminder.cardName}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.reminderDate,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              {new Date(reminder.date).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "numeric",
+                                  month: "long",
+                                }
+                              )}
+                            </Text>
+                          </View>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Upcoming Reminders (Normal/Other) */}
+                    {upcomingReminders.map((reminder) => (
+                      <TouchableOpacity
+                        key={reminder.id}
+                        style={styles.reminderItem}
+                        onPress={() =>
+                          navigation.navigate("CardDetail", {
+                            cardId: reminder.cardId,
+                          })
+                        }
+                      >
+                        <LinearGradient
+                          colors={["#3B82F6", "#2563EB"]} // Blue gradient
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.reminderGradient}
+                        >
+                          <View style={styles.reminderHeader}>
+                            <View style={styles.reminderIconContainer}>
+                              <Ionicons
+                                name="time"
+                                size={20}
+                                color={
+                                  isDark ? "#FFFFFF" : theme.colors.text.inverse
+                                }
+                              />
+                            </View>
+                          </View>
+                          <View>
+                            <Text
+                              style={[
+                                styles.reminderTitle,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              Tagihan
+                            </Text>
+                            <Text
+                              style={[
+                                styles.reminderSubtitle,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              {reminder.cardName}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.reminderDate,
+                                isDark && { color: "#FFFFFF" },
+                              ]}
+                            >
+                              {new Date(reminder.date).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "numeric",
+                                  month: "long",
+                                }
+                              )}
+                            </Text>
+                          </View>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </>
+            )}
+          </View>
 
           {/* Tags Filter - Only show if there are cards */}
           {unarchivedCards.length > 0 && (
@@ -885,7 +1034,12 @@ export const HomeScreen = () => {
                       gap: 8,
                     }}
                   >
-                    <View style={styles.warningIconContainer}>
+                    <View
+                      style={[
+                        styles.warningIconContainer,
+                        isDark && { backgroundColor: "#FFFFFF" },
+                      ]}
+                    >
                       <Ionicons name="warning" size={20} color="#B91C1C" />
                     </View>
                     <Text style={styles.overLimitTitle}>Peringatan Limit</Text>
@@ -936,7 +1090,10 @@ export const HomeScreen = () => {
                           </Text>
                         </View>
                         <TouchableOpacity
-                          style={styles.overLimitButton}
+                          style={[
+                            styles.overLimitButton,
+                            isDark && { backgroundColor: "#FFFFFF" },
+                          ]}
                           onPress={() =>
                             navigation.navigate("CardDetail", {
                               cardId: card.id,
@@ -1001,10 +1158,24 @@ export const HomeScreen = () => {
                         <Text style={styles.transactionSub}>
                           {new Date(tx.date).toLocaleDateString("id-ID", {
                             day: "numeric",
-                            month: "long",
-                            year: "numeric",
+                            month: "short",
                           })}
                         </Text>
+                        {/* Badges Row */}
+                        <View style={styles.badgesRow}>
+                          {tx.installmentId && (
+                            <View style={styles.miniBadge}>
+                              <Text style={styles.miniBadgeText}>Cicilan</Text>
+                            </View>
+                          )}
+                          {card && (
+                            <View style={styles.cardBadgeVisible}>
+                              <Text style={styles.cardBadgeTextVisible}>
+                                {card.alias}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
@@ -1081,7 +1252,7 @@ export const HomeScreen = () => {
 // Import Theme type for the getStyles function
 import type { Theme } from "../context/ThemeContext";
 
-const getStyles = (theme: Theme) =>
+const getStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -1413,14 +1584,6 @@ const getStyles = (theme: Theme) =>
       textAlign: "center",
       marginVertical: theme.spacing.m,
     },
-    remindersSection: {
-      marginBottom: theme.spacing.l,
-      backgroundColor: theme.colors.surfaceElevated,
-      marginHorizontal: theme.spacing.m,
-      paddingVertical: theme.spacing.m,
-      borderRadius: theme.borderRadius.xl,
-      ...theme.shadows.small,
-    },
     remindersHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -1429,8 +1592,8 @@ const getStyles = (theme: Theme) =>
       paddingHorizontal: theme.spacing.m,
     },
     remindersTitle: {
-      ...theme.typography.h2,
-      fontSize: 20,
+      ...theme.typography.h3,
+      fontSize: moderateScale(16),
       color: theme.colors.text.primary,
       fontWeight: "700",
     },
@@ -1450,10 +1613,6 @@ const getStyles = (theme: Theme) =>
       ...theme.typography.caption,
       color: theme.colors.text.secondary,
       fontSize: 10,
-    },
-    remindersContent: {
-      paddingHorizontal: theme.spacing.m,
-      gap: theme.spacing.m,
     },
     reminderItem: {
       width: 180, // Increased from 150
@@ -1629,7 +1788,7 @@ const getStyles = (theme: Theme) =>
     reminderTitle: {
       ...theme.typography.body,
       fontWeight: "700",
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
     },
     reminderSubtitle: {
       ...theme.typography.caption,
@@ -1643,7 +1802,7 @@ const getStyles = (theme: Theme) =>
     },
     reminderAmount: {
       ...theme.typography.body,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "700",
       marginTop: scale(6),
       fontSize: scale(13),
@@ -1695,7 +1854,135 @@ const getStyles = (theme: Theme) =>
     sectionDivider: {
       height: 1,
       backgroundColor: theme.colors.border,
-      marginHorizontal: theme.spacing.l,
+      marginHorizontal: theme.spacing.m,
+      // Removed marginBottom: theme.spacing.xl, as it's now handled by dashboardCard
+    },
+    // Unified Dashboard Card
+    dashboardCard: {
+      marginHorizontal: theme.spacing.m,
       marginBottom: theme.spacing.xl,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      // No shadow as requested
+    },
+    dashboardDivider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginHorizontal: theme.spacing.m,
+    },
+
+    // Credit Health Score Section (Removed Shadows)
+    healthScoreSection: {
+      padding: theme.spacing.m,
+    },
+    healthScoreContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    healthScoreLeft: {
+      flex: 1,
+    },
+    healthScoreRight: {
+      marginLeft: theme.spacing.m,
+    },
+    healthScoreTitle: {
+      ...theme.typography.h3,
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    healthScoreSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.m,
+      fontSize: moderateScale(13),
+    },
+    healthScoreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    cardHealthScoreTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    healthScoreButtonText: {
+      fontSize: moderateScale(12),
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    healthScoreCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 6,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.colors.background, // Keep background for contrast
+    },
+    healthScoreNumber: {
+      fontSize: moderateScale(22),
+      fontWeight: "700",
+    },
+    healthScoreMax: {
+      fontSize: moderateScale(10),
+      color: theme.colors.text.tertiary,
+    },
+
+    // Embedded Reminders Section
+    remindersSectionEmbed: {
+      paddingBottom: theme.spacing.m,
+      paddingTop: theme.spacing.s,
+    },
+    remindersHeaderEmbed: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.m,
+      marginBottom: theme.spacing.s,
+    },
+    remindersContentEmbed: {
+      paddingHorizontal: theme.spacing.m,
+      gap: theme.spacing.m,
+    },
+    // Badge Styles
+    badgesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+      flexWrap: "wrap",
+    },
+    miniBadge: {
+      backgroundColor: isDark
+        ? theme.colors.primary + "30"
+        : theme.colors.primary + "15",
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 3,
+    },
+    miniBadgeText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontSize: moderateScale(9),
+      fontWeight: "600",
+    },
+    cardBadgeVisible: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 3,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    cardBadgeTextVisible: {
+      fontSize: moderateScale(9),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
     },
   });

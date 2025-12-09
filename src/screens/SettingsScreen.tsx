@@ -346,28 +346,15 @@ export const SettingsScreen = () => {
     }
   };
 
-  const handleTestNotification = async () => {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Test Notifikasi",
-          body: "Ini adalah notifikasi percobaan dari Card Go! 🚀",
-        },
-        trigger: null,
-      });
-      Alert.alert("Sukses", "Notifikasi dikirim! Cek status bar kamu.");
-    } catch (error) {
-      Alert.alert("Error", "Gagal mengirim notifikasi.");
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatarInitials}>
+            <Text
+              style={[styles.avatarInitials, isDark && { color: "#FFFFFF" }]}
+            >
               {getInitials(userProfile?.nickname)}
             </Text>
           </View>
@@ -584,17 +571,6 @@ export const SettingsScreen = () => {
           </View>
         )}
 
-        {/* Debug / Test Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Debug</Text>
-          <SettingsItem
-            icon="notifications-circle-outline"
-            label="Test Notifikasi"
-            sublabel="Kirim notifikasi percobaan sekarang"
-            onPress={handleTestNotification}
-          />
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Kustomisasi</Text>
           <SettingsItem
@@ -793,7 +769,7 @@ const getStyles = (theme: Theme) =>
     },
     avatarInitials: {
       ...theme.typography.h2,
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "700",
     },
     profileName: {

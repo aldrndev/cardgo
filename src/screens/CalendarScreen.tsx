@@ -301,6 +301,7 @@ export const CalendarScreen = () => {
       </View>
 
       <Calendar
+        key={isDark ? "dark" : "light"} // Force re-render on theme change
         onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
         markedDates={markedDates}
         markingType={"multi-dot"}
@@ -612,7 +613,7 @@ const getStyles = (theme: Theme) =>
       fontWeight: "500",
     },
     selectedDayText: {
-      color: theme.colors.text.inverse,
+      color: "#FFFFFF",
       fontWeight: "600",
     },
     todayText: {
