@@ -64,17 +64,16 @@ export const PrivacyPolicyScreen = () => {
             <Text style={styles.sectionTitle}>Komitmen Kami</Text>
           </View>
           <Text style={styles.text}>
-            Card Go adalah aplikasi{" "}
-            <Text style={styles.bold}>offline-first</Text> yang dirancang dengan
-            prinsip <Text style={styles.bold}>Privacy First</Text>. Kami
-            berkomitmen untuk melindungi privasi dan keamanan data finansial
-            Anda.
+            Card Go memprioritaskan privasi Anda. Data finansial Anda disimpan
+            secara
+            <Text style={styles.bold}> lokal (offline)</Text> di perangkat Anda.
           </Text>
           <Text style={styles.text}>
-            Kebijakan Privasi ini menjelaskan bagaimana kami menangani data
-            Anda, apa yang kami simpan, dan apa yang{" "}
-            <Text style={styles.bold}>TIDAK PERNAH</Text> kami simpan atau
-            kirimkan.
+            Kami menggunakan koneksi internet hanya untuk fitur pendukung
+            seperti menampilkan iklan (pada versi gratis) atau verifikasi
+            pembelian fitur premium. Data finansial sensitif Anda{" "}
+            <Text style={styles.bold}>TIDAK PERNAH</Text> dikirim ke server
+            kami.
           </Text>
         </View>
 
@@ -243,27 +242,20 @@ export const PrivacyPolicyScreen = () => {
                 color={theme.colors.primary}
               />
             </View>
-            <Text style={styles.sectionTitle}>Layanan Pihak Ketiga</Text>
-          </View>
-          <Text style={styles.text}>
-            Card Go <Text style={styles.bold}>TIDAK menggunakan</Text> layanan
-            berikut:
-          </Text>
-          <View style={styles.bulletList}>
-            <BulletPoint
-              text="Analytics atau tracking tools (Google Analytics, Firebase Analytics, dll)"
-              isDanger
-            />
-            <BulletPoint text="Iklan atau ad networks" isDanger />
-            <BulletPoint text="Social media integration" isDanger />
-            <BulletPoint text="Crash reporting dengan data pribadi" isDanger />
-          </View>
-          <Text style={styles.text}>
-            Aplikasi ini sepenuhnya{" "}
-            <Text style={styles.bold}>
-              offline dan tidak berkomunikasi dengan server eksternal
+            <Text style={styles.sectionTitle}>
+              Layanan Pihak Ketiga & Iklan
             </Text>
-            .
+          </View>
+          <Text style={styles.text}>
+            Untuk mendukung pengembangan aplikasi, kami dapat menampilkan iklan
+            dari penyedia layanan pihak ketiga (misalnya Google AdMob).
+          </Text>
+          <Text style={styles.text}>
+            Layanan iklan ini mungkin mengumpulkan informasi anonim seperti ID
+            Perangkat atau data penggunaan untuk menampilkan iklan yang relevan.
+            Namun, mereka <Text style={styles.bold}>TIDAK MEMILIKI AKSES</Text>{" "}
+            ke data finansial atau informasi kartu kredit yang Anda simpan di
+            Card Go.
           </Text>
         </View>
 
