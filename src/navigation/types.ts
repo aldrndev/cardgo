@@ -5,7 +5,7 @@ export type RootStackParamList = {
   CardDetail: { cardId: string };
   AddEditCard: { cardId?: string };
   About: undefined;
-  TransactionsList: { cardId?: string };
+  TransactionsList: { cardId?: string; initialCategory?: string };
   AddTransaction: { cardId?: string };
   AddSubscription: { cardId?: string };
   SetPin: undefined;

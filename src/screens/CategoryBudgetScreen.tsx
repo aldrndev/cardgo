@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { storage } from "../utils/storage";
 import { formatCurrency } from "../utils/formatters";
@@ -27,19 +27,37 @@ interface CategoryBudget {
 export const CategoryBudgetScreen = () => {
   const navigation = useNavigation();
   const { transactions } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [budgetInput, setBudgetInput] = useState("");
   const [thresholdInput, setThresholdInput] = useState("80");
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
-  // Get all unique categories from transactions
+  // Get categories that have active budgets
   const categories = useMemo(() => {
-    const cats = new Set<string>();
-    transactions.forEach((t) => {
-      if (t.category) cats.add(t.category);
-    });
-    return Array.from(cats).sort();
-  }, [transactions]);
+    return budgets.map((b) => b.category).sort();
+  }, [budgets]);
+
+  // Categories available to add (from transactions, not yet budgeted)
+  const availableCategories = useMemo(() => {
+    const transactionCategories = new Set(transactions.map((t) => t.category));
+    return Array.from(transactionCategories)
+      .filter(
+        (c): c is string =>
+          typeof c === "string" &&
+          !!c &&
+          !budgets.some(
+            (b) => b.category.toLowerCase().trim() === c.toLowerCase().trim()
+          )
+      )
+      .sort();
+  }, [transactions, budgets]);
 
   // Calculate current month spending per category
   const categorySpending = useMemo(() => {
@@ -96,6 +114,8 @@ export const CategoryBudgetScreen = () => {
     await storage.saveCategoryBudgets(newBudgets);
     setBudgets(newBudgets);
     setEditingCategory(null);
+    setIsAddingNew(false);
+    setNewCategoryName("");
     setBudgetInput("");
     setThresholdInput("80");
   };
@@ -147,7 +167,17 @@ export const CategoryBudgetScreen = () => {
           />
         </TouchableOpacity>
         <Text style={styles.title}>Budget per Kategori</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity
+          style={styles.headerAddButton}
+          onPress={() => {
+            setIsAddingNew(true);
+            setNewCategoryName("");
+            setBudgetInput("");
+            setThresholdInput("80");
+          }}
+        >
+          <Ionicons name="add" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -164,8 +194,198 @@ export const CategoryBudgetScreen = () => {
           </Text>
         </View>
 
+        {/* Add New Category Form */}
+        {isAddingNew && (
+          <View style={[styles.categoryCard, { marginBottom: 16 }]}>
+            <Text style={styles.sectionTitle}>Tambah Budget Baru</Text>
+
+            {!newCategoryName ? (
+              <View>
+                <Text style={[styles.inputLabel, { marginBottom: 12 }]}>
+                  Pilih Kategori dari Transaksi:
+                </Text>
+                {availableCategories.length === 0 ? (
+                  <View
+                    style={{
+                      padding: theme.spacing.m,
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.borderRadius.m,
+                      borderStyle: "dashed",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...theme.typography.caption,
+                        color: theme.colors.text.tertiary,
+                        textAlign: "center",
+                      }}
+                    >
+                      Semua kategori dari transaksi Anda sudah memiliki budget.
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}
+                  >
+                    {availableCategories.map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          backgroundColor: theme.colors.surface,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          paddingVertical: 8,
+                          paddingHorizontal: 12,
+                          borderRadius: 20,
+                          gap: 6,
+                        }}
+                        onPress={() => setNewCategoryName(cat)}
+                      >
+                        <Ionicons
+                          name={getCategoryIcon(cat).iconName as any}
+                          size={16}
+                          color={
+                            getCategoryIcon(cat).iconColor ||
+                            theme.colors.primary
+                          }
+                        />
+                        <Text
+                          style={{
+                            ...theme.typography.caption,
+                            color: theme.colors.text.primary,
+                            fontWeight: "600",
+                          }}
+                        >
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.editForm}>
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputLabel}>Kategori Terpilih</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: theme.spacing.m,
+                      backgroundColor: theme.colors.background,
+                      borderRadius: theme.borderRadius.m,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor:
+                            getCategoryIcon(newCategoryName).iconColor + "20",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons
+                          name={
+                            getCategoryIcon(newCategoryName).iconName as any
+                          }
+                          size={18}
+                          color={
+                            getCategoryIcon(newCategoryName).iconColor ||
+                            theme.colors.primary
+                          }
+                        />
+                      </View>
+                      <Text
+                        style={{
+                          ...theme.typography.body,
+                          fontWeight: "600",
+                          color: theme.colors.text.primary,
+                        }}
+                      >
+                        {newCategoryName}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setNewCategoryName("")}>
+                      <Text
+                        style={{
+                          color: theme.colors.primary,
+                          fontWeight: "600",
+                          fontSize: 12,
+                        }}
+                      >
+                        Ganti
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputLabel}>Budget (Rp)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    value={formatNumberInput(budgetInput)}
+                    onChangeText={(text) =>
+                      setBudgetInput(text.replace(/\./g, ""))
+                    }
+                    autoFocus
+                  />
+                </View>
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputLabel}>Alert Threshold (%)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="80"
+                    keyboardType="numeric"
+                    value={thresholdInput}
+                    onChangeText={setThresholdInput}
+                    maxLength={3}
+                  />
+                </View>
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setIsAddingNew(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Batal</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={() => saveBudget(newCategoryName)}
+                  >
+                    <Text style={styles.saveButtonText}>Simpan</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Categories List */}
-        {categories.length === 0 ? (
+        {categories.length === 0 && !isAddingNew ? (
           <View style={styles.emptyState}>
             <Ionicons
               name="folder-open-outline"
@@ -174,8 +394,14 @@ export const CategoryBudgetScreen = () => {
             />
             <Text style={styles.emptyTitle}>Belum Ada Kategori</Text>
             <Text style={styles.emptyDesc}>
-              Tambahkan transaksi terlebih dahulu untuk melihat kategori.
+              Tambahkan transaksi atau buat kategori baru untuk mulai budgeting.
             </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => setIsAddingNew(true)}
+            >
+              <Text style={styles.emptyButtonText}>Buat Kategori Baru</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           categories.map((category) => {
@@ -192,9 +418,12 @@ export const CategoryBudgetScreen = () => {
                   <View style={styles.categoryInfo}>
                     <View style={styles.iconContainer}>
                       <Ionicons
-                        name={getCategoryIcon(category) as any}
+                        name={getCategoryIcon(category).iconName as any}
                         size={20}
-                        color={theme.colors.primary}
+                        color={
+                          getCategoryIcon(category).iconColor ||
+                          theme.colors.primary
+                        }
                       />
                     </View>
                     <View>
@@ -346,218 +575,244 @@ export const CategoryBudgetScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  placeholder: {
-    width: 32,
-  },
-  content: {
-    padding: theme.spacing.m,
-  },
-  infoCard: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.primary + "10",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
-    gap: theme.spacing.s,
-  },
-  infoText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    flex: 1,
-    lineHeight: 18,
-  },
-  categoryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  categoryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  categoryInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + "15",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryName: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  categorySpent: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary + "10",
-  },
-  addButtonText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  removeButton: {
-    padding: theme.spacing.s,
-  },
-  budgetSection: {
-    marginTop: theme.spacing.m,
-    paddingTop: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  budgetRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.s,
-  },
-  budgetLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  budgetPercentage: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  textWarning: {
-    color: theme.colors.status.warning,
-  },
-  textDanger: {
-    color: theme.colors.status.error,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  thresholdHint: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
-    fontSize: 10,
-  },
-  editForm: {
-    marginTop: theme.spacing.m,
-    paddingTop: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    gap: theme.spacing.m,
-  },
-  inputRow: {
-    gap: theme.spacing.xs,
-  },
-  inputLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  input: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.s,
-    padding: theme.spacing.m,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  formButtons: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-  },
-  cancelButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.border,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-  },
-  saveButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-  },
-  saveButtonText: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: "#FFF",
-  },
-  editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.m,
-  },
-  editButtonText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: theme.spacing.xxl,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-  },
-  emptyTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.m,
-  },
-  emptyDesc: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.s,
-    textAlign: "center",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    backButton: {
+      padding: theme.spacing.xs,
+    },
+    title: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    headerAddButton: {
+      padding: theme.spacing.xs,
+    },
+    content: {
+      padding: theme.spacing.m,
+    },
+    infoCard: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.primary + "10",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginBottom: theme.spacing.m,
+      gap: theme.spacing.s,
+    },
+    infoText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      flex: 1,
+      lineHeight: 18,
+    },
+    categoryCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    categoryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    categoryInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+    },
+    iconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.primary + "15",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    categoryName: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    categorySpent: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: 2,
+    },
+    addButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary + "10",
+    },
+    addButtonText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    removeButton: {
+      padding: theme.spacing.s,
+    },
+    budgetSection: {
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    budgetRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.s,
+    },
+    budgetLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    budgetPercentage: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.primary,
+    },
+    textWarning: {
+      color: theme.colors.status.warning,
+    },
+    textDanger: {
+      color: theme.colors.status.error,
+    },
+    progressBar: {
+      height: 6,
+      backgroundColor: theme.colors.border,
+      borderRadius: 3,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 3,
+    },
+    thresholdHint: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.xs,
+      fontSize: 10,
+    },
+    editForm: {
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      gap: theme.spacing.m,
+    },
+    inputRow: {
+      marginBottom: theme.spacing.m,
+    },
+    inputLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xs,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.s,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    formButtons: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+      marginTop: theme.spacing.xs,
+    },
+    cancelButton: {
+      flex: 1,
+      padding: theme.spacing.s,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.border,
+    },
+    cancelButtonText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    saveButton: {
+      flex: 1,
+      padding: theme.spacing.s,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary,
+    },
+    saveButtonText: {
+      ...theme.typography.body,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    editButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    editButtonText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+    },
+    emptyState: {
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing.xl,
+      marginTop: theme.spacing.xl,
+    },
+    emptyTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.m,
+      marginBottom: theme.spacing.xs,
+    },
+    emptyDesc: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      marginBottom: theme.spacing.l,
+    },
+    emptyButton: {
+      marginTop: theme.spacing.m,
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.round,
+    },
+    emptyButtonText: {
+      color: "#FFFFFF",
+      fontWeight: "600",
+      fontSize: moderateScale(14),
+    },
+    sectionTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+  });

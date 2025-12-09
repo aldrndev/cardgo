@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { storage } from "../utils/storage";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
@@ -54,6 +54,11 @@ type OnboardingScreenNavigationProp = StackNavigationProp<
 export const OnboardingScreen = () => {
   const { width } = useWindowDimensions();
   const navigation = useNavigation<OnboardingScreenNavigationProp>();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [nickname, setNickname] = useState("");
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -260,129 +265,130 @@ export const OnboardingScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    padding: theme.spacing.m,
-    alignItems: "flex-end",
-  },
-  slide: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.xl,
-  },
-  imageContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing.xl,
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  title: {
-    ...theme.typography.h1,
-    textAlign: "center",
-    marginBottom: theme.spacing.m,
-    color: theme.colors.primary,
-  },
-  description: {
-    ...theme.typography.body,
-    textAlign: "center",
-    color: theme.colors.text.secondary,
-    paddingHorizontal: theme.spacing.m,
-    lineHeight: 24,
-  },
-  footer: {
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.background, // Ensure background is opaque
-  },
-  pagination: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: theme.spacing.xl,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.border,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: theme.colors.primary,
-    width: 24,
-  },
-  buttonContainer: {
-    gap: theme.spacing.m,
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.m,
-    borderRadius: theme.borderRadius.l,
-    alignItems: "center",
-    ...theme.shadows.medium,
-  },
-  buttonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-  },
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      padding: theme.spacing.m,
+      alignItems: "flex-end",
+    },
+    slide: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing.xl,
+    },
+    imageContainer: {
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: theme.spacing.xl,
+    },
+    image: {
+      width: "100%",
+      height: "100%",
+    },
+    title: {
+      ...theme.typography.h1,
+      textAlign: "center",
+      marginBottom: theme.spacing.m,
+      color: theme.colors.primary,
+    },
+    description: {
+      ...theme.typography.body,
+      textAlign: "center",
+      color: theme.colors.text.secondary,
+      paddingHorizontal: theme.spacing.m,
+      lineHeight: 24,
+    },
+    footer: {
+      padding: theme.spacing.xl,
+      backgroundColor: theme.colors.background, // Ensure background is opaque
+    },
+    pagination: {
+      flexDirection: "row",
+      justifyContent: "center",
+      marginBottom: theme.spacing.xl,
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.border,
+      marginHorizontal: 4,
+    },
+    activeDot: {
+      backgroundColor: theme.colors.primary,
+      width: 24,
+    },
+    buttonContainer: {
+      gap: theme.spacing.m,
+    },
+    button: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.l,
+      alignItems: "center",
+      ...theme.shadows.medium,
+    },
+    buttonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
 
-  inputWrapper: {
-    paddingHorizontal: theme.spacing.xl,
-    alignItems: "center",
-  },
-  input: {
-    width: "100%",
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    fontSize: 18,
-    color: theme.colors.text.primary,
-    textAlign: "center",
-    marginTop: theme.spacing.l,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.small,
-  },
-  inputSlideContent: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.xl,
-  },
-  inputSlideImage: {
-    width: 200,
-    height: 200,
-    marginBottom: theme.spacing.l,
-  },
-  nameInputContainer: {
-    width: "100%",
-    marginTop: theme.spacing.xl,
-  },
-  nameInput: {
-    width: "100%",
-    backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.m,
-    paddingHorizontal: theme.spacing.l,
-    borderRadius: theme.borderRadius.l,
-    fontSize: 18,
-    color: theme.colors.text.primary,
-    textAlign: "center",
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    ...theme.shadows.small,
-  },
-  greetingPreview: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    fontWeight: "600",
-    marginTop: theme.spacing.l,
-    fontSize: 18,
-  },
-});
+    inputWrapper: {
+      paddingHorizontal: theme.spacing.xl,
+      alignItems: "center",
+    },
+    input: {
+      width: "100%",
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      fontSize: 18,
+      color: theme.colors.text.primary,
+      textAlign: "center",
+      marginTop: theme.spacing.l,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      ...theme.shadows.small,
+    },
+    inputSlideContent: {
+      flexGrow: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.xl,
+      paddingBottom: theme.spacing.xl,
+    },
+    inputSlideImage: {
+      width: 200,
+      height: 200,
+      marginBottom: theme.spacing.l,
+    },
+    nameInputContainer: {
+      width: "100%",
+      marginTop: theme.spacing.xl,
+    },
+    nameInput: {
+      width: "100%",
+      backgroundColor: theme.colors.surface,
+      paddingVertical: theme.spacing.m,
+      paddingHorizontal: theme.spacing.l,
+      borderRadius: theme.borderRadius.l,
+      fontSize: 18,
+      color: theme.colors.text.primary,
+      textAlign: "center",
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      ...theme.shadows.small,
+    },
+    greetingPreview: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      fontWeight: "600",
+      marginTop: theme.spacing.l,
+      fontSize: 18,
+    },
+  });

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   TouchableOpacity,
   StyleSheet,
@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { moderateScale, scale } from "../utils/responsive";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -27,7 +27,15 @@ interface ExpandableFABProps {
   style?: ViewStyle;
 }
 
+const FAB_SIZE = moderateScale(56);
+const ACTION_SIZE = moderateScale(44);
+const BOTTOM_OFFSET = scale(90);
+const RIGHT_OFFSET = scale(20);
+
 export const ExpandableFAB = ({ actions, style }: ExpandableFABProps) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [isOpen, setIsOpen] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
   const rotateAnimation = useRef(new Animated.Value(0)).current;
@@ -176,6 +184,9 @@ export const FloatingActionButton = ({
   onPress,
   style,
 }: FloatingActionButtonProps) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   return (
     <TouchableOpacity
       style={[styles.simpleFab, style]}
@@ -187,97 +198,93 @@ export const FloatingActionButton = ({
   );
 };
 
-const FAB_SIZE = moderateScale(56);
-const ACTION_SIZE = moderateScale(44);
-const BOTTOM_OFFSET = scale(90);
-const RIGHT_OFFSET = scale(20);
-
-const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 998,
-  },
-  backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#000000",
-  },
-  fabWrapper: {
-    position: "absolute",
-    bottom: BOTTOM_OFFSET,
-    right: RIGHT_OFFSET,
-    zIndex: 1000,
-    alignItems: "flex-end",
-  },
-  actionsContainer: {
-    position: "absolute",
-    bottom: FAB_SIZE + 10,
-    right: (FAB_SIZE - ACTION_SIZE) / 2,
-    alignItems: "flex-end",
-  },
-  actionItem: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  labelPill: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.m,
-    marginRight: theme.spacing.s,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-  labelText: {
-    fontSize: moderateScale(13),
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-  },
-  actionCircle: {
-    width: ACTION_SIZE,
-    height: ACTION_SIZE,
-    borderRadius: ACTION_SIZE / 2,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  mainFab: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  simpleFab: {
-    position: "absolute",
-    bottom: BOTTOM_OFFSET,
-    right: RIGHT_OFFSET,
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    zIndex: 1000,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 998,
+    },
+    backdropOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "#000000",
+    },
+    fabWrapper: {
+      position: "absolute",
+      bottom: BOTTOM_OFFSET,
+      right: RIGHT_OFFSET,
+      zIndex: 1000,
+      alignItems: "flex-end",
+    },
+    actionsContainer: {
+      position: "absolute",
+      bottom: FAB_SIZE + 10,
+      right: (FAB_SIZE - ACTION_SIZE) / 2,
+      alignItems: "flex-end",
+    },
+    actionItem: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    labelPill: {
+      backgroundColor: theme.colors.surface,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.m,
+      marginRight: theme.spacing.s,
+      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+    },
+    labelText: {
+      fontSize: moderateScale(13),
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+    },
+    actionCircle: {
+      width: ACTION_SIZE,
+      height: ACTION_SIZE,
+      borderRadius: ACTION_SIZE / 2,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    mainFab: {
+      width: FAB_SIZE,
+      height: FAB_SIZE,
+      borderRadius: FAB_SIZE / 2,
+      backgroundColor: theme.colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 6,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+    },
+    simpleFab: {
+      position: "absolute",
+      bottom: BOTTOM_OFFSET,
+      right: RIGHT_OFFSET,
+      width: FAB_SIZE,
+      height: FAB_SIZE,
+      borderRadius: FAB_SIZE / 2,
+      backgroundColor: theme.colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 6,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      zIndex: 1000,
+    },
+  });

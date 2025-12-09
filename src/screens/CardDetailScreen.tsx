@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { RootStackParamList } from "../navigation/types";
@@ -30,7 +30,8 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import { scale, moderateScale, isTablet, width } from "../utils/responsive";
 import { PaymentHistorySection } from "../components/PaymentHistorySection";
 import { ExpandableFAB } from "../components/FloatingActionButton";
-import React, { useState } from "react";
+import { HealthScoreService } from "../services/HealthScoreService";
+import React, { useState, useMemo } from "react";
 
 type CardDetailScreenRouteProp = RouteProp<RootStackParamList, "CardDetail">;
 type CardDetailScreenNavigationProp = StackNavigationProp<
@@ -44,6 +45,7 @@ export const CardDetailScreen = () => {
   const navigation = useNavigation<CardDetailScreenNavigationProp>();
   const route = useRoute<CardDetailScreenRouteProp>();
   const { cardId } = route.params;
+  const { theme, isDark } = useTheme();
   const {
     cards,
     deleteCard,
@@ -55,6 +57,9 @@ export const CardDetailScreen = () => {
   } = useCards();
   const { getRecordsByCardId } = useLimitIncrease();
   const card = cards.find((c) => c.id === cardId);
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentType, setPaymentType] = useState<"full" | "minimal">("full");
@@ -80,6 +85,28 @@ export const CardDetailScreen = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
   }, [transactions, cardId]);
+
+  // Calculate per-card health score
+  const cardHealthScore = React.useMemo(() => {
+    if (!card) return null;
+    return HealthScoreService.calculateCardHealthScore(card, transactions);
+  }, [card, transactions]);
+
+  // Get color based on rating
+  const getScoreColor = (rating: string) => {
+    switch (rating) {
+      case "excellent":
+        return "#10B981";
+      case "good":
+        return "#3B82F6";
+      case "fair":
+        return "#F59E0B";
+      case "poor":
+        return "#EF4444";
+      default:
+        return theme.colors.text.secondary;
+    }
+  };
 
   if (!card) {
     return (
@@ -245,7 +272,7 @@ export const CardDetailScreen = () => {
                     <Ionicons
                       name="create-outline"
                       size={moderateScale(22)}
-                      color="#FFFFFF"
+                      color={"#FFFFFF"}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -255,7 +282,7 @@ export const CardDetailScreen = () => {
                     <Ionicons
                       name="archive-outline"
                       size={moderateScale(22)}
-                      color="#FFFFFF"
+                      color={"#FFFFFF"}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -265,7 +292,7 @@ export const CardDetailScreen = () => {
                     <Ionicons
                       name="trash-outline"
                       size={moderateScale(22)}
-                      color="#FFFFFF"
+                      color={"#FFFFFF"}
                     />
                   </TouchableOpacity>
                 </View>
@@ -338,34 +365,24 @@ export const CardDetailScreen = () => {
             {/* Monthly Budget */}
             {card.monthlyBudget && card.monthlyBudget > 0 && (
               <View style={styles.budgetSection}>
+                {/* Budget Info - Same structure as Usage */}
                 <View style={styles.row}>
                   <View>
-                    <Text style={styles.label}>Budget Bulanan</Text>
+                    <Text style={styles.label}>Budget Terpakai</Text>
                     <Text style={styles.amount}>
-                      {formatCurrency(card.monthlyBudget)}
+                      {formatCurrency(card.currentUsage || 0)}
                     </Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.label}>Sisa Budget</Text>
-                    <Text
-                      style={[
-                        styles.value,
-                        {
-                          color:
-                            card.monthlyBudget - card.currentUsage < 0
-                              ? theme.colors.status.error
-                              : theme.colors.text.primary,
-                        },
-                      ]}
-                    >
-                      {formatCurrency(
-                        (card.monthlyBudget || 0) - (card.currentUsage || 0)
-                      )}
+                    <Text style={styles.label}>Budget</Text>
+                    <Text style={styles.value}>
+                      {formatCurrency(card.monthlyBudget)}
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.progressBarContainer}>
+                {/* Progress Bar */}
+                <View style={styles.progressBarBg}>
                   <View
                     style={[
                       styles.progressBarFill,
@@ -381,9 +398,19 @@ export const CardDetailScreen = () => {
                     ]}
                   />
                 </View>
-                <Text style={styles.progressText}>
-                  {budgetPercentage.toFixed(1)}% Terpakai
-                </Text>
+
+                {/* Budget Details Below Progress Bar */}
+                <View style={styles.usageInfoRow}>
+                  <Text style={styles.percentageText}>
+                    {budgetPercentage.toFixed(1)}% Terpakai
+                  </Text>
+                  <Text style={styles.percentageText}>
+                    {formatCurrency(
+                      (card.monthlyBudget || 0) - (card.currentUsage || 0)
+                    )}{" "}
+                    sisa budget
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -415,6 +442,178 @@ export const CardDetailScreen = () => {
             </View>
 
             {/* Divider */}
+            <View style={styles.sectionDivider} />
+
+            {/* Card Health Score Widget */}
+            {cardHealthScore && (
+              <View
+                style={[
+                  styles.cardHealthScoreWidget,
+                  isDark && { shadowOpacity: 0, elevation: 0 },
+                ]}
+              >
+                <View style={styles.cardHealthScoreHeader}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={styles.cardHealthScoreTitle}>
+                      Card Health Score
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        Alert.alert(
+                          "Card Health Score",
+                          "Skor kesehatan kartu dihitung berdasarkan:\n\n" +
+                            (card.monthlyBudget && card.monthlyBudget > 0
+                              ? "• Penggunaan Limit (70 pts)\n• Riwayat Pembayaran (20 pts)\n• Disiplin Budget (10 pts)\n\n"
+                              : "• Penggunaan Limit (70 pts)\n• Riwayat Pembayaran (30 pts)\n\n") +
+                            "Total: 100 pts\n\n" +
+                            "Rating:\n" +
+                            "• Excellent (80-100)\n" +
+                            "• Good (60-79)\n" +
+                            "• Fair (40-59)\n" +
+                            "• Poor (0-39)",
+                          [{ text: "OK" }]
+                        )
+                      }
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={18}
+                        color={theme.colors.text.secondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <View
+                    style={[
+                      styles.cardHealthCircle,
+                      { borderColor: getScoreColor(cardHealthScore.rating) },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.cardHealthNumber,
+                        { color: getScoreColor(cardHealthScore.rating) },
+                      ]}
+                    >
+                      {cardHealthScore.totalScore}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.cardHealthBreakdown}>
+                  {/* Utilization */}
+                  <View style={styles.cardHealthItem}>
+                    <View style={styles.cardHealthItemHeader}>
+                      <Text style={styles.cardHealthItemLabel}>
+                        Penggunaan Limit
+                      </Text>
+                      <Text style={styles.cardHealthItemScore}>
+                        {cardHealthScore.breakdown.creditUtilization.score}/
+                        {card.monthlyBudget && card.monthlyBudget > 0
+                          ? "70"
+                          : "70"}
+                      </Text>
+                    </View>
+                    <View style={styles.cardHealthProgressBar}>
+                      <View
+                        style={[
+                          styles.cardHealthProgressFill,
+                          {
+                            width: `${
+                              (cardHealthScore.breakdown.creditUtilization
+                                .score /
+                                (card.monthlyBudget && card.monthlyBudget > 0
+                                  ? 70
+                                  : 70)) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              cardHealthScore.breakdown.creditUtilization.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Payment History */}
+                  <View style={styles.cardHealthItem}>
+                    <View style={styles.cardHealthItemHeader}>
+                      <Text style={styles.cardHealthItemLabel}>
+                        Riwayat Pembayaran
+                      </Text>
+                      <Text style={styles.cardHealthItemScore}>
+                        {cardHealthScore.breakdown.paymentHistory.score}/
+                        {card.monthlyBudget && card.monthlyBudget > 0
+                          ? "20"
+                          : "30"}
+                      </Text>
+                    </View>
+                    <View style={styles.cardHealthProgressBar}>
+                      <View
+                        style={[
+                          styles.cardHealthProgressFill,
+                          {
+                            width: `${
+                              (cardHealthScore.breakdown.paymentHistory.score /
+                                (card.monthlyBudget && card.monthlyBudget > 0
+                                  ? 20
+                                  : 30)) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              cardHealthScore.breakdown.paymentHistory.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Budget Discipline - Only show if card has budget */}
+                  {card.monthlyBudget && card.monthlyBudget > 0 && (
+                    <View style={styles.cardHealthItem}>
+                      <View style={styles.cardHealthItemHeader}>
+                        <Text style={styles.cardHealthItemLabel}>
+                          Disiplin Budget
+                        </Text>
+                        <Text style={styles.cardHealthItemScore}>
+                          {cardHealthScore.breakdown.spendingDiscipline.score}
+                          /10
+                        </Text>
+                      </View>
+                      <View style={styles.cardHealthProgressBar}>
+                        <View
+                          style={[
+                            styles.cardHealthProgressFill,
+                            {
+                              width: `${
+                                (cardHealthScore.breakdown.spendingDiscipline
+                                  .score /
+                                  10) *
+                                100
+                              }%`,
+                              backgroundColor: getScoreColor(
+                                cardHealthScore.breakdown.spendingDiscipline
+                                  .rating
+                              ),
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Divider before Payment Status */}
             <View style={styles.sectionDivider} />
 
             {/* Payment Status */}
@@ -649,18 +848,12 @@ export const CardDetailScreen = () => {
 
             {/* Notes */}
             {card.notes ? (
-              <>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { marginVertical: theme.spacing.s },
-                  ]}
-                />
-                <View style={styles.noteContainer}>
-                  <Text style={styles.label}>Catatan</Text>
-                  <Text style={styles.noteText}>{card.notes}</Text>
-                </View>
-              </>
+              <View
+                style={[styles.noteContainer, { marginTop: theme.spacing.m }]}
+              >
+                <Text style={styles.label}>Catatan</Text>
+                <Text style={styles.noteText}>{card.notes}</Text>
+              </View>
             ) : null}
           </View>
 
@@ -790,10 +983,17 @@ export const CardDetailScreen = () => {
                         <Text style={styles.transactionDate}>
                           {new Date(t.date).toLocaleDateString("id-ID", {
                             day: "numeric",
-                            month: "long",
-                            year: "numeric",
+                            month: "short",
                           })}
                         </Text>
+                        {/* Cicilan Badge Only */}
+                        {t.installmentId && (
+                          <View style={styles.badgesRow}>
+                            <View style={styles.miniBadge}>
+                              <Text style={styles.miniBadgeText}>Cicilan</Text>
+                            </View>
+                          </View>
+                        )}
                       </View>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
@@ -932,857 +1132,944 @@ export const CardDetailScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  backButtonText: {
-    fontSize: moderateScale(24),
-    color: theme.colors.text.primary,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  placeholder: {
-    width: theme.containerSizes.iconMedium,
-  },
-  content: {
-    paddingBottom: theme.spacing.xl,
-    alignItems: isTablet ? "center" : undefined,
-  },
-  responsiveContainer: {
-    width: "100%",
-    maxWidth: isTablet ? 600 : undefined,
-  },
-  actionButtons: {},
-  actionButton: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    ...theme.shadows.small,
-    gap: 8,
-  },
-  actionButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-    fontSize: moderateScale(16),
-  },
-  cardContainer: {
-    marginBottom: theme.spacing.l,
-    marginTop: theme.spacing.m,
-    // paddingHorizontal: theme.spacing.m, // Removed to allow custom width
-    alignItems: "center", // Centered
-  },
-  section: {
-    // backgroundColor: theme.colors.surface, // Removed card bg
-    paddingHorizontal: theme.spacing.l, // Keep padding
-    paddingVertical: theme.spacing.l,
-    marginBottom: theme.spacing.l, // Reduced margin
-    // borderRadius: theme.borderRadius.m,
-    // ...theme.shadows.small,
-  },
-  sectionTitle: {
-    ...theme.typography.h2,
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-  },
-  cardSection: {
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.l,
-    marginHorizontal: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    ...theme.shadows.small,
-  },
-  subSectionTitle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.m,
-  },
-  budgetSection: {
-    marginTop: theme.spacing.l,
-  },
-  billingInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  billingInfoItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  billingInfoLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  billingInfoValue: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  paymentStatusSection: {
-    // Container for payment status within the grouped section
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: theme.spacing.m,
-  },
-  label: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
-  },
-  amount: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    fontWeight: "700",
-  },
-  cycleText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: 4,
-  },
-  value: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  progressBarBg: {
-    height: scale(8),
-    backgroundColor: theme.colors.background,
-    borderRadius: 4,
-    overflow: "hidden",
-    marginBottom: theme.spacing.s,
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-  },
-  usageInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  percentageText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: theme.spacing.s,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  detailLabel: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  detailValue: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  healthScoreContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: theme.spacing.s,
-  },
-  healthScoreCircle: {
-    width: scale(60),
-    height: scale(60),
-    borderRadius: scale(30),
-    borderWidth: 4,
-    borderColor: theme.colors.surface,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  healthScoreValue: {
-    ...theme.typography.h2,
-    fontWeight: "bold",
-  },
-  healthFactors: {
-    flex: 1,
-  },
-  healthFactorText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 2,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  seeAllText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontSize: moderateScale(14),
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: theme.spacing.s,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  noteContainer: {
-    marginTop: theme.spacing.m,
-    padding: theme.spacing.m,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-  },
-  noteText: {
-    ...theme.typography.body,
-    marginTop: theme.spacing.xs,
-  },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  iconContainer: {
-    width: 56, // Fixed to match HomeScreen
-    height: 56, // Fixed to match HomeScreen
-    borderRadius: 20, // Fixed to match HomeScreen
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  transactionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  transactionIcon: {
-    fontSize: moderateScale(24),
-  },
-  transactionDesc: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    fontSize: moderateScale(16), // Increased from 15
-    marginRight: 8,
-  },
-  transactionDate: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(12),
-  },
-  transactionAmount: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    fontSize: moderateScale(14),
-  },
-  convertedAmount: {
-    ...theme.typography.caption,
-    fontSize: moderateScale(10),
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-    marginTop: theme.spacing.xl,
-  },
-  reminderItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-  },
-  reminderIcon: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  reminderTitle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  reminderSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  reminderValue: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  historyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.primary + "10",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  historyButtonText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  addTransactionButton: {
-    marginTop: theme.spacing.m,
-    padding: theme.spacing.m,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-  },
-  addTransactionText: {
-    ...theme.typography.button,
-    color: theme.colors.primary,
-  },
-  progressBarContainer: {
-    height: scale(8),
-    backgroundColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-    marginTop: theme.spacing.s,
-  },
-  progressText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 4,
-    textAlign: "right",
-  },
-  actions: {
-    flexDirection: "row",
-    padding: theme.spacing.m,
-    gap: theme.spacing.m,
-  },
-  button: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-    justifyContent: "center",
-    ...theme.shadows.small,
-  },
-  buttonText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.inverse,
-    marginTop: 4,
-    fontWeight: "600",
-  },
-  editButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  archiveButton: {
-    backgroundColor: theme.colors.text.secondary,
-  },
-  deleteButton: {
-    backgroundColor: theme.colors.status.error,
-  },
-  swipeActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 16,
-  },
-  swipeButton: {
-    width: scale(48),
-    height: scale(48),
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 12,
-    borderRadius: 24,
-    ...theme.shadows.medium, // Stronger shadow for floating effect
-    shadowColor: theme.colors.primary, // Colored shadow hint
-    shadowOpacity: 0.2,
-  },
-  swipeHintContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    marginTop: 8,
-    gap: 4,
-  },
-  swipeHintText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(12),
-  },
-  addSubscriptionButton: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    ...theme.shadows.small,
-    marginTop: theme.spacing.m,
-    gap: 8,
-  },
-  addSubscriptionText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-    fontSize: moderateScale(16),
-  },
-  circleAddButton: {
-    width: moderateScale(48),
-    height: moderateScale(48),
-    borderRadius: moderateScale(24),
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-end",
-    marginTop: theme.spacing.m,
-    ...theme.shadows.medium,
-  },
-  // Payment Status Styles
-  lastPaidText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  markPaidButton: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    gap: 8,
-    ...theme.shadows.small,
-  },
-  markPaidButtonText: {
-    ...theme.typography.button,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  circleCheckButton: {
-    width: moderateScale(48),
-    height: moderateScale(48),
-    borderRadius: moderateScale(24),
-    backgroundColor: theme.colors.status.success,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-end",
-    ...theme.shadows.medium,
-  },
-  // Unpaid Card Styles
-  unpaidCard: {
-    backgroundColor: theme.colors.status.warning + "10",
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    borderWidth: 1,
-    borderColor: theme.colors.status.warning + "30",
-  },
-  unpaidHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  unpaidIconContainer: {
-    width: moderateScale(44),
-    height: moderateScale(44),
-    borderRadius: moderateScale(22),
-    backgroundColor: theme.colors.status.warning + "20",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.m,
-  },
-  unpaidTitle: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  unpaidSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.status.warning,
-    fontWeight: "500",
-  },
-  unpaidAmountRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: theme.spacing.s,
-    paddingHorizontal: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
-  },
-  unpaidAmountLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  unpaidAmount: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    fontWeight: "700",
-  },
-  payNowButton: {
-    backgroundColor: theme.colors.status.success,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.s + 2,
-    paddingHorizontal: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    gap: 8,
-    ...theme.shadows.small,
-  },
-  payNowButtonText: {
-    ...theme.typography.button,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  // Paid Card Styles
-  paidCard: {
-    backgroundColor: theme.colors.status.success + "10",
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.status.success + "30",
-    gap: 12,
-  },
-  paidIconCircle: {
-    width: moderateScale(32),
-    height: moderateScale(32),
-    borderRadius: moderateScale(16),
-    backgroundColor: theme.colors.status.success,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  paidCardTitle: {
-    ...theme.typography.body,
-    color: theme.colors.status.success,
-    fontWeight: "700",
-  },
-  // paidCardSubtitle removed to save space
-  paidCardDate: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  paidIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.m,
-    backgroundColor: theme.colors.status.success + "10",
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.status.success + "30",
-    gap: 12,
-  },
-  paidText: {
-    ...theme.typography.body,
-    color: theme.colors.status.success,
-    fontWeight: "600",
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.l,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    width: "100%",
-    maxWidth: 400,
-    ...theme.shadows.medium,
-  },
-  modalTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-    textAlign: "center",
-  },
-  modalSubtitle: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.l,
-    textAlign: "center",
-  },
-  modalInput: {
-    ...theme.typography.body,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    color: theme.colors.text.primary,
-  },
-  modalTextArea: {
-    height: scale(80),
-    textAlignVertical: "top",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-    marginTop: theme.spacing.s,
-  },
-  modalButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-  },
-  modalCancelButton: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  modalConfirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  modalCancelText: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  modalConfirmText: {
-    ...theme.typography.button,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  // Payment Type Selection Styles
-  paymentTypeContainer: {
-    marginBottom: theme.spacing.m,
-  },
-  paymentTypeLabel: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  radioOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.s,
-    gap: 12,
-  },
-  radioOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + "08",
-  },
-  radioCircle: {
-    width: scale(20),
-    height: scale(20),
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioCircleSelected: {
-    width: scale(10),
-    height: scale(10),
-    borderRadius: 5,
-    backgroundColor: theme.colors.primary,
-  },
-  radioLabel: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  radioSubtext: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  // Input Label Styles
-  inputLabel: {
-    ...theme.typography.body,
-    fontWeight: "500",
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  required: {
-    color: theme.colors.status.error,
-  },
-  modalInputError: {
-    borderColor: theme.colors.status.error,
-    borderWidth: 1.5,
-  },
-  errorText: {
-    ...theme.typography.caption,
-    color: theme.colors.status.error,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.s,
-  },
-  // Inline Payment Form Styles
-  paymentForm: {
-    marginTop: theme.spacing.m,
-    padding: theme.spacing.m,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  formButtons: {
-    flexDirection: "row",
-    gap: theme.spacing.s,
-    marginTop: theme.spacing.m,
-  },
-  formButton: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  formCancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  formConfirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  formCancelText: {
-    ...theme.typography.button,
-    color: theme.colors.text.primary,
-  },
-  formConfirmText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-    fontWeight: "600",
-  },
-  datePickerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    marginBottom: theme.spacing.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  datePickerLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 2,
-  },
-  datePickerValue: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    fontWeight: "500",
-  },
-  datePickerModal: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  datePickerContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    width: "85%",
-    ...theme.shadows.large,
-  },
-  datePickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  datePickerTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  dateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.l,
-    gap: theme.spacing.s,
-  },
-  dateColumn: {
-    flex: 1,
-  },
-  dateLabelText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  dateInput: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    textAlign: "center",
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  datePickerActions: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-    marginTop: theme.spacing.m,
-  },
-  datePickerCancel: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-  },
-  datePickerConfirm: {
-    flex: 1,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-  },
-  datePickerCancelText: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  datePickerConfirmText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    backButtonText: {
+      fontSize: moderateScale(24),
+      color: theme.colors.text.primary,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    placeholder: {
+      width: theme.containerSizes.iconMedium,
+    },
+    content: {
+      paddingBottom: theme.spacing.xl,
+      alignItems: isTablet ? "center" : undefined,
+    },
+    responsiveContainer: {
+      width: "100%",
+      maxWidth: isTablet ? 600 : undefined,
+    },
+    actionButtons: {},
+    actionButton: {
+      backgroundColor: theme.colors.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      ...theme.shadows.small,
+      gap: 8,
+    },
+    actionButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontSize: moderateScale(16),
+    },
+    cardContainer: {
+      marginBottom: theme.spacing.l,
+      marginTop: theme.spacing.m,
+      // paddingHorizontal: theme.spacing.m, // Removed to allow custom width
+      alignItems: "center", // Centered
+    },
+    section: {
+      // backgroundColor: theme.colors.surface, // Removed card bg
+      paddingHorizontal: theme.spacing.l, // Keep padding
+      paddingVertical: theme.spacing.l,
+      marginBottom: theme.spacing.l, // Reduced margin
+      // borderRadius: theme.borderRadius.m,
+      // ...theme.shadows.small,
+    },
+    sectionTitle: {
+      ...theme.typography.h2,
+      fontSize: 20,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+    cardSection: {
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.l,
+      marginHorizontal: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      ...theme.shadows.small,
+    },
+    subSectionTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    sectionDivider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: theme.spacing.m,
+    },
+    budgetSection: {
+      marginTop: theme.spacing.l,
+    },
+    budgetDetailsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: theme.spacing.s,
+    },
+    billingInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+    },
+    billingInfoItem: {
+      alignItems: "center",
+      flex: 1,
+    },
+    billingInfoLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: 4,
+      marginBottom: 2,
+    },
+    billingInfoValue: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    paymentStatusSection: {
+      // Container for payment status within the grouped section
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
+      marginBottom: theme.spacing.m,
+    },
+    label: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 4,
+    },
+    amount: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      fontWeight: "700",
+    },
+    cycleText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: 4,
+    },
+    value: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    progressBarBg: {
+      height: scale(8),
+      backgroundColor: theme.colors.background,
+      borderRadius: 4,
+      overflow: "hidden",
+      marginBottom: theme.spacing.s,
+    },
+    progressBarFill: {
+      height: "100%",
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+    },
+    usageInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    percentageText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    detailRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: theme.spacing.s,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    detailLabel: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    detailValue: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    healthScoreContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: theme.spacing.s,
+    },
+    healthScoreCircle: {
+      width: scale(60),
+      height: scale(60),
+      borderRadius: scale(30),
+      borderWidth: 4,
+      borderColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    healthScoreValue: {
+      ...theme.typography.h2,
+      fontWeight: "bold",
+    },
+    healthFactors: {
+      flex: 1,
+    },
+    healthFactorText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 2,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    seeAllText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontSize: moderateScale(14),
+    },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: theme.spacing.s,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    noteContainer: {
+      marginTop: theme.spacing.m,
+      padding: theme.spacing.m,
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+    },
+    noteText: {
+      ...theme.typography.body,
+      marginTop: theme.spacing.xs,
+    },
+    transactionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    iconContainer: {
+      width: 56, // Fixed to match HomeScreen
+      height: 56, // Fixed to match HomeScreen
+      borderRadius: 20, // Fixed to match HomeScreen
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 16,
+    },
+    transactionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    transactionIcon: {
+      fontSize: moderateScale(24),
+    },
+    transactionDesc: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      fontSize: moderateScale(16), // Increased from 15
+      marginRight: 8,
+    },
+    transactionDate: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(12),
+    },
+    transactionAmount: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      fontSize: moderateScale(14),
+    },
+    convertedAmount: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(10),
+      color: theme.colors.text.tertiary,
+      marginTop: 2,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      marginTop: theme.spacing.xl,
+    },
+    reminderItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+    },
+    reminderIcon: {
+      width: scale(40),
+      height: scale(40),
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    reminderTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    reminderSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    reminderValue: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    historyButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary + "10",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      gap: 4,
+    },
+    historyButtonText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    addTransactionButton: {
+      marginTop: theme.spacing.m,
+      padding: theme.spacing.m,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+    },
+    addTransactionText: {
+      ...theme.typography.button,
+      color: theme.colors.primary,
+    },
+    progressBarContainer: {
+      height: scale(8),
+      backgroundColor: theme.colors.border,
+      borderRadius: 4,
+      overflow: "hidden",
+      marginTop: theme.spacing.s,
+    },
+    progressText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginTop: 4,
+      textAlign: "right",
+    },
+    actions: {
+      flexDirection: "row",
+      padding: theme.spacing.m,
+      gap: theme.spacing.m,
+    },
+    button: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+      justifyContent: "center",
+      ...theme.shadows.small,
+    },
+    buttonText: {
+      ...theme.typography.caption,
+      color: "#FFFFFF",
+      marginTop: 4,
+      fontWeight: "600",
+    },
+    editButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    archiveButton: {
+      backgroundColor: theme.colors.text.secondary,
+    },
+    deleteButton: {
+      backgroundColor: theme.colors.status.error,
+    },
+    swipeActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginLeft: 16,
+    },
+    swipeButton: {
+      width: scale(48),
+      height: scale(48),
+      justifyContent: "center",
+      alignItems: "center",
+      marginLeft: 12,
+      borderRadius: 24,
+      ...theme.shadows.medium, // Stronger shadow for floating effect
+      shadowColor: theme.colors.primary, // Colored shadow hint
+      shadowOpacity: 0.2,
+    },
+    swipeHintContainer: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      alignItems: "center",
+      marginTop: 8,
+      gap: 4,
+    },
+    swipeHintText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(12),
+    },
+    addSubscriptionButton: {
+      backgroundColor: theme.colors.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      ...theme.shadows.small,
+      marginTop: theme.spacing.m,
+      gap: 8,
+    },
+    addSubscriptionText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontSize: moderateScale(16),
+    },
+    circleAddButton: {
+      width: moderateScale(48),
+      height: moderateScale(48),
+      borderRadius: moderateScale(24),
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "flex-end",
+      marginTop: theme.spacing.m,
+      ...theme.shadows.medium,
+    },
+    // Payment Status Styles
+    lastPaidText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    markPaidButton: {
+      backgroundColor: theme.colors.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      gap: 8,
+      ...theme.shadows.small,
+    },
+    markPaidButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    circleCheckButton: {
+      width: moderateScale(48),
+      height: moderateScale(48),
+      borderRadius: moderateScale(24),
+      backgroundColor: theme.colors.status.success,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "flex-end",
+      ...theme.shadows.medium,
+    },
+    // Unpaid Card Styles
+    unpaidCard: {
+      backgroundColor: theme.colors.status.warning + "10",
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      borderWidth: 1,
+      borderColor: theme.colors.status.warning + "30",
+    },
+    unpaidHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    unpaidIconContainer: {
+      width: moderateScale(44),
+      height: moderateScale(44),
+      borderRadius: moderateScale(22),
+      backgroundColor: theme.colors.status.warning + "20",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: theme.spacing.m,
+    },
+    unpaidTitle: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    unpaidSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.status.warning,
+      fontWeight: "500",
+    },
+    unpaidAmountRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: theme.spacing.s,
+      paddingHorizontal: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      marginBottom: theme.spacing.m,
+    },
+    unpaidAmountLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    unpaidAmount: {
+      ...theme.typography.body,
+      fontSize: moderateScale(16),
+      color: theme.colors.text.primary,
+      fontWeight: "700",
+    },
+    payNowButton: {
+      backgroundColor: theme.colors.status.success,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.s + 2,
+      paddingHorizontal: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      gap: 8,
+      ...theme.shadows.small,
+    },
+    payNowButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    // Paid Card Styles
+    paidCard: {
+      backgroundColor: theme.colors.status.success + "10",
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.status.success + "30",
+      gap: 12,
+    },
+    paidIconCircle: {
+      width: moderateScale(32),
+      height: moderateScale(32),
+      borderRadius: moderateScale(16),
+      backgroundColor: theme.colors.status.success,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    paidCardTitle: {
+      ...theme.typography.body,
+      color: theme.colors.status.success,
+      fontWeight: "700",
+    },
+    // paidCardSubtitle removed to save space
+    paidCardDate: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    paidIndicator: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: theme.spacing.m,
+      backgroundColor: theme.colors.status.success + "10",
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.status.success + "30",
+      gap: 12,
+    },
+    paidText: {
+      ...theme.typography.body,
+      color: theme.colors.status.success,
+      fontWeight: "600",
+    },
+    // Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: theme.spacing.l,
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      width: "100%",
+      maxWidth: 400,
+      ...theme.shadows.medium,
+    },
+    modalTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+      textAlign: "center",
+    },
+    modalSubtitle: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.l,
+      textAlign: "center",
+    },
+    modalInput: {
+      ...theme.typography.body,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      color: theme.colors.text.primary,
+    },
+    modalTextArea: {
+      height: scale(80),
+      textAlignVertical: "top",
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+      marginTop: theme.spacing.s,
+    },
+    modalButton: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+    },
+    modalCancelButton: {
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    modalConfirmButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    modalCancelText: {
+      ...theme.typography.button,
+      color: theme.colors.text.secondary,
+    },
+    modalConfirmText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    // Payment Type Selection Styles
+    paymentTypeContainer: {
+      marginBottom: theme.spacing.m,
+    },
+    paymentTypeLabel: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+    },
+    radioOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.s,
+      gap: 12,
+    },
+    radioOptionSelected: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.primary + "08",
+    },
+    radioCircle: {
+      width: scale(20),
+      height: scale(20),
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioCircleSelected: {
+      width: scale(10),
+      height: scale(10),
+      borderRadius: 5,
+      backgroundColor: theme.colors.primary,
+    },
+    radioLabel: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    radioSubtext: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: 2,
+    },
+    // Input Label Styles
+    inputLabel: {
+      ...theme.typography.body,
+      fontWeight: "500",
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xs,
+    },
+    required: {
+      color: theme.colors.status.error,
+    },
+    modalInputError: {
+      borderColor: theme.colors.status.error,
+      borderWidth: 1.5,
+    },
+    errorText: {
+      ...theme.typography.caption,
+      color: theme.colors.status.error,
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.s,
+    },
+    // Inline Payment Form Styles
+    paymentForm: {
+      marginTop: theme.spacing.m,
+      padding: theme.spacing.m,
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    formButtons: {
+      flexDirection: "row",
+      gap: theme.spacing.s,
+      marginTop: theme.spacing.m,
+    },
+    formButton: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    formCancelButton: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    formConfirmButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    formCancelText: {
+      ...theme.typography.button,
+      color: theme.colors.text.primary,
+    },
+    formConfirmText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    datePickerButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      marginBottom: theme.spacing.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    datePickerLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 2,
+    },
+    datePickerValue: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      fontWeight: "500",
+    },
+    datePickerModal: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0,0,0,0.5)",
+    },
+    datePickerContent: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      width: "85%",
+      ...theme.shadows.large,
+    },
+    datePickerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    datePickerTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    dateRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.l,
+      gap: theme.spacing.s,
+    },
+    dateColumn: {
+      flex: 1,
+    },
+    dateLabelText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    dateInput: {
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      textAlign: "center",
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    datePickerActions: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+      marginTop: theme.spacing.m,
+    },
+    datePickerCancel: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.background,
+      alignItems: "center",
+    },
+    datePickerConfirm: {
+      flex: 1,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+    },
+    datePickerCancelText: {
+      ...theme.typography.button,
+      color: theme.colors.text.secondary,
+    },
+    datePickerConfirmText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
+    // Card Health Score Widget Styles
+    cardHealthScoreWidget: {
+      marginTop: theme.spacing.s,
+      marginBottom: theme.spacing.m,
+      // No paddingHorizontal - inherits from parent cardSection
+      // No background, border-radius, or shadow - blends with page
+    },
+    cardHealthScoreHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    cardHealthScoreTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    cardHealthCircle: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      borderWidth: 5,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.background,
+    },
+    cardHealthNumber: {
+      fontSize: moderateScale(24),
+      fontWeight: "700",
+    },
+    cardHealthBreakdown: {
+      gap: theme.spacing.m,
+    },
+    cardHealthItem: {
+      marginBottom: theme.spacing.xs,
+    },
+    cardHealthItemHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    cardHealthItemLabel: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+    },
+    cardHealthItemScore: {
+      fontSize: moderateScale(11),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    cardHealthProgressBar: {
+      height: 5,
+      backgroundColor: theme.colors.border,
+      borderRadius: 2.5,
+      overflow: "hidden",
+    },
+    cardHealthProgressFill: {
+      height: "100%",
+      borderRadius: 2.5,
+    },
+    // Transaction Badge Styles (for Cicilan badge)
+    badgesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
+    miniBadge: {
+      backgroundColor: theme.colors.primary + "30",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    miniBadgeText: {
+      fontSize: moderateScale(9),
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+  });

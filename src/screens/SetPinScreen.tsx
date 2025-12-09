@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { moderateScale } from "../utils/responsive";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +20,11 @@ const PIN_LENGTH = 4;
 export const SetPinScreen = () => {
   const navigation = useNavigation();
   const { setPin } = useAuth();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [pin, setLocalPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [step, setStep] = useState<"enter" | "confirm">("enter");
@@ -121,71 +126,74 @@ export const SetPinScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    marginRight: theme.spacing.m,
-  },
-  headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.xl,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xl * 2,
-  },
-  pinContainer: {
-    flexDirection: "row",
-    marginBottom: theme.spacing.xl * 3,
-  },
-  pinDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.text.secondary,
-    marginHorizontal: theme.spacing.s,
-  },
-  pinDotFilled: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  keypad: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    width: width * 0.8,
-  },
-  key: {
-    width: width * 0.2,
-    height: width * 0.2,
-    justifyContent: "center",
-    alignItems: "center",
-    margin: theme.spacing.s,
-    borderRadius: width * 0.1,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.small,
-  },
-  keyText: {
-    fontSize: 28,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-});
+const getStyles = (theme: Theme) => {
+  const { width } = Dimensions.get("window");
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      marginRight: theme.spacing.m,
+    },
+    headerTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.xl,
+    },
+    title: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.xl * 2,
+    },
+    pinContainer: {
+      flexDirection: "row",
+      marginBottom: theme.spacing.xl * 3,
+    },
+    pinDot: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.text.secondary,
+      marginHorizontal: theme.spacing.s,
+    },
+    pinDotFilled: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    keypad: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      width: width * 0.8,
+    },
+    key: {
+      width: width * 0.2,
+      height: width * 0.2,
+      justifyContent: "center",
+      alignItems: "center",
+      margin: theme.spacing.s,
+      borderRadius: width * 0.1,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.small,
+    },
+    keyText: {
+      fontSize: 28,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+  });
+};

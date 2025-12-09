@@ -6,17 +6,25 @@ import {
   ScrollView,
   Dimensions,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { PieChart, LineChart } from "react-native-chart-kit";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
 import { storage } from "../utils/storage";
 import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../navigation/types";
+import { HealthScoreService } from "../services/HealthScoreService";
+import {
+  SpendingInsightsService,
+  SpendingInsight,
+} from "../services/SpendingInsightsService";
 
 const { width } = Dimensions.get("window");
 
@@ -36,7 +44,12 @@ const COLOR_PALETTE = [
 
 export const InsightsScreen = () => {
   const { cards, transactions } = useCards();
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   const [selectedPeriod, setSelectedPeriod] = useState<"month" | "year">(
     "month"
   );
@@ -53,6 +66,32 @@ export const InsightsScreen = () => {
     };
     loadBudgets();
   }, []);
+
+  // Generate smart spending insights
+  const spendingInsights = useMemo(() => {
+    return SpendingInsightsService.generateInsights(
+      transactions,
+      cards,
+      categoryBudgets
+    );
+  }, [transactions, cards, categoryBudgets]);
+
+  const handleInsightPress = (insight: SpendingInsight) => {
+    if (insight.type === "budget_warning") {
+      navigation.navigate("CategoryBudget");
+    } else if (
+      ["unusual_spending", "category_trend", "savings_tip"].includes(
+        insight.type
+      )
+    ) {
+      navigation.navigate("TransactionsList", {
+        initialCategory: insight.category,
+      });
+    } else if (insight.type === "milestone") {
+      // Milestone is about credit limit usage, so go to Cards Tab
+      navigation.navigate("CardsTab");
+    }
+  };
 
   const navigateDate = (direction: -1 | 1) => {
     const newDate = new Date(selectedDate);
@@ -171,11 +210,27 @@ export const InsightsScreen = () => {
         const cardTx = filteredTransactions.filter(
           (tx) => tx.cardId === card.id
         );
+
+        // Calculate remaining limit handling shared limits
+        let remainingLimit = card.creditLimit - card.currentUsage;
+
+        if (card.useSharedLimit && card.bankId) {
+          const groupCards = cards.filter(
+            (c) => c.bankId === card.bankId && c.useSharedLimit && !c.isArchived
+          );
+          const totalGroupUsage = groupCards.reduce(
+            (sum, c) => sum + (c.currentUsage || 0),
+            0
+          );
+          remainingLimit = card.creditLimit - totalGroupUsage;
+        }
+
         return {
           card,
           spending: cardTx.reduce((sum, tx) => sum + tx.amount, 0),
           txCount: cardTx.length,
           usagePercent: (card.currentUsage / card.creditLimit) * 100,
+          remainingLimit,
         };
       })
       .filter((d) => d.spending > 0 || d.usagePercent > 0)
@@ -239,13 +294,16 @@ export const InsightsScreen = () => {
   // For short display in charts, use same format as formatCurrency
   const formatCompactCurrency = (amount: number) => {
     if (isNaN(amount) || amount === 0) return "Rp 0";
-    if (amount >= 1_000_000_000) {
-      const val = (amount / 1_000_000_000).toFixed(2).replace(/\.00$/, "");
-      return `Rp ${val} M`;
+    const absAmount = Math.abs(amount);
+    const sign = amount < 0 ? "-" : "";
+
+    if (absAmount >= 1_000_000_000) {
+      const val = (absAmount / 1_000_000_000).toFixed(2).replace(/\.00$/, "");
+      return `${sign}Rp ${val} M`;
     }
-    if (amount >= 1_000_000) {
-      const val = (amount / 1_000_000).toFixed(2).replace(/\.00$/, "");
-      return `Rp ${val} Jt`;
+    if (absAmount >= 1_000_000) {
+      const val = (absAmount / 1_000_000).toFixed(2).replace(/\.00$/, "");
+      return `${sign}Rp ${val} Jt`;
     }
     // For < 1 million, show full format
     return new Intl.NumberFormat("id-ID", {
@@ -256,6 +314,41 @@ export const InsightsScreen = () => {
     })
       .format(amount)
       .replace(/Rp\s?/, "Rp ");
+  };
+
+  // Calculate Health Score
+  const healthScore = useMemo(() => {
+    return HealthScoreService.calculateHealthScore(cards, transactions);
+  }, [cards, transactions]);
+
+  // Get color based on rating
+  const getScoreColor = (rating: string) => {
+    switch (rating) {
+      case "excellent":
+        return "#10B981"; // green
+      case "good":
+        return "#3B82F6"; // blue
+      case "fair":
+        return "#F59E0B"; // yellow/orange
+      case "poor":
+        return "#EF4444"; // red
+      default:
+        return theme.colors.text.secondary;
+    }
+  };
+
+  const showHealthScoreInfo = () => {
+    Alert.alert(
+      "All Credit Health Score",
+      "Skor kesehatan kredit Anda dihitung dari:\n\n" +
+        "• Penggunaan Limit (40%): Menjaga penggunaan di bawah 30% dari total limit.\n" +
+        "• Riwayat Pembayaran (30%): Ketepatan waktu pembayaran tagihan.\n" +
+        "• Disiplin Budget (20%): Kepatuhan terhadap budget bulanan.\n" +
+        "• Trend (10%): Tren penurunan pengeluaran dalam 3 bulan terakhir.\n\n" +
+        `Total Skor: ${healthScore.totalScore}/100\n` +
+        `Rating: ${healthScore.rating.toUpperCase()}`,
+      [{ text: "Mengerti", style: "default" }]
+    );
   };
 
   return (
@@ -341,7 +434,7 @@ export const InsightsScreen = () => {
         >
           <Text style={styles.summaryLabel}>Total Pengeluaran</Text>
           <Text style={styles.summaryAmount}>
-            {formatCurrency(totalSpending)}
+            {formatCurrency(totalSpending, Number.MAX_SAFE_INTEGER)}
           </Text>
 
           <View style={styles.summaryDivider} />
@@ -374,6 +467,295 @@ export const InsightsScreen = () => {
             </View>
           </View>
         </LinearGradient>
+
+        {/* Smart Spending Insights */}
+        <View style={styles.insightsSection}>
+          <View style={styles.insightsSectionHeader}>
+            <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
+            <Text style={styles.insightsSectionTitle}>Smart Insights</Text>
+            {spendingInsights.length > 0 && (
+              <View style={styles.insightsBadge}>
+                <Text style={styles.insightsBadgeText}>
+                  {spendingInsights.length}
+                </Text>
+              </View>
+            )}
+          </View>
+          {spendingInsights.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.insightsScrollContent}
+              decelerationRate="fast"
+              snapToInterval={scale(240) + theme.spacing.m}
+            >
+              {spendingInsights.slice(0, 5).map((insight, index) => {
+                const severityColor = SpendingInsightsService.getSeverityColor(
+                  insight.severity,
+                  theme
+                );
+                const gradientColors: [string, string] =
+                  insight.severity === "warning"
+                    ? ["#FEF3C7", "#FDE68A"]
+                    : insight.severity === "success"
+                    ? ["#D1FAE5", "#A7F3D0"]
+                    : ["#EEF2FF", "#E0E7FF"];
+                const darkGradientColors: [string, string] =
+                  insight.severity === "warning"
+                    ? ["#78350F", "#92400E"]
+                    : insight.severity === "success"
+                    ? ["#064E3B", "#065F46"]
+                    : ["#312E81", "#3730A3"];
+
+                return (
+                  <TouchableOpacity
+                    key={insight.id}
+                    style={styles.insightCardWrapper}
+                    activeOpacity={0.9}
+                    onPress={() => handleInsightPress(insight)}
+                  >
+                    <LinearGradient
+                      colors={isDark ? darkGradientColors : gradientColors}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.insightCard}
+                    >
+                      {/* Severity Indicator */}
+                      <View
+                        style={[
+                          styles.insightSeverityDot,
+                          { backgroundColor: severityColor },
+                        ]}
+                      />
+
+                      {/* Icon with Background */}
+                      <View
+                        style={[
+                          styles.insightIconContainer,
+                          {
+                            backgroundColor: "rgba(255,255,255,0.95)",
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={insight.icon as any}
+                          size={20}
+                          color={severityColor}
+                        />
+                      </View>
+
+                      {/* Content */}
+                      <Text
+                        style={[
+                          styles.insightTitle,
+                          isDark && { color: "#FFFFFF" },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {insight.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.insightDescription,
+                          isDark && { color: "rgba(255,255,255,0.8)" },
+                        ]}
+                        numberOfLines={3}
+                      >
+                        {insight.description}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.insightsEmptyState}>
+              <View style={styles.insightsEmptyIcon}>
+                <Ionicons
+                  name="sparkles"
+                  size={32}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={styles.insightsEmptyTitle}>Belum Ada Insight</Text>
+              <Text style={styles.insightsEmptyText}>
+                Tambahkan lebih banyak transaksi untuk mendapatkan analisis
+                pengeluaran cerdas.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Credit Health Score */}
+        <View style={styles.card}>
+          <View style={styles.healthScoreHeader}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Text style={[styles.cardTitle, { marginBottom: 0 }]}>
+                All Credit Health Score
+              </Text>
+              <TouchableOpacity
+                onPress={showHealthScoreInfo}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="information-circle-outline"
+                  size={18}
+                  color={theme.colors.text.secondary}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Score Circle */}
+          <View style={styles.scoreContainer}>
+            <View
+              style={[
+                styles.scoreCircle,
+                { borderColor: getScoreColor(healthScore.rating) },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.scoreNumber,
+                  { color: getScoreColor(healthScore.rating) },
+                ]}
+              >
+                {healthScore.totalScore}
+              </Text>
+              <Text style={styles.scoreLabel}>/ 100</Text>
+            </View>
+          </View>
+
+          {/* Breakdown */}
+          <Text style={styles.breakdownTitle}>Rincian Skor</Text>
+
+          {/* Penggunaan Limit */}
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownHeader}>
+              <Text style={styles.breakdownLabel}>Penggunaan Limit</Text>
+              <Text style={styles.breakdownScore}>
+                {healthScore.breakdown.creditUtilization.score}/40
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${
+                      (healthScore.breakdown.creditUtilization.score / 40) * 100
+                    }%`,
+                    backgroundColor: getScoreColor(
+                      healthScore.breakdown.creditUtilization.rating
+                    ),
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.breakdownDetail}>
+              {healthScore.breakdown.creditUtilization.percentage.toFixed(1)}%
+              dari limit terpakai
+            </Text>
+          </View>
+
+          {/* Riwayat Pembayaran */}
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownHeader}>
+              <Text style={styles.breakdownLabel}>Riwayat Pembayaran</Text>
+              <Text style={styles.breakdownScore}>
+                {healthScore.breakdown.paymentHistory.score}/30
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${
+                      (healthScore.breakdown.paymentHistory.score / 30) * 100
+                    }%`,
+                    backgroundColor: getScoreColor(
+                      healthScore.breakdown.paymentHistory.rating
+                    ),
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.breakdownDetail}>
+              {healthScore.breakdown.paymentHistory.onTimeCount} tepat waktu,{" "}
+              {healthScore.breakdown.paymentHistory.lateCount} telat
+            </Text>
+          </View>
+
+          {/* Disiplin Budget */}
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownHeader}>
+              <Text style={styles.breakdownLabel}>Disiplin Budget</Text>
+              <Text style={styles.breakdownScore}>
+                {healthScore.breakdown.spendingDiscipline.score}/20
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${
+                      (healthScore.breakdown.spendingDiscipline.score / 20) *
+                      100
+                    }%`,
+                    backgroundColor: getScoreColor(
+                      healthScore.breakdown.spendingDiscipline.rating
+                    ),
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.breakdownDetail}>
+              {healthScore.breakdown.spendingDiscipline.budgetUsage > 0
+                ? `${healthScore.breakdown.spendingDiscipline.budgetUsage.toFixed(
+                    0
+                  )}% dari budget`
+                : "Belum ada budget"}
+            </Text>
+          </View>
+
+          {/* Trend */}
+          <View style={styles.breakdownItem}>
+            <View style={styles.breakdownHeader}>
+              <Text style={styles.breakdownLabel}>Trend (3 Bulan)</Text>
+              <Text style={styles.breakdownScore}>
+                {healthScore.breakdown.trend.score}/10
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${(healthScore.breakdown.trend.score / 10) * 100}%`,
+                    backgroundColor:
+                      healthScore.breakdown.trend.direction === "improving"
+                        ? "#10B981"
+                        : healthScore.breakdown.trend.direction === "declining"
+                        ? "#EF4444"
+                        : "#6B7280",
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.breakdownDetail}>
+              Spending{" "}
+              {healthScore.breakdown.trend.direction === "improving"
+                ? "menurun ✓"
+                : healthScore.breakdown.trend.direction === "declining"
+                ? "meningkat ↑"
+                : "stabil"}
+            </Text>
+          </View>
+        </View>
 
         {/* Weekly Trend */}
         <View style={styles.card}>
@@ -457,7 +839,7 @@ export const InsightsScreen = () => {
         {monthlyTrend.some((m) => m.amount > 0) && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Tren Pengeluaran 6 Bulan</Text>
-            <View style={{ marginLeft: -16 }}>
+            <View style={{ paddingRight: 8 }}>
               <LineChart
                 data={{
                   labels: monthlyTrend.map((m) => m.label),
@@ -468,12 +850,15 @@ export const InsightsScreen = () => {
                     },
                   ],
                 }}
-                width={width - 32}
+                width={width - 48}
                 height={180}
                 chartConfig={{
                   ...chartConfig,
                   backgroundGradientFrom: theme.colors.surface,
                   backgroundGradientTo: theme.colors.surface,
+                  propsForLabels: {
+                    fontSize: 10,
+                  },
                 }}
                 bezier
                 style={{
@@ -483,9 +868,15 @@ export const InsightsScreen = () => {
                 withOuterLines={false}
                 formatYLabel={(value) => {
                   const num = parseFloat(value);
-                  if (num >= 1000000) return `${(num / 1000000).toFixed(0)}jt`;
-                  if (num >= 1000) return `${(num / 1000).toFixed(0)}rb`;
-                  return value;
+                  const absNum = Math.abs(num);
+                  const sign = num < 0 ? "-" : "";
+                  if (absNum >= 1000000000)
+                    return `${sign}Rp ${(absNum / 1000000000).toFixed(1)} M`;
+                  if (absNum >= 1000000)
+                    return `${sign}Rp ${(absNum / 1000000).toFixed(0)} Jt`;
+                  if (absNum >= 1000)
+                    return `${sign}Rp ${(absNum / 1000).toFixed(0)} Rb`;
+                  return `${sign}Rp ${absNum}`;
                 }}
               />
             </View>
@@ -641,10 +1032,23 @@ export const InsightsScreen = () => {
                     ]}
                   />
                 </View>
-                <Text style={styles.usageText}>
-                  {item.usagePercent.toFixed(0)}% limit • {item.txCount}{" "}
-                  transaksi
-                </Text>
+                <View style={styles.usageInfoContainer}>
+                  <View>
+                    <Text style={styles.usageLabel}>Sisa Limit</Text>
+                    <Text style={styles.usageValue}>
+                      {formatCurrency(
+                        item.remainingLimit,
+                        Number.MAX_SAFE_INTEGER
+                      )}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={styles.usageLabel}>Total Transaksi</Text>
+                    <Text style={styles.usageValue}>
+                      {item.txCount} transaksi
+                    </Text>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
@@ -671,324 +1075,580 @@ export const InsightsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  periodSelector: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    margin: theme.spacing.m,
-    padding: 4,
-    borderRadius: theme.borderRadius.l,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.m,
-    alignItems: "center",
-    borderRadius: theme.borderRadius.m,
-  },
-  periodButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  periodText: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-  },
-  periodTextActive: {
-    color: "#FFF",
-  },
-  dateNavigator: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-  },
-  navButton: {
-    padding: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-  },
-  dateLabel: {
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  content: {
-    paddingHorizontal: theme.spacing.m,
-  },
-  summaryCard: {
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-  },
-  summaryLabel: {
-    fontSize: moderateScale(13),
-    color: "rgba(255,255,255,0.8)",
-  },
-  summaryAmount: {
-    fontSize: moderateScale(28),
-    fontWeight: "700",
-    color: "#FFF",
-    marginTop: theme.spacing.xs,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginVertical: theme.spacing.m,
-  },
-  summaryStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  statLabel: {
-    fontSize: moderateScale(11),
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-  },
-  changeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-  },
-  cardTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-  },
-  chartBars: {
-    flexDirection: "row",
-    height: scale(130),
-    gap: 4,
-  },
-  barColumn: {
-    flex: 1,
-    alignItems: "center",
-  },
-  barValue: {
-    fontSize: moderateScale(8),
-    color: theme.colors.text.tertiary,
-    marginBottom: 4,
-    height: 20,
-    textAlign: "center",
-  },
-  barWrapper: {
-    flex: 1,
-    width: "75%",
-    justifyContent: "flex-end",
-  },
-  bar: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-    minHeight: 4,
-  },
-  barLabel: {
-    fontSize: moderateScale(11),
-    color: theme.colors.text.secondary,
-    marginTop: 6,
-    fontWeight: "500",
-  },
-  legendList: {
-    gap: theme.spacing.s,
-  },
-  legendRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: theme.spacing.xs,
-  },
-  legendLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: theme.spacing.s,
-  },
-  legendName: {
-    fontSize: moderateScale(14),
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  legendRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-  },
-  legendAmount: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    minWidth: 65,
-    textAlign: "right",
-  },
-  legendPercent: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.secondary,
-    minWidth: 30,
-    textAlign: "right",
-  },
-  cardUsageItem: {
-    marginBottom: theme.spacing.m,
-    paddingBottom: theme.spacing.s,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  cardUsageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-  },
-  cardNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  cardDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: theme.spacing.s,
-  },
-  cardUsageName: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  cardUsageSpending: {
-    fontSize: moderateScale(14),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  usageBarBg: {
-    height: 6,
-    backgroundColor: theme.colors.border,
-    borderRadius: 3,
-    marginVertical: theme.spacing.xs,
-  },
-  usageBarFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  usageText: {
-    fontSize: moderateScale(11),
-    color: theme.colors.text.tertiary,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: theme.spacing.xxl,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-  },
-  emptyTitle: {
-    fontSize: moderateScale(18),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.m,
-  },
-  emptyDesc: {
-    fontSize: moderateScale(14),
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.s,
-    textAlign: "center",
-  },
-  trendSummary: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: theme.spacing.m,
-    paddingTop: theme.spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  trendItem: {
-    alignItems: "center",
-  },
-  trendLabel: {
-    fontSize: moderateScale(11),
-    color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.xs,
-  },
-  trendValue: {
-    fontSize: moderateScale(14),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  seeAllText: {
-    fontSize: moderateScale(13),
-    fontWeight: "600",
-    color: theme.colors.primary,
-  },
-  budgetItem: {
-    marginBottom: theme.spacing.m,
-  },
-  budgetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-  },
-  budgetCategory: {
-    fontSize: moderateScale(14),
-    fontWeight: "500",
-    color: theme.colors.text.primary,
-  },
-  budgetPercentage: {
-    fontSize: moderateScale(14),
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  budgetProgressBg: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  budgetProgressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  budgetDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: theme.spacing.xs,
-  },
-  budgetSpent: {
-    fontSize: moderateScale(12),
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  budgetLimit: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.tertiary,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    periodSelector: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.surface,
+      margin: theme.spacing.m,
+      padding: 4,
+      borderRadius: theme.borderRadius.l,
+    },
+    periodButton: {
+      flex: 1,
+      paddingVertical: theme.spacing.m,
+      alignItems: "center",
+      borderRadius: theme.borderRadius.m,
+    },
+    periodButtonActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    periodText: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+    },
+    periodTextActive: {
+      color: "#FFF",
+    },
+    dateNavigator: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+    },
+    navButton: {
+      padding: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+    },
+    dateLabel: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    content: {
+      paddingHorizontal: theme.spacing.m,
+    },
+    summaryCard: {
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+    },
+    summaryLabel: {
+      fontSize: moderateScale(13),
+      color: "rgba(255,255,255,0.8)",
+    },
+    summaryAmount: {
+      fontSize: moderateScale(28),
+      fontWeight: "700",
+      color: "#FFF",
+      marginTop: theme.spacing.xs,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: "rgba(255,255,255,0.2)",
+      marginVertical: theme.spacing.m,
+    },
+    summaryStats: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    statItem: {
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: "#FFF",
+    },
+    statLabel: {
+      fontSize: moderateScale(11),
+      color: "rgba(255,255,255,0.7)",
+      marginTop: 2,
+    },
+    changeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+    },
+    cardTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+    chartBars: {
+      flexDirection: "row",
+      height: scale(130),
+      gap: 4,
+    },
+    barColumn: {
+      flex: 1,
+      alignItems: "center",
+    },
+    barValue: {
+      fontSize: moderateScale(8),
+      color: theme.colors.text.tertiary,
+      marginBottom: 4,
+      height: 20,
+      textAlign: "center",
+    },
+    barWrapper: {
+      flex: 1,
+      width: "75%",
+      justifyContent: "flex-end",
+    },
+    bar: {
+      width: "100%",
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+      minHeight: 4,
+    },
+    barLabel: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+      marginTop: 6,
+      fontWeight: "500",
+    },
+    legendList: {
+      gap: theme.spacing.s,
+    },
+    legendRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: theme.spacing.xs,
+    },
+    legendLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: theme.spacing.s,
+    },
+    legendName: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    legendRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+    },
+    legendAmount: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      minWidth: 65,
+      textAlign: "right",
+    },
+    legendPercent: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+      minWidth: 30,
+      textAlign: "right",
+    },
+    cardUsageItem: {
+      marginBottom: theme.spacing.m,
+      paddingBottom: theme.spacing.s,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    cardUsageHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    cardNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    cardDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: theme.spacing.s,
+    },
+    cardUsageName: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    cardUsageSpending: {
+      fontSize: moderateScale(14),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    usageBarBg: {
+      height: 6,
+      backgroundColor: theme.colors.border,
+      borderRadius: 3,
+      marginVertical: theme.spacing.xs,
+    },
+    usageBarFill: {
+      height: "100%",
+      borderRadius: 3,
+    },
+    usageText: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+      fontWeight: "500",
+    },
+    usageInfoContainer: {
+      marginTop: 4,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    usageLabel: {
+      fontSize: moderateScale(10),
+      color: theme.colors.text.tertiary,
+      marginBottom: 2,
+    },
+    usageValue: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.secondary,
+      fontWeight: "500",
+    },
+    emptyState: {
+      alignItems: "center",
+      padding: theme.spacing.xxl,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+    },
+    emptyTitle: {
+      fontSize: moderateScale(18),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.m,
+    },
+    emptyDesc: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.s,
+      textAlign: "center",
+    },
+    trendSummary: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    trendItem: {
+      alignItems: "center",
+    },
+    trendLabel: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.tertiary,
+      marginBottom: theme.spacing.xs,
+    },
+    trendValue: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    seeAllText: {
+      fontSize: moderateScale(13),
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    budgetItem: {
+      marginBottom: theme.spacing.m,
+    },
+    budgetHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    budgetCategory: {
+      fontSize: moderateScale(14),
+      fontWeight: "500",
+      color: theme.colors.text.primary,
+    },
+    budgetPercentage: {
+      fontSize: moderateScale(14),
+      fontWeight: "700",
+      color: theme.colors.primary,
+    },
+    budgetProgressBg: {
+      height: 6,
+      backgroundColor: theme.colors.border,
+      borderRadius: 3,
+      overflow: "hidden",
+    },
+    budgetProgressFill: {
+      height: "100%",
+      borderRadius: 3,
+    },
+    budgetDetails: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: theme.spacing.xs,
+    },
+    budgetSpent: {
+      fontSize: moderateScale(12),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    budgetLimit: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.tertiary,
+    },
+    // Health Score Styles
+    healthScoreHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    ratingBadge: {
+      paddingHorizontal: moderateScale(12),
+      paddingVertical: moderateScale(4),
+      borderRadius: theme.borderRadius.m,
+    },
+    ratingText: {
+      fontSize: moderateScale(10),
+      fontWeight: "700",
+      textTransform: "uppercase",
+    },
+    scoreContainer: {
+      alignItems: "center",
+      paddingVertical: theme.spacing.l,
+    },
+    scoreCircle: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      borderWidth: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    scoreNumber: {
+      fontSize: moderateScale(40),
+      fontWeight: "700",
+    },
+    scoreLabel: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.tertiary,
+    },
+    breakdownTitle: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+      marginTop: theme.spacing.s,
+    },
+    breakdownItem: {
+      marginBottom: theme.spacing.m,
+    },
+    breakdownHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.xs,
+    },
+    breakdownLabel: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+    },
+    breakdownScore: {
+      fontSize: moderateScale(12),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    progressBar: {
+      height: 6,
+      backgroundColor: theme.colors.border,
+      borderRadius: 3,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 3,
+    },
+    breakdownDetail: {
+      fontSize: moderateScale(11),
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.xs,
+    },
+    recommendationsContainer: {
+      marginTop: theme.spacing.l,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    recommendationsTitle: {
+      fontSize: moderateScale(14),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+    },
+    recommendationItem: {
+      flexDirection: "row",
+      marginBottom: theme.spacing.xs,
+      paddingRight: theme.spacing.m,
+    },
+    recommendationBullet: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+      marginRight: theme.spacing.xs,
+    },
+    recommendationText: {
+      flex: 1,
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+      lineHeight: 18,
+    },
+    // Smart Insights Styles
+    insightsSection: {
+      marginTop: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+    },
+    insightsSectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+    },
+    insightsSectionTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    insightsBadge: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    insightsBadgeText: {
+      color: "#FFFFFF",
+      fontSize: moderateScale(11),
+      fontWeight: "600",
+    },
+    insightsScrollContent: {
+      paddingHorizontal: theme.spacing.m,
+      gap: theme.spacing.m,
+    },
+    insightCardWrapper: {
+      width: scale(240),
+      minHeight: scale(150),
+      borderRadius: theme.borderRadius.l,
+      marginRight: theme.spacing.m,
+      ...theme.shadows.medium,
+    },
+    insightCard: {
+      flex: 1,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.2)",
+    },
+    insightIconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.colors.background,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing.s,
+    },
+    insightTitle: {
+      fontSize: moderateScale(14),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: 6,
+      letterSpacing: 0.2,
+    },
+    insightDescription: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+      lineHeight: 17,
+      opacity: 0.9,
+    },
+    insightCategoryBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: "rgba(0,0,0,0.1)",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    insightCategoryText: {
+      fontSize: moderateScale(10),
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+    },
+    // Additional Insight Card Styles
+    insightSeverityDot: {
+      position: "absolute",
+      top: 14,
+      right: 14,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 2,
+      borderColor: "rgba(255,255,255,0.5)",
+    },
+    insightBottomRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: "auto",
+    },
+    insightActionIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    // Empty State for Insights
+    insightsEmptyState: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.l,
+      marginHorizontal: theme.spacing.m,
+      alignItems: "center",
+      ...theme.shadows.small,
+    },
+    insightsEmptyIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: theme.colors.primary + "15",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing.m,
+    },
+    insightsEmptyTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    insightsEmptyText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      lineHeight: 18,
+    },
+  });

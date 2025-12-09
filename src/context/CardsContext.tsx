@@ -29,7 +29,7 @@ import {
 interface CardsContextType {
   cards: Card[];
   isLoading: boolean;
-  addCard: (data: CardFormData) => Promise<void>;
+  addCard: (data: CardFormData) => Promise<string>;
   updateCard: (id: string, data: Partial<Card>) => Promise<void>;
   deleteCard: (id: string) => Promise<void>;
   archiveCard: (id: string, isArchived: boolean) => Promise<void>;
@@ -297,11 +297,12 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     setCards(updatedCards);
     await storage.saveCards(updatedCards);
 
-    // Schedule reminders
+    // Schedule reminders (NotificationService handles all payment reminders)
     NotificationService.schedulePaymentReminder(newCard);
     NotificationService.scheduleLimitIncreaseReminder(newCard);
     NotificationService.scheduleAnnualFeeReminder(newCard);
-    await scheduleCardReminder(newCard);
+    // Note: scheduleCardReminder removed - NotificationService already schedules 3-day reminder
+    return newCard.id;
   };
 
   const updateCard = async (id: string, data: Partial<Card>) => {
@@ -330,11 +331,11 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
 
     const updatedCard = updatedCards.find((c) => c.id === id);
     if (updatedCard) {
-      // Reschedule reminders
+      // Reschedule reminders (NotificationService handles all payment reminders)
       NotificationService.schedulePaymentReminder(updatedCard);
       NotificationService.scheduleLimitIncreaseReminder(updatedCard);
       NotificationService.scheduleAnnualFeeReminder(updatedCard);
-      await scheduleCardReminder(updatedCard);
+      // Note: scheduleCardReminder removed - NotificationService already schedules 3-day reminder
     }
   };
 
@@ -483,6 +484,7 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     const updatedSubs = [...subscriptions, newSub];
     setSubscriptions(updatedSubs);
     await storage.saveSubscriptions(updatedSubs);
+    await checkSubscriptions(updatedSubs, transactions, cards);
   };
 
   const updateSubscription = async (
@@ -496,6 +498,7 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
     );
     setSubscriptions(updatedSubs);
     await storage.saveSubscriptions(updatedSubs);
+    await checkSubscriptions(updatedSubs, transactions, cards);
   };
 
   const deleteSubscription = async (id: string) => {

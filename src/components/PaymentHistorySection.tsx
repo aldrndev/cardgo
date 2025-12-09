@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
-// import { useAppTheme } from "../context/ThemeContext";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { PaymentRecord } from "../types/card";
 import { formatCurrency } from "../utils/formatters";
 import { useNavigation } from "@react-navigation/native";
@@ -27,6 +26,10 @@ export const PaymentHistorySection: React.FC<PaymentHistorySectionProps> = ({
   cardId,
 }) => {
   const navigation = useNavigation<NavigationProp>();
+  const { theme } = useTheme();
+
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
   if (history.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -151,142 +154,143 @@ export const PaymentHistorySection: React.FC<PaymentHistorySectionProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.m,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  seeAllText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  headerTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  list: {
-    maxHeight: 300,
-  },
-  listContent: {
-    paddingVertical: theme.spacing.xs,
-  },
-  recordItem: {
-    flexDirection: "row",
-    marginBottom: theme.spacing.m,
-  },
-  timelineContainer: {
-    alignItems: "center",
-    marginRight: theme.spacing.m,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.border,
-    borderWidth: 2,
-    borderColor: theme.colors.surface,
-  },
-  timelineDotActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary + "30",
-  },
-  timelineLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: theme.colors.border,
-    marginTop: 4,
-  },
-  recordContent: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.s,
-    padding: theme.spacing.m,
-  },
-  recordHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-  },
-  billingCycle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  amount: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  recordDetails: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: theme.spacing.xs,
-  },
-  dateText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  notesContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    marginTop: theme.spacing.s,
-    paddingTop: theme.spacing.s,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  notesText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    flex: 1,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.m,
-    fontWeight: "500",
-  },
-  emptySubtext: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
-  },
-  paymentTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: theme.colors.status.warning + "20",
-  },
-  fullPaymentBadge: {
-    backgroundColor: theme.colors.status.success + "20",
-  },
-  paymentTypeText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.status.warning,
-  },
-  fullPaymentText: {
-    color: theme.colors.status.success,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.m,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    seeAllText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    headerTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    list: {
+      maxHeight: 300,
+    },
+    listContent: {
+      paddingVertical: theme.spacing.xs,
+    },
+    recordItem: {
+      flexDirection: "row",
+      marginBottom: theme.spacing.m,
+    },
+    timelineContainer: {
+      alignItems: "center",
+      marginRight: theme.spacing.m,
+    },
+    timelineDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: theme.colors.border,
+      borderWidth: 2,
+      borderColor: theme.colors.surface,
+    },
+    timelineDotActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary + "30",
+    },
+    timelineLine: {
+      flex: 1,
+      width: 2,
+      backgroundColor: theme.colors.border,
+      marginTop: 4,
+    },
+    recordContent: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.s,
+      padding: theme.spacing.m,
+    },
+    recordHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    billingCycle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    amount: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.primary,
+    },
+    recordDetails: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: theme.spacing.xs,
+    },
+    dateText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    notesContainer: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 6,
+      marginTop: theme.spacing.s,
+      paddingTop: theme.spacing.s,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    notesText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      flex: 1,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      paddingVertical: theme.spacing.xl,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.m,
+      fontWeight: "500",
+    },
+    emptySubtext: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.xs,
+    },
+    paymentTypeBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+      backgroundColor: theme.colors.status.warning + "20",
+    },
+    fullPaymentBadge: {
+      backgroundColor: theme.colors.status.success + "20",
+    },
+    paymentTypeText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: theme.colors.status.warning,
+    },
+    fullPaymentText: {
+      color: theme.colors.status.success,
+    },
+  });

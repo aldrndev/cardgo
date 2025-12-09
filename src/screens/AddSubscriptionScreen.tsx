@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,26 +8,35 @@ import {
   ScrollView,
   Alert,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { scale, moderateScale } from "../utils/responsive";
-import { CATEGORIES } from "../utils/categorizer";
+import { CATEGORIES, categorizeTransaction } from "../utils/categorizer";
 import { getCategoryIcon } from "../utils/categoryIcons";
 import {
   parseAmount,
   formatNumberInput,
   formatCurrency,
 } from "../utils/formatters";
+import * as Haptics from "expo-haptics";
+import { CURRENCIES, Currency } from "../constants/currencies";
 
 export const AddSubscriptionScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { cardId: paramCardId } = route.params || {};
   const { cards, addSubscription } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -37,11 +46,19 @@ export const AddSubscriptionScreen = () => {
   );
   const [billingDay, setBillingDay] = useState("1");
   const [category, setCategory] = useState("Hiburan");
-  const [description, setDescription] = useState("");
 
   const [currency, setCurrency] = useState("IDR");
   const [exchangeRate, setExchangeRate] = useState("");
-  const CURRENCIES = ["IDR", "USD", "SGD", "EUR", "JPY", "AUD"];
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [searchCurrency, setSearchCurrency] = useState("");
+
+  const handleNameChange = (text: string) => {
+    setName(text);
+    const suggestedCategory = categorizeTransaction(text);
+    if (suggestedCategory !== "Lainnya") {
+      setCategory(suggestedCategory);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -102,7 +119,7 @@ export const AddSubscriptionScreen = () => {
         nextBillingDate: nextDate.toISOString(),
         category,
         isActive: true,
-        description,
+        // description: undefined, // description removed
       });
       navigation.goBack();
     } catch (error) {
@@ -118,100 +135,217 @@ export const AddSubscriptionScreen = () => {
           style={styles.backButton}
         >
           <Ionicons
-            name="arrow-back"
+            name="close"
             size={moderateScale(24)}
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
         <Text style={styles.title}>Tambah Langganan</Text>
-        <View style={{ width: theme.containerSizes.iconMedium }} />
+        <View style={{ width: scale(24) }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.amountContainer}>
-          <Text style={styles.currencyPrefix}>
-            {currency === "IDR" ? "Rp" : currency}
-          </Text>
-          <TextInput
-            style={styles.amountInput}
-            value={amount}
-            onChangeText={(text) => {
-              const numeric = text.replace(/[^0-9]/g, "");
-              if (numeric) {
-                setAmount(parseInt(numeric).toLocaleString("id-ID"));
-              } else {
-                setAmount("");
-              }
-            }}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor={theme.colors.text.tertiary}
-            autoFocus
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.sectionLabel}>Mata Uang</Text>
-          <ScrollView
-            horizontal
-            contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-            showsHorizontalScrollIndicator={false}
-          >
-            {CURRENCIES.map((curr) => (
-              <TouchableOpacity
-                key={curr}
-                style={[
-                  styles.currencyChip,
-                  currency === curr && styles.activeCurrencyChip,
-                ]}
-                onPress={() => setCurrency(curr)}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Card Selector (only if no paramCardId) */}
+          {!paramCardId && (
+            <View style={styles.cardSelectorContainer}>
+              <Text style={styles.sectionLabel}>Pilih Kartu</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.cardSelectorContent}
               >
-                <Text
-                  style={[
-                    styles.currencyChipText,
-                    currency === curr && styles.activeCurrencyChipText,
-                  ]}
-                >
-                  {curr}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                {cards.map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    style={[
+                      styles.cardOption,
+                      cardId === card.id && {
+                        backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.primary,
+                        borderWidth: 2,
+                      },
+                    ]}
+                    onPress={() => setCardId(card.id)}
+                  >
+                    <Ionicons
+                      name="card"
+                      size={moderateScale(20)}
+                      color={
+                        cardId === card.id
+                          ? "#FFFFFF"
+                          : theme.colors.text.tertiary
+                      }
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={[
+                        styles.cardOptionText,
+                        cardId === card.id && {
+                          color: "#FFFFFF",
+                          fontWeight: "600",
+                        },
+                      ]}
+                    >
+                      {card.alias}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
-        {currency !== "IDR" && (
-          <View style={styles.inputContainer}>
+          {/* Currency Selector */}
+          <TouchableOpacity
+            style={[styles.inputContainer, { marginBottom: theme.spacing.l }]}
+            onPress={() => setShowCurrencyPicker(true)}
+          >
             <Ionicons
-              name="cash-outline"
+              name="flag-outline"
               size={moderateScale(20)}
               color={theme.colors.text.secondary}
               style={styles.inputIcon}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.inputLabel}>Nilai Tukar (Ke IDR)</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Contoh: 15000"
-                placeholderTextColor={theme.colors.text.tertiary}
-                keyboardType="numeric"
-                value={formatNumberInput(exchangeRate)}
-                onChangeText={(text) =>
-                  setExchangeRate(parseAmount(text).toString())
-                }
-              />
-              {amount && exchangeRate && (
-                <Text style={styles.helperText}>
-                  Estimasi:{" "}
-                  {formatCurrency(
-                    parseAmount(amount) * parseAmount(exchangeRate)
-                  )}
-                </Text>
-              )}
+              <Text style={styles.inputLabel}>Mata Uang</Text>
+              <Text style={styles.textInput}>
+                {CURRENCIES.find((c) => c.code === currency)?.flag}{" "}
+                {CURRENCIES.find((c) => c.code === currency)?.code} -{" "}
+                {CURRENCIES.find((c) => c.code === currency)?.name}
+              </Text>
             </View>
-          </View>
-        )}
+            <Ionicons
+              name="chevron-down"
+              size={20}
+              color={theme.colors.text.secondary}
+            />
+          </TouchableOpacity>
 
-        <View style={styles.card}>
+          {/* Currency Picker Modal */}
+          <Modal
+            visible={showCurrencyPicker}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setShowCurrencyPicker(false)}
+          >
+            <SafeAreaView
+              style={{ flex: 1, backgroundColor: theme.colors.background }}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Pilih Mata Uang</Text>
+                <TouchableOpacity onPress={() => setShowCurrencyPicker(false)}>
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={theme.colors.text.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.searchContainer}>
+                <Ionicons
+                  name="search"
+                  size={20}
+                  color={theme.colors.text.secondary}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Cari mata uang..."
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  value={searchCurrency}
+                  onChangeText={setSearchCurrency}
+                  autoFocus={false}
+                />
+              </View>
+              <ScrollView contentContainerStyle={styles.currencyList}>
+                {CURRENCIES.filter(
+                  (c) =>
+                    c.code
+                      .toLowerCase()
+                      .includes(searchCurrency.toLowerCase()) ||
+                    c.name.toLowerCase().includes(searchCurrency.toLowerCase())
+                ).map((c) => (
+                  <TouchableOpacity
+                    key={c.code}
+                    style={styles.currencyItem}
+                    onPress={() => {
+                      setCurrency(c.code);
+                      setShowCurrencyPicker(false);
+                      setSearchCurrency("");
+                    }}
+                  >
+                    <Text style={styles.currencyFlag}>{c.flag}</Text>
+                    <View>
+                      <Text style={styles.currencyCode}>{c.code}</Text>
+                      <Text style={styles.currencyName}>{c.name}</Text>
+                    </View>
+                    {currency === c.code && (
+                      <Ionicons
+                        name="checkmark"
+                        size={24}
+                        color={theme.colors.primary}
+                        style={{ marginLeft: "auto" }}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </SafeAreaView>
+          </Modal>
+
+          {/* Amount Input - Hero Element */}
+          <View style={styles.amountCard}>
+            <Text style={styles.amountLabel}>Biaya Langganan</Text>
+            <View style={styles.amountInputRow}>
+              <Text style={styles.currencyPrefix}>{currency}</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={formatNumberInput(amount)}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, "");
+                  setAmount(cleaned ? parseInt(cleaned).toString() : "");
+                }}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={theme.colors.text.tertiary}
+                autoFocus
+              />
+            </View>
+            {currency !== "IDR" && amount && exchangeRate && (
+              <Text style={styles.amountEquivalent}>
+                ≈ Rp{" "}
+                {(
+                  parseAmount(amount) * parseAmount(exchangeRate)
+                ).toLocaleString("id-ID")}
+              </Text>
+            )}
+
+            {/* Exchange Rate Input - Only if currency != IDR */}
+            {currency !== "IDR" && (
+              <View style={styles.exchangeRateContainer}>
+                <Text style={styles.inputLabel}>Nilai Tukar (Ke IDR)</Text>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { borderBottomWidth: 1, borderColor: theme.colors.border },
+                  ]}
+                  placeholder="Contoh: 15000"
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  keyboardType="numeric"
+                  value={formatNumberInput(exchangeRate)}
+                  onChangeText={(text) =>
+                    setExchangeRate(parseAmount(text).toString())
+                  }
+                />
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.sectionLabel}>Detail Langganan</Text>
+
+          {/* Name Input */}
           <View style={styles.inputContainer}>
             <Ionicons
               name="create-outline"
@@ -219,41 +353,48 @@ export const AddSubscriptionScreen = () => {
               color={theme.colors.text.secondary}
               style={styles.inputIcon}
             />
-            <TextInput
-              style={styles.textInput}
-              placeholder="Nama Layanan (cth. Netflix)"
-              value={name}
-              onChangeText={setName}
-              placeholderTextColor={theme.colors.text.tertiary}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color={theme.colors.text.secondary}
-              style={styles.inputIcon}
-            />
             <View style={{ flex: 1 }}>
-              <Text style={styles.inputLabel}>Tanggal Tagihan (1-31)</Text>
+              <Text style={styles.inputLabel}>Nama Layanan</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Contoh: 25"
-                value={billingDay}
-                onChangeText={(text) => {
-                  const val = parseInt(text);
-                  if (!text || (val >= 1 && val <= 31)) {
-                    setBillingDay(text);
-                  }
-                }}
-                keyboardType="numeric"
-                maxLength={2}
+                placeholder="Contoh: Netflix, Spotify"
+                value={name}
+                onChangeText={handleNameChange}
                 placeholderTextColor={theme.colors.text.tertiary}
               />
             </View>
           </View>
 
+          {/* Billing Day & Cycle */}
+          <View style={{ flexDirection: "row", gap: theme.spacing.m }}>
+            <View style={[styles.inputContainer, { flex: 1 }]}>
+              <Ionicons
+                name="calendar-outline"
+                size={moderateScale(20)}
+                color={theme.colors.text.secondary}
+                style={styles.inputIcon}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Tgl Tagihan</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Tgl 1-31"
+                  value={billingDay}
+                  onChangeText={(text) => {
+                    const val = parseInt(text);
+                    if (!text || (val >= 1 && val <= 31)) {
+                      setBillingDay(text);
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  placeholderTextColor={theme.colors.text.tertiary}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Cycle Selection */}
           <View style={styles.cycleContainer}>
             <TouchableOpacity
               style={[
@@ -289,60 +430,11 @@ export const AddSubscriptionScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {!paramCardId && (
-            <>
-              <Text style={styles.sectionLabel}>Sumber Dana</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalScroll}
-              >
-                {cards.map((card) => (
-                  <TouchableOpacity
-                    key={card.id}
-                    style={[
-                      styles.cardOption,
-                      cardId === card.id && styles.cardOptionActive,
-                      { borderColor: card.colorTheme || theme.colors.primary },
-                    ]}
-                    onPress={() => setCardId(card.id)}
-                  >
-                    <Ionicons
-                      name="card"
-                      size={moderateScale(20)}
-                      color={card.colorTheme || theme.colors.primary}
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text
-                      style={[
-                        styles.cardOptionText,
-                        cardId === card.id && styles.cardOptionTextActive,
-                      ]}
-                    >
-                      {card.alias}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
-          )}
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: theme.spacing.s,
-              marginBottom: theme.spacing.s,
-            }}
-          >
-            <Text
-              style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}
-            >
-              Kategori
-            </Text>
+          {/* Category Selector */}
+          <View style={styles.categoryHeader}>
+            <Text style={styles.sectionLabel}>Kategori</Text>
             <View style={styles.swipeHintContainer}>
-              <Text style={styles.swipeHintText}>Geser kiri untuk lainnya</Text>
+              <Text style={styles.swipeHintText}>Geser untuk lainnya</Text>
               <Ionicons
                 name="arrow-forward"
                 size={moderateScale(12)}
@@ -350,10 +442,11 @@ export const AddSubscriptionScreen = () => {
               />
             </View>
           </View>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
+            contentContainerStyle={styles.categoryList}
           >
             {CATEGORIES.map((cat) => {
               const { iconName, iconColor } = getCategoryIcon(cat);
@@ -381,7 +474,7 @@ export const AddSubscriptionScreen = () => {
                     <Ionicons
                       name={iconName}
                       size={moderateScale(18)}
-                      color={isSelected ? theme.colors.text.inverse : iconColor}
+                      color={isSelected ? "#FFFFFF" : iconColor}
                     />
                   </View>
                   <Text
@@ -403,213 +496,281 @@ export const AddSubscriptionScreen = () => {
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>Simpan Langganan</Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-  },
-  amountContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: theme.spacing.xl,
-  },
-  currencyPrefix: {
-    fontSize: moderateScale(32),
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-    marginRight: theme.spacing.s,
-  },
-  amountInput: {
-    fontSize: moderateScale(48),
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-    minWidth: 100,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-    ...theme.shadows.medium,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    marginBottom: theme.spacing.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  inputIcon: {
-    marginRight: theme.spacing.m,
-  },
-  textInput: {
-    flex: 1,
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    height: theme.containerSizes.iconMedium,
-  },
-  inputLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: 2,
-  },
-  cycleContainer: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-    marginBottom: theme.spacing.l,
-  },
-  cycleButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.s,
-    alignItems: "center",
-  },
-  cycleButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  cycleText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  cycleTextActive: {
-    color: theme.colors.text.inverse,
-    fontWeight: "600",
-  },
-  sectionLabel: {
-    ...theme.typography.h3,
-    fontSize: moderateScale(16),
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-    marginTop: theme.spacing.s,
-  },
-  horizontalScroll: {
-    gap: theme.spacing.s,
-    paddingBottom: theme.spacing.m,
-  },
-  cardOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderRadius: theme.borderRadius.round,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  cardOptionActive: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 2,
-  },
-  cardOptionText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  cardOptionTextActive: {
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-  },
-  categoryOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  categoryIconContainer: {
-    width: theme.containerSizes.iconSmall,
-    height: theme.containerSizes.iconSmall,
-    borderRadius: scale(14),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-    ...theme.shadows.small,
-  },
-  categoryText: {
-    fontSize: moderateScale(12),
-    color: theme.colors.text.secondary,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    alignItems: "center",
-    marginTop: theme.spacing.l,
-    ...theme.shadows.medium,
-  },
-  saveButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.text.inverse,
-    fontSize: moderateScale(16),
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.m,
-  },
-  currencyChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  activeCurrencyChip: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  currencyChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  activeCurrencyChipText: {
-    color: theme.colors.text.inverse,
-  },
-  helperText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: 4,
-  },
-  swipeHintContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  swipeHintText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: moderateScale(12),
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderBottomWidth: 0, // No border for cleaner look
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    // Card Selector
+    cardSelectorContainer: {
+      marginBottom: theme.spacing.l,
+    },
+    cardSelectorContent: {
+      gap: theme.spacing.m,
+      paddingRight: theme.spacing.m,
+    },
+    cardOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.borderRadius.round,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    cardOptionText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+
+    // Amount Card (Hero)
+    amountCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.l,
+      ...theme.shadows.medium,
+    },
+    amountLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.s,
+      textAlign: "center",
+    },
+    amountInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing.xs,
+    },
+    amountInput: {
+      fontSize: moderateScale(36),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      minWidth: 100,
+      textAlign: "right",
+    },
+    currencyPrefix: {
+      fontSize: moderateScale(24),
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+      marginRight: theme.spacing.s,
+      alignSelf: "center",
+    },
+    amountEquivalent: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      textAlign: "center",
+      marginTop: 4,
+    },
+    exchangeRateContainer: {
+      marginTop: theme.spacing.m,
+      paddingTop: theme.spacing.m,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border + "40",
+    },
+
+    // Standard Inputs
+    inputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      marginBottom: theme.spacing.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    inputIcon: {
+      marginRight: theme.spacing.m,
+    },
+    textInput: {
+      flex: 1,
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+      height: theme.containerSizes.iconMedium, // consistent height
+    },
+    inputLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: 2,
+    },
+
+    // Section Labels
+    sectionLabel: {
+      ...theme.typography.h3,
+      fontSize: moderateScale(16),
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+    },
+
+    // Cycle & Category
+    cycleContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: theme.spacing.l,
+      overflow: "hidden",
+    },
+    cycleButton: {
+      flex: 1,
+      paddingVertical: theme.spacing.s,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cycleButtonActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    cycleText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      fontSize: moderateScale(14),
+    },
+    cycleTextActive: {
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+
+    categoryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.s,
+      marginTop: theme.spacing.m,
+    },
+    categoryList: {
+      gap: theme.spacing.s,
+      paddingBottom: theme.spacing.s,
+    },
+    categoryOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    categoryIconContainer: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 8,
+    },
+    categoryText: {
+      fontSize: moderateScale(12),
+      color: theme.colors.text.secondary,
+    },
+    swipeHintContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    swipeHintText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: moderateScale(12),
+    },
+
+    // Save Button
+    saveButton: {
+      backgroundColor: theme.colors.primary,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      alignItems: "center",
+      marginTop: theme.spacing.l,
+      ...theme.shadows.medium,
+    },
+    saveButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
+
+    // Modal Styles
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      margin: theme.spacing.m,
+      padding: theme.spacing.m,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: theme.spacing.s,
+      color: theme.colors.text.primary,
+      ...theme.typography.body,
+    },
+    currencyList: {
+      padding: theme.spacing.m,
+    },
+    currencyItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border + "40",
+    },
+    currencyFlag: {
+      fontSize: moderateScale(24),
+      marginRight: theme.spacing.m,
+    },
+    currencyCode: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    currencyName: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+  });

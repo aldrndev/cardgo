@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 
 export const AboutScreen = () => {
   const navigation = useNavigation();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -83,12 +87,50 @@ export const AboutScreen = () => {
             <Text style={styles.sectionTitle}>Fitur Utama</Text>
           </View>
           <View style={styles.featureList}>
-            <FeatureItem icon="card" text="Kelola multiple kartu kredit" />
-            <FeatureItem icon="calendar" text="Pantau jatuh tempo & billing" />
-            <FeatureItem icon="notifications" text="Pengingat pembayaran" />
-            <FeatureItem icon="trending-up" text="Tracking kenaikan limit" />
-            <FeatureItem icon="repeat" text="Kelola langganan otomatis" />
-            <FeatureItem icon="download" text="Backup & Export data" />
+            <View style={styles.featureItem}>
+              <Ionicons name="card" size={18} color={theme.colors.primary} />
+              <Text style={styles.featureText}>
+                Kelola multiple kartu kredit
+              </Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons
+                name="calendar"
+                size={18}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.featureText}>
+                Pantau jatuh tempo & billing
+              </Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons
+                name="notifications"
+                size={18}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.featureText}>Pengingat pembayaran</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons
+                name="trending-up"
+                size={18}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.featureText}>Tracking kenaikan limit</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="repeat" size={18} color={theme.colors.primary} />
+              <Text style={styles.featureText}>Kelola langganan otomatis</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons
+                name="download"
+                size={18}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.featureText}>Backup & Export data</Text>
+            </View>
           </View>
         </View>
 
@@ -120,136 +162,130 @@ export const AboutScreen = () => {
   );
 };
 
-const FeatureItem = ({ icon, text }: { icon: string; text: string }) => (
-  <View style={styles.featureItem}>
-    <Ionicons name={icon as any} size={18} color={theme.colors.primary} />
-    <Text style={styles.featureText}>{text}</Text>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  placeholder: {
-    width: 32,
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: theme.spacing.xl,
-  },
-  appInfoCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.xl,
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  appIcon: {
-    fontSize: 48,
-    marginBottom: theme.spacing.s,
-  },
-  appName: {
-    ...theme.typography.h1,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  appVersion: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.m,
-  },
-  description: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-    gap: theme.spacing.s,
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  text: {
-    ...theme.typography.body,
-    marginBottom: theme.spacing.m,
-    lineHeight: 22,
-    color: theme.colors.text.secondary,
-  },
-  warningBox: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.status.warning + "15",
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    gap: theme.spacing.s,
-  },
-  warningText: {
-    ...theme.typography.caption,
-    color: theme.colors.status.warning,
-    flex: 1,
-    lineHeight: 18,
-  },
-  featureList: {
-    gap: theme.spacing.s,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.m,
-    paddingVertical: theme.spacing.xs,
-  },
-  featureText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  disclaimerText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontStyle: "italic",
-    lineHeight: 18,
-  },
-  footer: {
-    alignItems: "center",
-    paddingVertical: theme.spacing.xl,
-  },
-  footerText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  copyright: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    backButton: {
+      padding: theme.spacing.xs,
+    },
+    title: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    placeholder: {
+      width: 32,
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: theme.spacing.xl,
+    },
+    appInfoCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.xl,
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    appIcon: {
+      fontSize: 48,
+      marginBottom: theme.spacing.s,
+    },
+    appName: {
+      ...theme.typography.h1,
+      color: theme.colors.primary,
+      marginBottom: theme.spacing.xs,
+    },
+    appVersion: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginBottom: theme.spacing.m,
+    },
+    description: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      lineHeight: 22,
+    },
+    section: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+      gap: theme.spacing.s,
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    text: {
+      ...theme.typography.body,
+      marginBottom: theme.spacing.m,
+      lineHeight: 22,
+      color: theme.colors.text.secondary,
+    },
+    warningBox: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.status.warning + "15",
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      gap: theme.spacing.s,
+    },
+    warningText: {
+      ...theme.typography.caption,
+      color: theme.colors.status.warning,
+      flex: 1,
+      lineHeight: 18,
+    },
+    featureList: {
+      gap: theme.spacing.s,
+    },
+    featureItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+      paddingVertical: theme.spacing.xs,
+    },
+    featureText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    disclaimerText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontStyle: "italic",
+      lineHeight: 18,
+    },
+    footer: {
+      alignItems: "center",
+      paddingVertical: theme.spacing.xl,
+    },
+    footerText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xs,
+    },
+    copyright: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+  });

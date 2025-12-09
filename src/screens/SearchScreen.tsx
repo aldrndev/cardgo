@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { useCards } from "../context/CardsContext";
 import { Card, Transaction, CARD_THEMES } from "../types/card";
 import { getCategoryIcon } from "../utils/categoryIcons";
@@ -22,6 +22,10 @@ export const SearchScreen = () => {
   const navigation = useNavigation();
   const { cards, transactions } = useCards();
   const [query, setQuery] = useState("");
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const results = useMemo(() => {
     if (!query.trim()) return { cards: [], transactions: [] };
@@ -267,178 +271,179 @@ export const SearchScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.s,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.l,
-    paddingHorizontal: theme.spacing.m,
-    height: scale(44),
-  },
-  searchIcon: {
-    marginRight: theme.spacing.s,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: moderateScale(15),
-    color: theme.colors.text.primary,
-    paddingVertical: 0,
-  },
-  content: {
-    paddingBottom: theme.spacing.xl,
-  },
-  section: {
-    marginTop: theme.spacing.m,
-    paddingHorizontal: theme.spacing.m,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-    gap: theme.spacing.s,
-  },
-  sectionTitle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  cardItem: {
-    marginBottom: theme.spacing.m,
-  },
-  transactionsList: {
-    // backgroundColor: theme.colors.surface, // Removed
-    // borderRadius: theme.borderRadius.l, // Removed
-    // overflow: "hidden", // Removed
-    // ...theme.shadows.small, // Removed
-  },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16, // Increased padding
-    paddingHorizontal: 0, // Removed horizontal padding since container handles it? No, keep standard spacing if needed, let's align with CardDetail
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  iconContainer: {
-    width: 56, // Fixed to match HomeScreen/CardDetail
-    height: 56,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  transactionContent: {
-    flex: 1,
-  },
-  transactionDesc: {
-    ...theme.typography.body,
-    fontWeight: "500",
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  transactionMeta: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  amountContainer: {
-    alignItems: "flex-end",
-    marginLeft: theme.spacing.s,
-  },
-  transactionAmount: {
-    ...theme.typography.body,
-    fontWeight: "700",
-    color: theme.colors.text.primary,
-  },
-  convertedAmount: {
-    ...theme.typography.caption,
-    fontSize: moderateScale(11),
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  initialState: {
-    paddingTop: theme.spacing.xl * 2,
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.xl,
-  },
-  initialIconContainer: {
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(40),
-    backgroundColor: theme.colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing.l,
-  },
-  initialTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  initialSubtitle: {
-    ...theme.typography.body,
-    color: theme.colors.text.tertiary,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  emptyState: {
-    paddingTop: theme.spacing.xl * 2,
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.xl,
-  },
-  emptyTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.l,
-    marginBottom: theme.spacing.s,
-  },
-  emptySubtitle: {
-    ...theme.typography.body,
-    color: theme.colors.text.tertiary,
-    textAlign: "center",
-  },
-  cardResultItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.l,
-    marginBottom: theme.spacing.s,
-    ...theme.shadows.small,
-  },
-  cardColorIndicator: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
-    marginRight: theme.spacing.m,
-  },
-  cardResultContent: {
-    flex: 1,
-  },
-  cardResultName: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  cardResultBank: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surface,
+      gap: theme.spacing.s,
+    },
+    backButton: {
+      padding: theme.spacing.xs,
+    },
+    searchContainer: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.l,
+      paddingHorizontal: theme.spacing.m,
+      height: scale(44),
+    },
+    searchIcon: {
+      marginRight: theme.spacing.s,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: moderateScale(15),
+      color: theme.colors.text.primary,
+      paddingVertical: 0,
+    },
+    content: {
+      paddingBottom: theme.spacing.xl,
+    },
+    section: {
+      marginTop: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+      gap: theme.spacing.s,
+    },
+    sectionTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    cardItem: {
+      marginBottom: theme.spacing.m,
+    },
+    transactionsList: {
+      // backgroundColor: theme.colors.surface, // Removed
+      // borderRadius: theme.borderRadius.l, // Removed
+      // overflow: "hidden", // Removed
+      // ...theme.shadows.small, // Removed
+    },
+    transactionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 16, // Increased padding
+      paddingHorizontal: 0, // Removed horizontal padding since container handles it? No, keep standard spacing if needed, let's align with CardDetail
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    iconContainer: {
+      width: 56, // Fixed to match HomeScreen/CardDetail
+      height: 56,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 16,
+    },
+    transactionContent: {
+      flex: 1,
+    },
+    transactionDesc: {
+      ...theme.typography.body,
+      fontWeight: "500",
+      color: theme.colors.text.primary,
+      marginBottom: 2,
+    },
+    transactionMeta: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    amountContainer: {
+      alignItems: "flex-end",
+      marginLeft: theme.spacing.s,
+    },
+    transactionAmount: {
+      ...theme.typography.body,
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+    },
+    convertedAmount: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(11),
+      color: theme.colors.text.tertiary,
+      marginTop: 2,
+    },
+    initialState: {
+      paddingTop: theme.spacing.xl * 2,
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.xl,
+    },
+    initialIconContainer: {
+      width: scale(80),
+      height: scale(80),
+      borderRadius: scale(40),
+      backgroundColor: theme.colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: theme.spacing.l,
+    },
+    initialTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.s,
+    },
+    initialSubtitle: {
+      ...theme.typography.body,
+      color: theme.colors.text.tertiary,
+      textAlign: "center",
+      lineHeight: 22,
+    },
+    emptyState: {
+      paddingTop: theme.spacing.xl * 2,
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.xl,
+    },
+    emptyTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.l,
+      marginBottom: theme.spacing.s,
+    },
+    emptySubtitle: {
+      ...theme.typography.body,
+      color: theme.colors.text.tertiary,
+      textAlign: "center",
+    },
+    cardResultItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.l,
+      marginBottom: theme.spacing.s,
+      ...theme.shadows.small,
+    },
+    cardColorIndicator: {
+      width: scale(44),
+      height: scale(44),
+      borderRadius: scale(12),
+      marginRight: theme.spacing.m,
+    },
+    cardResultContent: {
+      flex: 1,
+    },
+    cardResultName: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: 2,
+    },
+    cardResultBank: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+  });

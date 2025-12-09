@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useCards } from "../context/CardsContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
@@ -43,6 +43,10 @@ export const AddLimitIncreaseScreen = () => {
   const { cardId: paramCardId } = route.params || {};
   const { cards } = useCards();
   const { addRecord } = useLimitIncrease();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [selectedCardId, setSelectedCardId] = useState(
     paramCardId || cards[0]?.id || ""
@@ -309,200 +313,201 @@ export const AddLimitIncreaseScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.small,
-  },
-  headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: theme.spacing.l,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: theme.spacing.s,
-  },
-  label: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-    marginBottom: 8,
-  },
-  cardSelectorContent: {
-    gap: theme.spacing.s,
-    paddingRight: theme.spacing.m,
-  },
-  cardOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: "transparent",
-    marginRight: 8,
-  },
-  cardOptionActive: {
-    backgroundColor: theme.colors.surface,
-  },
-  cardOptionText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  cardOptionTextActive: {
-    color: theme.colors.text.primary,
-    fontWeight: "600",
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.l,
-  },
-  dateInput: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  dateText: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  amountContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  currencyPrefix: {
-    ...theme.typography.h3,
-    color: theme.colors.text.tertiary,
-    marginRight: theme.spacing.s,
-  },
-  amountInput: {
-    flex: 1,
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-    paddingVertical: 8,
-  },
-  segmentContainer: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  segmentButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 100, // Rounded
-  },
-  segmentButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  segmentText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    fontWeight: "600",
-  },
-  segmentTextActive: {
-    color: "#FFFFFF",
-  },
-  chipsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.primary + "10",
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  chipTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  footer: {
-    padding: theme.spacing.m,
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 16,
-    borderRadius: theme.borderRadius.l,
-    alignItems: "center",
-    ...theme.shadows.medium,
-  },
-  saveButtonText: {
-    ...theme.typography.h3,
-    color: "#FFFFFF",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: theme.spacing.l,
-  },
-  calendarContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.l,
-    padding: theme.spacing.m,
-  },
-  closeModalButton: {
-    marginTop: theme.spacing.m,
-    alignItems: "center",
-    padding: theme.spacing.m,
-  },
-  closeModalText: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.small,
+    },
+    headerTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    section: {
+      marginBottom: theme.spacing.l,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: theme.spacing.s,
+    },
+    label: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: 8,
+    },
+    cardSelectorContent: {
+      gap: theme.spacing.s,
+      paddingRight: theme.spacing.m,
+    },
+    cardOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: "transparent",
+      marginRight: 8,
+    },
+    cardOptionActive: {
+      backgroundColor: theme.colors.surface,
+    },
+    cardOptionText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+    },
+    cardOptionTextActive: {
+      color: theme.colors.text.primary,
+      fontWeight: "600",
+    },
+    inputGroup: {
+      marginBottom: theme.spacing.l,
+    },
+    dateInput: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    dateText: {
+      ...theme.typography.body,
+      color: theme.colors.text.primary,
+    },
+    amountContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    currencyPrefix: {
+      ...theme.typography.h3,
+      color: theme.colors.text.tertiary,
+      marginRight: theme.spacing.s,
+    },
+    amountInput: {
+      flex: 1,
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+      paddingVertical: 8,
+    },
+    segmentContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    segmentButton: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: "center",
+      borderRadius: 100, // Rounded
+    },
+    segmentButtonActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    segmentText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      fontWeight: "600",
+    },
+    segmentTextActive: {
+      color: "#FFFFFF",
+    },
+    chipsContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    chip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    chipActive: {
+      backgroundColor: theme.colors.primary + "10",
+      borderColor: theme.colors.primary,
+    },
+    chipText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    chipTextActive: {
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    footer: {
+      padding: theme.spacing.m,
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    saveButton: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: 16,
+      borderRadius: theme.borderRadius.l,
+      alignItems: "center",
+      ...theme.shadows.medium,
+    },
+    saveButtonText: {
+      ...theme.typography.h3,
+      color: "#FFFFFF",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      padding: theme.spacing.l,
+    },
+    calendarContainer: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
+    },
+    closeModalButton: {
+      marginTop: theme.spacing.m,
+      alignItems: "center",
+      padding: theme.spacing.m,
+    },
+    closeModalText: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+  });

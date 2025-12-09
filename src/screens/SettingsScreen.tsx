@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
 
 import { useNavigation } from "@react-navigation/native";
-import { theme } from "../constants/theme";
-import { useTheme, ThemeMode } from "../context/ThemeContext";
+import { useTheme, ThemeMode, Theme } from "../context/ThemeContext";
 import { storage } from "../utils/storage";
 import { moderateScale } from "../utils/responsive";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
@@ -44,59 +44,6 @@ interface SettingsItemProps {
   color?: string;
 }
 
-const SettingsItem = ({
-  icon,
-  label,
-  sublabel,
-  onPress,
-  isDanger,
-  rightElement,
-  showChevron = true,
-  color,
-}: SettingsItemProps) => {
-  return (
-    <TouchableOpacity
-      style={styles.settingsItemContainer}
-      onPress={onPress}
-      disabled={!onPress}
-      activeOpacity={0.7}
-    >
-      <View
-        style={[
-          styles.iconContainer,
-          {
-            backgroundColor: isDanger
-              ? theme.colors.status.error + "15"
-              : theme.colors.primary + "15",
-          },
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={moderateScale(22)}
-          color={
-            isDanger ? theme.colors.status.error : color || theme.colors.primary
-          }
-        />
-      </View>
-      <View style={styles.itemContent}>
-        <Text style={[styles.itemLabel, isDanger && styles.dangerText]}>
-          {label}
-        </Text>
-        {sublabel && <Text style={styles.itemSublabel}>{sublabel}</Text>}
-      </View>
-      {rightElement}
-      {showChevron && !rightElement && (
-        <Ionicons
-          name="chevron-forward"
-          size={moderateScale(20)}
-          color={theme.colors.text.tertiary}
-        />
-      )}
-    </TouchableOpacity>
-  );
-};
-
 export const SettingsScreen = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const {
@@ -109,7 +56,65 @@ export const SettingsScreen = () => {
   } = useCards();
   const { getRecordsByCardId } = useLimitIncrease();
   const { hasPin, removePin, refreshBiometricStatus } = useAuth();
-  const { themeMode, isDark, setThemeMode } = useTheme();
+  const { themeMode, isDark, setThemeMode, theme } = useTheme();
+
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
+  // SettingsItem defined inside to access styles and theme from closure
+  const SettingsItem = ({
+    icon,
+    label,
+    sublabel,
+    onPress,
+    isDanger,
+    rightElement,
+    showChevron = true,
+    color,
+  }: SettingsItemProps) => {
+    return (
+      <TouchableOpacity
+        style={styles.settingsItemContainer}
+        onPress={onPress}
+        disabled={!onPress}
+        activeOpacity={0.7}
+      >
+        <View
+          style={[
+            styles.iconContainer,
+            {
+              backgroundColor: isDanger
+                ? theme.colors.status.error + "15"
+                : theme.colors.primary + "15",
+            },
+          ]}
+        >
+          <Ionicons
+            name={icon}
+            size={moderateScale(22)}
+            color={
+              isDanger
+                ? theme.colors.status.error
+                : color || theme.colors.primary
+            }
+          />
+        </View>
+        <View style={styles.itemContent}>
+          <Text style={[styles.itemLabel, isDanger && styles.dangerText]}>
+            {label}
+          </Text>
+          {sublabel && <Text style={styles.itemSublabel}>{sublabel}</Text>}
+        </View>
+        {rightElement}
+        {showChevron && !rightElement && (
+          <Ionicons
+            name="chevron-forward"
+            size={moderateScale(20)}
+            color={theme.colors.text.tertiary}
+          />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const [biometricEnabled, setBiometricEnabled] = React.useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = React.useState(false);
@@ -347,7 +352,9 @@ export const SettingsScreen = () => {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatarInitials}>
+            <Text
+              style={[styles.avatarInitials, isDark && { color: "#FFFFFF" }]}
+            >
               {getInitials(userProfile?.nickname)}
             </Text>
           </View>
@@ -715,204 +722,205 @@ export const SettingsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.l,
-    borderRadius: theme.borderRadius.l,
-    marginBottom: theme.spacing.l,
-    ...theme.shadows.small,
-  },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.m,
-  },
-  avatarInitials: {
-    ...theme.typography.h2,
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  profileName: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  profileSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  section: {
-    marginBottom: theme.spacing.l,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.s,
-    ...theme.shadows.small,
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    fontSize: 16,
-    marginLeft: theme.spacing.s,
-    marginTop: theme.spacing.s,
-    marginBottom: theme.spacing.m,
-    color: theme.colors.text.primary,
-  },
-  settingsItemContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.s,
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border + "40",
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.m,
-  },
-  itemContent: {
-    flex: 1,
-    marginRight: theme.spacing.s,
-  },
-  itemLabel: {
-    ...theme.typography.body,
-    fontWeight: "500",
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  itemSublabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: 11,
-  },
-  dangerText: {
-    color: theme.colors.status.error,
-  },
-  versionText: {
-    textAlign: "center",
-    marginTop: theme.spacing.m,
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  pwaWarningSection: {
-    backgroundColor: theme.colors.status.warning + "15",
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    marginHorizontal: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    borderWidth: 1,
-    borderColor: theme.colors.status.warning + "30",
-  },
-  pwaWarningHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.s,
-    gap: theme.spacing.s,
-  },
-  pwaWarningTitle: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.status.warning,
-  },
-  pwaWarningText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-    marginBottom: theme.spacing.m,
-  },
-  pwaWarningFeatures: {
-    marginBottom: theme.spacing.m,
-    gap: theme.spacing.xs,
-  },
-  pwaFeatureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.s,
-  },
-  pwaFeatureText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  pwaBackupButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.s,
-    paddingVertical: theme.spacing.s,
-    paddingHorizontal: theme.spacing.m,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.s,
-  },
-  pwaBackupButtonText: {
-    ...theme.typography.body,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  themeSelector: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.border + "40",
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.xs,
-    gap: theme.spacing.xs,
-  },
-  themeOption: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.m,
-    borderRadius: theme.borderRadius.s,
-    gap: theme.spacing.xs,
-  },
-  themeOptionActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  themeOptionText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.text.secondary,
-  },
-  themeOptionTextActive: {
-    color: "#FFFFFF",
-  },
-  themeHint: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    textAlign: "center",
-    marginTop: theme.spacing.s,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    profileHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.l,
+      borderRadius: theme.borderRadius.l,
+      marginBottom: theme.spacing.l,
+      ...theme.shadows.small,
+    },
+    avatarContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: theme.spacing.m,
+    },
+    avatarInitials: {
+      ...theme.typography.h2,
+      color: "#FFFFFF",
+      fontWeight: "700",
+    },
+    profileName: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    profileSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    section: {
+      marginBottom: theme.spacing.l,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.s,
+      ...theme.shadows.small,
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      fontSize: 16,
+      marginLeft: theme.spacing.s,
+      marginTop: theme.spacing.s,
+      marginBottom: theme.spacing.m,
+      color: theme.colors.text.primary,
+    },
+    settingsItemContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: theme.spacing.s,
+      paddingVertical: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border + "40",
+    },
+    iconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: theme.spacing.m,
+    },
+    itemContent: {
+      flex: 1,
+      marginRight: theme.spacing.s,
+    },
+    itemLabel: {
+      ...theme.typography.body,
+      fontWeight: "500",
+      color: theme.colors.text.primary,
+      marginBottom: 2,
+    },
+    itemSublabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: 11,
+    },
+    dangerText: {
+      color: theme.colors.status.error,
+    },
+    versionText: {
+      textAlign: "center",
+      marginTop: theme.spacing.m,
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    pwaWarningSection: {
+      backgroundColor: theme.colors.status.warning + "15",
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      marginHorizontal: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      borderWidth: 1,
+      borderColor: theme.colors.status.warning + "30",
+    },
+    pwaWarningHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.s,
+      gap: theme.spacing.s,
+    },
+    pwaWarningTitle: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.status.warning,
+    },
+    pwaWarningText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      lineHeight: 18,
+      marginBottom: theme.spacing.m,
+    },
+    pwaWarningFeatures: {
+      marginBottom: theme.spacing.m,
+      gap: theme.spacing.xs,
+    },
+    pwaFeatureRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.s,
+    },
+    pwaFeatureText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    pwaBackupButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.borderRadius.s,
+      paddingVertical: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.s,
+    },
+    pwaBackupButtonText: {
+      ...theme.typography.body,
+      color: "#fff",
+      fontWeight: "600",
+    },
+    themeSelector: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.border + "40",
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.xs,
+      gap: theme.spacing.xs,
+    },
+    themeOption: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.s,
+      gap: theme.spacing.xs,
+    },
+    themeOptionActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    themeOptionText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.text.secondary,
+    },
+    themeOptionTextActive: {
+      color: "#FFFFFF",
+    },
+    themeHint: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      textAlign: "center",
+      marginTop: theme.spacing.s,
+    },
+  });

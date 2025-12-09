@@ -18,6 +18,7 @@ const lightColors = {
   secondary: "#10B981",
   background: "#F8FAFC",
   surface: "#FFFFFF",
+  surfaceElevated: "#FFFFFF", // Same as surface in light mode
   error: "#EF4444",
   text: {
     primary: "#1E293B",
@@ -46,11 +47,12 @@ const lightColors = {
 
 // Dark colors
 const darkColors = {
-  primary: "#818CF8",
+  primary: "#4F46E5", // Same royal purple as light mode
   secondary: "#34D399",
   background: "#0F172A",
   surface: "#1E293B",
-  error: "#F87171",
+  surfaceElevated: "#0F172A", // Darker elevated surface (same as background)
+  error: "#EF4444", // Same red as light mode
   text: {
     primary: "#F1F5F9",
     secondary: "#94A3B8",
@@ -63,7 +65,7 @@ const darkColors = {
   status: {
     success: "#34D399",
     warning: "#FBBF24",
-    error: "#F87171",
+    error: "#EF4444", // Same red as light mode
     info: "#60A5FA",
   },
   cardGradients: [
@@ -77,7 +79,7 @@ const darkColors = {
 };
 
 // Shared theme properties
-const createTheme = (colors: typeof lightColors) => ({
+const createTheme = (colors: typeof lightColors, isDark: boolean) => ({
   colors,
   spacing: {
     xs: scale(4),
@@ -127,27 +129,51 @@ const createTheme = (colors: typeof lightColors) => ({
     },
   },
   shadows: {
-    small: {
-      shadowColor: colors.text.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    medium: {
-      shadowColor: colors.text.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    large: {
-      shadowColor: colors.text.primary,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.15,
-      shadowRadius: 20,
-      elevation: 10,
-    },
+    small: isDark
+      ? {
+          shadowColor: "transparent",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        }
+      : {
+          shadowColor: colors.text.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        },
+    medium: isDark
+      ? {
+          shadowColor: "transparent",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        }
+      : {
+          shadowColor: colors.text.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 4,
+        },
+    large: isDark
+      ? {
+          shadowColor: "transparent",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        }
+      : {
+          shadowColor: colors.text.primary,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          elevation: 10,
+        },
   },
   iconSizes: {
     xs: scale(16),
@@ -219,7 +245,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   // Create theme object
   const theme = useMemo(() => {
-    return createTheme(isDark ? darkColors : lightColors);
+    return createTheme(isDark ? darkColors : lightColors, isDark);
   }, [isDark]);
 
   if (!isLoaded) {
@@ -242,4 +268,4 @@ export const useTheme = () => {
 };
 
 // Export static theme for backward compatibility (uses light theme)
-export const theme = createTheme(lightColors);
+export const theme = createTheme(lightColors, false);

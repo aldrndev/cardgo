@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { moderateScale } from "../utils/responsive";
 import { useCards } from "../context/CardsContext";
 import { formatCurrency } from "../utils/formatters";
@@ -18,6 +18,10 @@ import { BANKS, getBankById } from "../constants/banks";
 export const LinkedLimitsScreen = () => {
   const navigation = useNavigation();
   const { cards, getSharedLimitInfo } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   // Get all unique bankIds that have shared limits
   const sharedLimitBanks = useMemo(() => {
@@ -80,7 +84,10 @@ export const LinkedLimitsScreen = () => {
                   <View style={styles.groupHeader}>
                     <Text style={styles.groupName}>{bank?.code || bankId}</Text>
                     <Text style={styles.groupLimit}>
-                      {formatCurrency(info.sharedLimit)}
+                      {formatCurrency(
+                        info.sharedLimit,
+                        Number.MAX_SAFE_INTEGER
+                      )}
                     </Text>
                   </View>
 
@@ -103,6 +110,13 @@ export const LinkedLimitsScreen = () => {
                   <Text style={styles.cardsLabel}>
                     {info.cards.length} kartu dalam grup:
                   </Text>
+
+                  {/* Column Headers */}
+                  <View style={styles.columnHeaders}>
+                    <Text style={styles.columnHeaderName}>Nama Kartu</Text>
+                    <Text style={styles.columnHeaderUsage}>Penggunaan</Text>
+                  </View>
+
                   {info.cards.map((card) => (
                     <View key={card.id} style={styles.cardItem}>
                       <Text style={styles.cardName}>{card.alias}</Text>
@@ -134,144 +148,165 @@ export const LinkedLimitsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    padding: theme.spacing.s,
-  },
-  headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  placeholder: {
-    width: moderateScale(40),
-  },
-  content: {
-    flex: 1,
-  },
-  infoCard: {
-    flexDirection: "row",
-    gap: theme.spacing.m,
-    backgroundColor: theme.colors.primary + "10",
-    padding: theme.spacing.m,
-    margin: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-  },
-  infoText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    flex: 1,
-  },
-  section: {
-    padding: theme.spacing.m,
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
-  },
-  groupCard: {
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.l,
-    borderRadius: theme.borderRadius.l,
-    marginBottom: theme.spacing.m,
-  },
-  groupHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing.m,
-  },
-  groupName: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  groupLimit: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  progressContainer: {
-    marginBottom: theme.spacing.l,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: theme.colors.background,
-    borderRadius: 4,
-    marginBottom: theme.spacing.xs,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-  },
-  progressDanger: {
-    backgroundColor: theme.colors.status.warning,
-  },
-  progressText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-  cardsLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.s,
-  },
-  cardItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: theme.spacing.s,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  cardName: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-  },
-  cardUsage: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: theme.spacing.xl,
-    marginTop: theme.spacing.xxl,
-  },
-  emptyTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.m,
-    marginBottom: theme.spacing.s,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-  },
-  noteCard: {
-    backgroundColor: theme.colors.status.warning + "15",
-    padding: theme.spacing.m,
-    margin: theme.spacing.m,
-    borderRadius: theme.borderRadius.m,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.status.warning,
-  },
-  noteText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      padding: theme.spacing.s,
+    },
+    headerTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    placeholder: {
+      width: moderateScale(40),
+    },
+    content: {
+      flex: 1,
+    },
+    infoCard: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+      backgroundColor: theme.colors.primary + "10",
+      padding: theme.spacing.m,
+      margin: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+    },
+    infoText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      flex: 1,
+    },
+    section: {
+      padding: theme.spacing.m,
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.m,
+    },
+    groupCard: {
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.l,
+      borderRadius: theme.borderRadius.l,
+      marginBottom: theme.spacing.m,
+    },
+    groupHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: theme.spacing.m,
+    },
+    groupName: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    groupLimit: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    progressContainer: {
+      marginBottom: theme.spacing.l,
+    },
+    progressBar: {
+      height: 8,
+      backgroundColor: theme.colors.background,
+      borderRadius: 4,
+      marginBottom: theme.spacing.xs,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+    },
+    progressDanger: {
+      backgroundColor: theme.colors.status.warning,
+    },
+    progressText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+    cardsLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.s,
+    },
+    columnHeaders: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingBottom: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
+    },
+    columnHeaderName: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(13),
+      color: theme.colors.text.tertiary,
+      fontWeight: "600",
+    },
+    columnHeaderUsage: {
+      ...theme.typography.caption,
+      fontSize: moderateScale(13),
+      color: theme.colors.text.tertiary,
+      fontWeight: "600",
+    },
+    cardItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: theme.spacing.s,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    cardName: {
+      ...theme.typography.body,
+      fontSize: moderateScale(14),
+      color: theme.colors.text.primary,
+    },
+    cardUsage: {
+      ...theme.typography.body,
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+    },
+    emptyState: {
+      alignItems: "center",
+      padding: theme.spacing.xl,
+      marginTop: theme.spacing.xxl,
+    },
+    emptyTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.m,
+      marginBottom: theme.spacing.s,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+    },
+    noteCard: {
+      backgroundColor: theme.colors.status.warning + "15",
+      padding: theme.spacing.m,
+      margin: theme.spacing.m,
+      borderRadius: theme.borderRadius.m,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.status.warning,
+    },
+    noteText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+    },
+  });

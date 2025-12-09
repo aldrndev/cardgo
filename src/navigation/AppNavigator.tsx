@@ -15,7 +15,7 @@ import { InsightsScreen } from "../screens/InsightsScreen";
 import { CalendarScreen } from "../screens/CalendarScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { TabNavigator } from "./TabNavigator";
-import { theme } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
 
 import { StartupScreen } from "../screens/StartupScreen";
 import { AddSubscriptionScreen } from "../screens/AddSubscriptionScreen";
@@ -27,6 +27,7 @@ import { PrivacyPolicyScreen } from "../screens/PrivacyPolicyScreen";
 import { TermsScreen } from "../screens/TermsScreen";
 import { BackupExportScreen } from "../screens/BackupExportScreen";
 import { CategoryBudgetScreen } from "../screens/CategoryBudgetScreen";
+import { LinkedLimitsScreen } from "../screens/LinkedLimitsScreen";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -35,6 +36,8 @@ import { NotificationController } from "../components/NotificationController";
 // ... existing imports
 
 export const AppNavigator = () => {
+  const { theme } = useTheme();
+
   return (
     <>
       <NotificationController />
@@ -122,6 +125,11 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="CategoryBudget"
           component={CategoryBudgetScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="LinkedLimits"
+          component={LinkedLimitsScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

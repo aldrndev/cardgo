@@ -34,7 +34,16 @@
       "favicon": "./assets/icon-new2.png",
       "bundler": "metro"
     },
-    "plugins": ["expo-font"],
+    "plugins": [
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon-new2.png",
+          "color": "#00A896"
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "b0a34643-a9ac-4c13-a350-a45ebb87d85b"

@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { useCards } from "../context/CardsContext";
@@ -33,6 +33,10 @@ export const LimitIncreaseHistoryScreen = () => {
   const { cardId } = route.params || {};
   const { records, updateRecord } = useLimitIncrease();
   const { cards } = useCards();
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const filteredRecords = useMemo(() => {
     if (cardId) {
@@ -242,147 +246,148 @@ export const LimitIncreaseHistoryScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.m,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.small,
-  },
-  headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  listContent: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.m,
-    padding: theme.spacing.m,
-    marginBottom: theme.spacing.m,
-    ...theme.shadows.small,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  cardInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.s,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardName: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  dateText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    fontSize: 10,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.m,
-  },
-  detailsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  label: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
-  },
-  value: {
-    ...theme.typography.body,
-    fontWeight: "600",
-    color: theme.colors.text.primary,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    marginTop: theme.spacing.s,
-    gap: theme.spacing.m,
-  },
-  helperText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.tertiary,
-    fontSize: 10,
-    marginTop: theme.spacing.m,
-    marginBottom: 4,
-    fontStyle: "italic",
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    borderRadius: theme.borderRadius.s,
-    gap: 4,
-    borderWidth: 1,
-  },
-  rejectButton: {
-    borderColor: theme.colors.status.error,
-    backgroundColor: theme.colors.status.error + "10",
-  },
-  approveButton: {
-    borderColor: theme.colors.status.success,
-    backgroundColor: theme.colors.status.success + "10",
-  },
-  rejectText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.status.error,
-  },
-  approveText: {
-    ...theme.typography.caption,
-    fontWeight: "600",
-    color: theme.colors.status.success,
-  },
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.m,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.small,
+    },
+    headerTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text.primary,
+    },
+    listContent: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.m,
+      padding: theme.spacing.m,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    cardInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.s,
+    },
+    iconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    cardName: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    dateText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    statusText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      fontSize: 10,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: theme.spacing.m,
+    },
+    detailsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    label: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: 4,
+    },
+    value: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+    },
+    actionsRow: {
+      flexDirection: "row",
+      marginTop: theme.spacing.s,
+      gap: theme.spacing.m,
+    },
+    helperText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      fontSize: 10,
+      marginTop: theme.spacing.m,
+      marginBottom: 4,
+      fontStyle: "italic",
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 8,
+      borderRadius: theme.borderRadius.s,
+      gap: 4,
+      borderWidth: 1,
+    },
+    rejectButton: {
+      borderColor: theme.colors.status.error,
+      backgroundColor: theme.colors.status.error + "10",
+    },
+    approveButton: {
+      borderColor: theme.colors.status.success,
+      backgroundColor: theme.colors.status.success + "10",
+    },
+    rejectText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.status.error,
+    },
+    approveText: {
+      ...theme.typography.caption,
+      fontWeight: "600",
+      color: theme.colors.status.success,
+    },
 
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 100,
-    gap: theme.spacing.m,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.text.tertiary,
-  },
-});
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 100,
+      gap: theme.spacing.m,
+    },
+    emptyText: {
+      ...theme.typography.body,
+      color: theme.colors.text.tertiary,
+    },
+  });

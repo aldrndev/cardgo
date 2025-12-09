@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { theme } from "../constants/theme";
+import { useTheme, Theme } from "../context/ThemeContext";
 import { formatCurrency } from "../utils/formatters";
 import { moderateScale } from "../utils/responsive";
 import { useCards } from "../context/CardsContext";
@@ -30,6 +30,10 @@ export const CardsScreen = () => {
   const navigation = useNavigation<CardsScreenNavigationProp>();
   const { cards } = useCards();
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const { theme, isDark } = useTheme();
+
+  // Dynamic styles based on theme
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   // Filter out archived cards if needed, or show them differently
   // For now, let's show active cards
@@ -148,81 +152,82 @@ export const CardsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.l,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    // alignItems is handled inline
-  },
-  content: {
-    padding: theme.spacing.m,
-    paddingBottom: 100,
-  },
-  cardsList: {
-    paddingTop: theme.spacing.s,
-  },
-  emptyWrapper: {
-    alignItems: "center",
-    paddingTop: theme.spacing.l,
-    paddingHorizontal: theme.spacing.l,
-  },
-  ghostCard: {
-    width: "100%",
-    aspectRatio: 1.586, // Standard credit card ratio
-    borderRadius: theme.borderRadius.xl,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderStyle: "dashed",
-    backgroundColor: theme.colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing.l,
-  },
-  ghostContent: {
-    alignItems: "center",
-    gap: theme.spacing.s,
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary + "15", // 15% opacity
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  ghostTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  ghostDescription: {
-    ...theme.typography.body,
-    color: theme.colors.text.secondary,
-    textAlign: "center",
-    maxWidth: "80%",
-    lineHeight: 22,
-  },
-  cardWrapper: {
-    width: "100%",
-    marginBottom: theme.spacing.m,
-  },
-});
+const getStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.l,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    title: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      // alignItems is handled inline
+    },
+    content: {
+      padding: theme.spacing.m,
+      paddingBottom: 100,
+    },
+    cardsList: {
+      paddingTop: theme.spacing.s,
+    },
+    emptyWrapper: {
+      alignItems: "center",
+      paddingTop: theme.spacing.l,
+      paddingHorizontal: theme.spacing.l,
+    },
+    ghostCard: {
+      width: "100%",
+      aspectRatio: 1.586, // Standard credit card ratio
+      borderRadius: theme.borderRadius.xl,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderStyle: "dashed",
+      backgroundColor: theme.colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: theme.spacing.l,
+    },
+    ghostContent: {
+      alignItems: "center",
+      gap: theme.spacing.s,
+    },
+    iconCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.colors.primary + "15", // 15% opacity
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    ghostTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    ghostDescription: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      maxWidth: "80%",
+      lineHeight: 22,
+    },
+    cardWrapper: {
+      width: "100%",
+      marginBottom: theme.spacing.m,
+    },
+  });
