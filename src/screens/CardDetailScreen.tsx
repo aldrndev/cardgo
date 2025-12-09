@@ -627,44 +627,70 @@ export const CardDetailScreen = () => {
                 Status Pembayaran
               </Text>
 
-              {!card.isPaid && !showPaymentForm && (
-                <View style={styles.unpaidCard}>
-                  <View style={styles.unpaidHeader}>
-                    <View style={styles.unpaidIconContainer}>
+              {/* No outstanding bill */}
+              {!card.isPaid &&
+                (card.currentUsage || 0) === 0 &&
+                !showPaymentForm && (
+                  <View style={styles.noBillCard}>
+                    <View style={styles.noBillIconContainer}>
                       <Ionicons
-                        name="time-outline"
-                        size={moderateScale(24)}
-                        color={theme.colors.status.warning}
+                        name="checkmark-circle"
+                        size={moderateScale(48)}
+                        color={theme.colors.status.success}
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.unpaidTitle}>Belum Dibayar</Text>
-                      <Text style={styles.unpaidSubtitle}>
-                        Jatuh tempo tanggal {card.dueDay}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.unpaidAmountRow}>
-                    <Text style={styles.unpaidAmountLabel}>Total Tagihan</Text>
-                    <Text style={styles.unpaidAmount}>
-                      {formatCurrency(
-                        card.statementAmount || card.currentUsage || 0
-                      )}
+                    <Text style={styles.noBillTitle}>Tidak Ada Tagihan</Text>
+                    <Text style={styles.noBillSubtitle}>
+                      Belum ada transaksi di periode ini
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.payNowButton}
-                    onPress={() => setShowPaymentForm(true)}
-                  >
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={moderateScale(20)}
-                      color="#FFF"
-                    />
-                    <Text style={styles.payNowButtonText}>Tandai Lunas</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+                )}
+
+              {/* Has outstanding bill - not paid yet */}
+              {!card.isPaid &&
+                (card.currentUsage || 0) > 0 &&
+                !showPaymentForm && (
+                  <View style={styles.unpaidCard}>
+                    <View style={styles.unpaidHeader}>
+                      <View style={styles.unpaidIconContainer}>
+                        <Ionicons
+                          name="time-outline"
+                          size={moderateScale(24)}
+                          color={theme.colors.status.warning}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.unpaidTitle}>Belum Dibayar</Text>
+                        <Text style={styles.unpaidSubtitle}>
+                          Jatuh tempo tanggal {card.dueDay}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.unpaidAmountRow}>
+                      <Text style={styles.unpaidAmountLabel}>
+                        Total Tagihan
+                      </Text>
+                      <Text style={styles.unpaidAmount}>
+                        {formatCurrency(
+                          card.statementAmount || card.currentUsage || 0
+                        )}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.payNowButton}
+                      onPress={() => setShowPaymentForm(true)}
+                    >
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={moderateScale(20)}
+                        color="#FFF"
+                      />
+                      <Text style={styles.payNowButtonText}>
+                        Catat Pembayaran
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
               {!card.isPaid && showPaymentForm && (
                 <View style={styles.paymentForm}>
@@ -1607,6 +1633,29 @@ const getStyles = (theme: Theme) =>
       justifyContent: "center",
       alignSelf: "flex-end",
       ...theme.shadows.medium,
+    },
+    // No Bill Card Styles
+    noBillCard: {
+      backgroundColor: theme.colors.status.success + "10",
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      borderWidth: 1,
+      borderColor: theme.colors.status.success + "30",
+      alignItems: "center",
+    },
+    noBillIconContainer: {
+      marginBottom: theme.spacing.m,
+    },
+    noBillTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.status.success,
+      fontWeight: "700",
+      marginBottom: theme.spacing.xs,
+    },
+    noBillSubtitle: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      textAlign: "center",
     },
     // Unpaid Card Styles
     unpaidCard: {

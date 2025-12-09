@@ -11,14 +11,29 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { scale, moderateScale } from "../utils/responsive";
 
 const THEME_STORAGE_KEY = "@card_go_theme_mode";
+const ACCENT_COLOR_KEY = "@card_go_accent_color";
 
-// Light colors
-const lightColors = {
-  primary: "#4F46E5",
+// Accent color presets
+export const ACCENT_COLORS = [
+  { name: "Ungu", color: "#4F46E5" }, // Default purple
+  { name: "Biru", color: "#2563EB" },
+  { name: "Hijau", color: "#059669" },
+  { name: "Merah", color: "#DC2626" },
+  { name: "Oranye", color: "#EA580C" },
+  { name: "Pink", color: "#DB2777" },
+  { name: "Teal", color: "#0D9488" },
+  { name: "Kuning", color: "#CA8A04" },
+  { name: "Cyan", color: "#06B6D4" },
+  { name: "Indigo", color: "#6366F1" },
+];
+
+// Light colors factory with custom primary
+const createLightColors = (primaryColor: string) => ({
+  primary: primaryColor,
   secondary: "#10B981",
   background: "#F8FAFC",
   surface: "#FFFFFF",
-  surfaceElevated: "#FFFFFF", // Same as surface in light mode
+  surfaceElevated: "#FFFFFF",
   error: "#EF4444",
   text: {
     primary: "#1E293B",
@@ -36,23 +51,23 @@ const lightColors = {
     info: "#3B82F6",
   },
   cardGradients: [
-    ["#4F46E5", "#818CF8"],
+    [primaryColor, lightenColor(primaryColor, 30)],
     ["#059669", "#34D399"],
     ["#DB2777", "#F472B6"],
     ["#7C3AED", "#A78BFA"],
     ["#2563EB", "#60A5FA"],
     ["#D97706", "#FBBF24"],
   ],
-};
+});
 
-// Dark colors
-const darkColors = {
-  primary: "#4F46E5", // Same royal purple as light mode
+// Dark colors factory with custom primary
+const createDarkColors = (primaryColor: string) => ({
+  primary: primaryColor,
   secondary: "#34D399",
   background: "#0F172A",
   surface: "#1E293B",
-  surfaceElevated: "#0F172A", // Darker elevated surface (same as background)
-  error: "#EF4444", // Same red as light mode
+  surfaceElevated: "#0F172A",
+  error: "#EF4444",
   text: {
     primary: "#F1F5F9",
     secondary: "#94A3B8",
@@ -65,21 +80,37 @@ const darkColors = {
   status: {
     success: "#34D399",
     warning: "#FBBF24",
-    error: "#EF4444", // Same red as light mode
+    error: "#EF4444",
     info: "#60A5FA",
   },
   cardGradients: [
-    ["#6366F1", "#A5B4FC"],
+    [lightenColor(primaryColor, 10), lightenColor(primaryColor, 40)],
     ["#10B981", "#6EE7B7"],
     ["#EC4899", "#F9A8D4"],
     ["#8B5CF6", "#C4B5FD"],
     ["#3B82F6", "#93C5FD"],
     ["#F59E0B", "#FCD34D"],
   ],
-};
+});
+
+// Helper to lighten a hex color
+function lightenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.min(255, (num >> 16) + amt);
+  const G = Math.min(255, ((num >> 8) & 0x00ff) + amt);
+  const B = Math.min(255, (num & 0x0000ff) + amt);
+  return `#${((1 << 24) | (R << 16) | (G << 8) | B)
+    .toString(16)
+    .slice(1)
+    .toUpperCase()}`;
+}
 
 // Shared theme properties
-const createTheme = (colors: typeof lightColors, isDark: boolean) => ({
+const createTheme = (
+  colors: ReturnType<typeof createLightColors>,
+  isDark: boolean
+) => ({
   colors,
   spacing: {
     xs: scale(4),
@@ -199,6 +230,8 @@ interface ThemeContextType {
   themeMode: ThemeMode;
   isDark: boolean;
   setThemeMode: (mode: ThemeMode) => void;
+  accentColor: string;
+  setAccentColor: (color: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -206,23 +239,29 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
+  const [accentColor, setAccentColorState] = useState<string>("#4F46E5"); // Default purple
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load saved theme preference
   useEffect(() => {
-    const loadTheme = async () => {
+    const loadPreferences = async () => {
       try {
-        const saved = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-        if (saved && ["light", "dark", "system"].includes(saved)) {
-          setThemeModeState(saved as ThemeMode);
+        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedTheme && ["light", "dark", "system"].includes(savedTheme)) {
+          setThemeModeState(savedTheme as ThemeMode);
+        }
+
+        const savedAccent = await AsyncStorage.getItem(ACCENT_COLOR_KEY);
+        if (savedAccent) {
+          setAccentColorState(savedAccent);
         }
       } catch (e) {
-        console.error("Failed to load theme:", e);
+        console.error("Failed to load theme preferences:", e);
       } finally {
         setIsLoaded(true);
       }
     };
-    loadTheme();
+    loadPreferences();
   }, []);
 
   // Save theme preference
@@ -235,6 +274,16 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Save accent color preference
+  const setAccentColor = async (color: string) => {
+    setAccentColorState(color);
+    try {
+      await AsyncStorage.setItem(ACCENT_COLOR_KEY, color);
+    } catch (e) {
+      console.error("Failed to save accent color:", e);
+    }
+  };
+
   // Determine actual dark mode
   const isDark = useMemo(() => {
     if (themeMode === "system") {
@@ -243,17 +292,29 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     return themeMode === "dark";
   }, [themeMode, systemColorScheme]);
 
-  // Create theme object
+  // Create theme object with custom accent color
   const theme = useMemo(() => {
-    return createTheme(isDark ? darkColors : lightColors, isDark);
-  }, [isDark]);
+    const colors = isDark
+      ? createDarkColors(accentColor)
+      : createLightColors(accentColor);
+    return createTheme(colors, isDark);
+  }, [isDark, accentColor]);
 
   if (!isLoaded) {
     return null; // Or loading indicator
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, themeMode, isDark, setThemeMode }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        themeMode,
+        isDark,
+        setThemeMode,
+        accentColor,
+        setAccentColor,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
@@ -267,5 +328,5 @@ export const useTheme = () => {
   return context;
 };
 
-// Export static theme for backward compatibility (uses light theme)
-export const theme = createTheme(lightColors, false);
+// Export static theme for backward compatibility (uses light theme with default color)
+export const theme = createTheme(createLightColors("#4F46E5"), false);

@@ -12,22 +12,57 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme, Theme } from "../context/ThemeContext";
-import { moderateScale } from "../utils/responsive";
+import { useTheme, Theme, ACCENT_COLORS } from "../context/ThemeContext";
+import { moderateScale, scale } from "../utils/responsive";
 import { storage } from "../utils/storage";
 import { CATEGORIES } from "../utils/categorizer";
 
+// Available icons for custom categories
+const CATEGORY_ICONS = [
+  "pricetag-outline",
+  "cart-outline",
+  "gift-outline",
+  "game-controller-outline",
+  "home-outline",
+  "car-outline",
+  "airplane-outline",
+  "restaurant-outline",
+  "cafe-outline",
+  "beer-outline",
+  "fitness-outline",
+  "heart-outline",
+  "musical-notes-outline",
+  "book-outline",
+  "headset-outline",
+  "phone-portrait-outline",
+  "laptop-outline",
+  "camera-outline",
+  "shirt-outline",
+  "cut-outline",
+  "paw-outline",
+  "leaf-outline",
+  "sparkles-outline",
+  "diamond-outline",
+];
+
+interface CustomCategory {
+  name: string;
+  icon: string;
+}
+
 export const CustomizationScreen = () => {
   const navigation = useNavigation();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, accentColor, setAccentColor } = useTheme();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>(
+    []
+  );
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState("IDR");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [selectedIcon, setSelectedIcon] = useState("pricetag-outline");
 
   useEffect(() => {
     loadSettings();
@@ -36,41 +71,48 @@ export const CustomizationScreen = () => {
   const loadSettings = async () => {
     const categories = await storage.getCustomCategories();
     setCustomCategories(categories || []);
-
-    const currency = await storage.getDefaultCurrency();
-    setDefaultCurrency(currency || "IDR");
   };
 
   const handleAddCategory = async () => {
-    if (!newCategory.trim()) {
+    if (!newCategoryName.trim()) {
       Alert.alert("Error", "Nama kategori tidak boleh kosong");
       return;
     }
 
-    const allCategories = [...CATEGORIES, ...customCategories];
-    if (allCategories.includes(newCategory.trim())) {
+    const allCategoryNames = [
+      ...CATEGORIES,
+      ...customCategories.map((c) => c.name),
+    ];
+    if (allCategoryNames.includes(newCategoryName.trim())) {
       Alert.alert("Error", "Kategori sudah ada");
       return;
     }
 
-    const updated = [...customCategories, newCategory.trim()];
+    const newCategory: CustomCategory = {
+      name: newCategoryName.trim(),
+      icon: selectedIcon,
+    };
+    const updated = [...customCategories, newCategory];
     await storage.saveCustomCategories(updated);
     setCustomCategories(updated);
-    setNewCategory("");
+    setNewCategoryName("");
+    setSelectedIcon("pricetag-outline");
     setShowAddCategory(false);
   };
 
-  const handleDeleteCategory = async (category: string) => {
+  const handleDeleteCategory = async (categoryName: string) => {
     Alert.alert(
       "Hapus Kategori",
-      `Yakin ingin menghapus kategori "${category}"?`,
+      `Yakin ingin menghapus kategori "${categoryName}"?`,
       [
         { text: "Batal", style: "cancel" },
         {
           text: "Hapus",
           style: "destructive",
           onPress: async () => {
-            const updated = customCategories.filter((c) => c !== category);
+            const updated = customCategories.filter(
+              (c) => c.name !== categoryName
+            );
             await storage.saveCustomCategories(updated);
             setCustomCategories(updated);
           },
@@ -78,13 +120,6 @@ export const CustomizationScreen = () => {
       ]
     );
   };
-
-  const handleCurrencyChange = async (currency: string) => {
-    await storage.saveDefaultCurrency(currency);
-    setDefaultCurrency(currency);
-  };
-
-  const currencies = ["IDR", "USD", "EUR", "SGD", "MYR"];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -104,10 +139,39 @@ export const CustomizationScreen = () => {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Accent Color Section - MOVED TO TOP */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Warna Aksen</Text>
+          <Text style={styles.sectionDescription}>
+            Pilih warna tema sesuai selera kamu
+          </Text>
+          <View style={styles.colorGrid}>
+            {ACCENT_COLORS.map((item) => (
+              <TouchableOpacity
+                key={item.color}
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: item.color },
+                  accentColor === item.color && styles.colorSwatchActive,
+                ]}
+                onPress={() => setAccentColor(item.color)}
+              >
+                {accentColor === item.color && (
+                  <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.colorLabel}>
+            {ACCENT_COLORS.find((c) => c.color === accentColor)?.name ||
+              "Kustom"}
+          </Text>
+        </View>
+
         {/* Custom Categories Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Kategori Kustom</Text>
+            <Text style={styles.sectionTitle}>Tambah Kategori</Text>
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => setShowAddCategory(true)}
@@ -120,7 +184,7 @@ export const CustomizationScreen = () => {
             </TouchableOpacity>
           </View>
           <Text style={styles.sectionDescription}>
-            Tambah kategori transaksi sesuai kebutuhanmu
+            Buat kategori transaksi dengan ikon pilihan
           </Text>
 
           {customCategories.length === 0 ? (
@@ -131,14 +195,31 @@ export const CustomizationScreen = () => {
                 color={theme.colors.text.tertiary}
               />
               <Text style={styles.emptyText}>Belum ada kategori kustom</Text>
+              <Text style={styles.emptySubtext}>
+                Tap tombol + untuk menambahkan
+              </Text>
             </View>
           ) : (
             <View style={styles.categoriesList}>
               {customCategories.map((category) => (
-                <View key={category} style={styles.categoryItem}>
-                  <Text style={styles.categoryName}>{category}</Text>
+                <View key={category.name} style={styles.categoryItem}>
+                  <View style={styles.categoryInfo}>
+                    <View
+                      style={[
+                        styles.categoryIcon,
+                        { backgroundColor: theme.colors.primary + "20" },
+                      ]}
+                    >
+                      <Ionicons
+                        name={category.icon as any}
+                        size={moderateScale(20)}
+                        color={theme.colors.primary}
+                      />
+                    </View>
+                    <Text style={styles.categoryName}>{category.name}</Text>
+                  </View>
                   <TouchableOpacity
-                    onPress={() => handleDeleteCategory(category)}
+                    onPress={() => handleDeleteCategory(category.name)}
                   >
                     <Ionicons
                       name="trash-outline"
@@ -150,50 +231,6 @@ export const CustomizationScreen = () => {
               ))}
             </View>
           )}
-        </View>
-
-        {/* Default Currency Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mata Uang Default</Text>
-          <Text style={styles.sectionDescription}>
-            Mata uang default untuk transaksi baru
-          </Text>
-          <View style={styles.currencyOptions}>
-            {currencies.map((currency) => (
-              <TouchableOpacity
-                key={currency}
-                style={[
-                  styles.currencyChip,
-                  defaultCurrency === currency && styles.currencyChipActive,
-                ]}
-                onPress={() => handleCurrencyChange(currency)}
-              >
-                <Text
-                  style={[
-                    styles.currencyText,
-                    defaultCurrency === currency && styles.currencyTextActive,
-                  ]}
-                >
-                  {currency}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Info Section */}
-        <View style={styles.section}>
-          <View style={styles.infoCard}>
-            <Ionicons
-              name="information-circle"
-              size={moderateScale(24)}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.infoText}>
-              Pengaturan lainnya seperti tema, format tanggal, dan urutan kartu
-              akan ditambahkan di versi mendatang
-            </Text>
-          </View>
         </View>
       </ScrollView>
 
@@ -221,16 +258,45 @@ export const CustomizationScreen = () => {
               style={styles.input}
               placeholder="Nama kategori..."
               placeholderTextColor={theme.colors.text.tertiary}
-              value={newCategory}
-              onChangeText={setNewCategory}
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
               autoFocus
             />
+
+            <Text style={styles.iconSectionTitle}>Pilih Ikon</Text>
+            <ScrollView
+              style={styles.iconScrollView}
+              contentContainerStyle={styles.iconGrid}
+              showsVerticalScrollIndicator={false}
+            >
+              {CATEGORY_ICONS.map((iconName) => (
+                <TouchableOpacity
+                  key={iconName}
+                  style={[
+                    styles.iconOption,
+                    selectedIcon === iconName && styles.iconOptionActive,
+                  ]}
+                  onPress={() => setSelectedIcon(iconName)}
+                >
+                  <Ionicons
+                    name={iconName as any}
+                    size={24}
+                    color={
+                      selectedIcon === iconName
+                        ? "#FFFFFF"
+                        : theme.colors.text.secondary
+                    }
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
-                  setNewCategory("");
+                  setNewCategoryName("");
+                  setSelectedIcon("pricetag-outline");
                   setShowAddCategory(false);
                 }}
               >
@@ -240,7 +306,7 @@ export const CustomizationScreen = () => {
                 style={[styles.modalButton, styles.confirmButton]}
                 onPress={handleAddCategory}
               >
-                <Text style={styles.confirmButtonText}>Tambah</Text>
+                <Text style={styles.confirmButtonText}>Simpan</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -267,37 +333,39 @@ const getStyles = (theme: Theme) =>
       borderBottomColor: theme.colors.border,
     },
     backButton: {
-      padding: theme.spacing.s,
+      padding: theme.spacing.xs,
     },
     headerTitle: {
-      ...theme.typography.h2,
+      ...theme.typography.h3,
       color: theme.colors.text.primary,
     },
     placeholder: {
-      width: moderateScale(40),
+      width: moderateScale(32),
     },
     content: {
       flex: 1,
+      padding: theme.spacing.m,
     },
     section: {
       backgroundColor: theme.colors.surface,
-      marginTop: theme.spacing.m,
+      borderRadius: theme.borderRadius.l,
       padding: theme.spacing.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
     },
     sectionHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: theme.spacing.xs,
     },
     sectionTitle: {
       ...theme.typography.h3,
       color: theme.colors.text.primary,
-      marginBottom: theme.spacing.xs,
     },
     sectionDescription: {
       ...theme.typography.caption,
-      color: theme.colors.text.secondary,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.xs,
       marginBottom: theme.spacing.m,
     },
     addButton: {
@@ -310,59 +378,63 @@ const getStyles = (theme: Theme) =>
     emptyText: {
       ...theme.typography.body,
       color: theme.colors.text.tertiary,
-      marginTop: theme.spacing.s,
+      marginTop: theme.spacing.m,
+    },
+    emptySubtext: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.xs,
     },
     categoriesList: {
       gap: theme.spacing.s,
     },
     categoryItem: {
       flexDirection: "row",
-      justifyContent: "space-between",
       alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
       backgroundColor: theme.colors.background,
-      padding: theme.spacing.m,
       borderRadius: theme.borderRadius.m,
+    },
+    categoryInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.m,
+    },
+    categoryIcon: {
+      width: scale(36),
+      height: scale(36),
+      borderRadius: scale(18),
+      justifyContent: "center",
+      alignItems: "center",
     },
     categoryName: {
       ...theme.typography.body,
       color: theme.colors.text.primary,
     },
-    currencyOptions: {
+    colorGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: theme.spacing.s,
+      gap: scale(12),
     },
-    currencyChip: {
-      paddingHorizontal: theme.spacing.l,
-      paddingVertical: theme.spacing.m,
-      borderRadius: theme.borderRadius.m,
-      backgroundColor: theme.colors.background,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+    colorSwatch: {
+      width: scale(48),
+      height: scale(48),
+      borderRadius: scale(24),
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 3,
+      borderColor: "transparent",
     },
-    currencyChipActive: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
+    colorSwatchActive: {
+      borderColor: theme.colors.text.primary,
     },
-    currencyText: {
-      ...theme.typography.body,
-      color: theme.colors.text.primary,
-      fontWeight: "600",
-    },
-    currencyTextActive: {
-      color: "#FFFFFF",
-    },
-    infoCard: {
-      flexDirection: "row",
-      gap: theme.spacing.m,
-      backgroundColor: theme.colors.primary + "10",
-      padding: theme.spacing.m,
-      borderRadius: theme.borderRadius.m,
-    },
-    infoText: {
+    colorLabel: {
       ...theme.typography.caption,
       color: theme.colors.text.secondary,
-      flex: 1,
+      textAlign: "center",
+      marginTop: theme.spacing.m,
     },
     modalOverlay: {
       flex: 1,
@@ -374,7 +446,8 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.surface,
       borderRadius: theme.borderRadius.l,
       padding: theme.spacing.l,
-      width: "85%",
+      width: "90%",
+      maxHeight: "80%",
       ...theme.shadows.large,
     },
     modalHeader: {
@@ -395,7 +468,36 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text.primary,
       borderWidth: 1,
       borderColor: theme.colors.border,
+      marginBottom: theme.spacing.m,
+    },
+    iconSectionTitle: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.s,
+      fontWeight: "600",
+    },
+    iconScrollView: {
+      maxHeight: scale(200),
       marginBottom: theme.spacing.l,
+    },
+    iconGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: scale(10),
+    },
+    iconOption: {
+      width: scale(44),
+      height: scale(44),
+      borderRadius: scale(22),
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    iconOptionActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
     },
     modalActions: {
       flexDirection: "row",

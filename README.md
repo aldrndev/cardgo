@@ -2,7 +2,9 @@
 
 **Card Go** adalah aplikasi mobile berbasis React Native yang dirancang untuk membantu pengguna melacak penggunaan kartu kredit, tagihan, dan limit dengan mudah, aman, dan tanpa perlu koneksi internet (Offline-First).
 
-Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensitif seperti nomor kartu lengkap, CVV, atau PIN.
+Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensitif seperti nomor kartu kredit lengkap atau CVV. Semua data tersimpan aman di perangkat (Local Storage).
+
+_Updated for 2025 - Version 1.2.0_
 
 ---
 
@@ -43,7 +45,27 @@ Aplikasi ini fokus pada privasi pengguna dengan **TIDAK** menyimpan data sensiti
 
 - **Visualisasi Tanggal**: Lihat tanggal cetak tagihan, jatuh tempo, dan jadwal kenaikan limit dalam tampilan kalender.
 
-### 7. Notifikasi & Pengingat (Local Push) 🔔
+### 7. Health Score Keuangan (Skor Kesehatan) ❤️
+
+- **Analisis Otomatis**: Menghitung skor kesehatan penggunaan kartu kredit Anda berdasarkan:
+  - Utilitas Limit (Credit Utilization Ratio)
+  - Riwayat Pembayaran (On-time Payments)
+  - Jumlah Kartu Aktif
+- **Tips & Rekomendasi**: Dapatkan saran untuk meningkatkan skor kesehatan finansial Anda.
+
+### 8. Auto Backup & Restore (Aman & Lokal) 🔄
+
+- **Backup Otomatis**: Aplikasi secara otomatis membuat backup data terenkripsi ke penyimpanan internal setiap hari/minggu (sesuai pengaturan).
+- **Frekuensi Terjadwal**: Pilih frekuensi backup (Harian, 3 Hari, Mingguan, Bulanan) dan waktu backup yang diinginkan.
+- **Restore Mudah**: Kembalikan data dengan mudah jika terjadi kesalahan atau saat berganti perangkat (via file JSON manual).
+
+### 9. Smart Spending Insights 💡
+
+- **Deteksi Anomali**: Notifikasi otomatis jika ada pengeluaran yang tidak biasa atau melonjak drastis dibandingkan kebiasaan Anda.
+- **Analisis Tren**: Bandingkan pengeluaran bulan ini dengan rata-rata 3 bulan terakhir untuk melihat pola belanja.
+- **Saran Cerdas**: Dapatkan tips penghematan personal dan rekomendasi alokasi budget.
+
+### 10. Notifikasi & Pengingat (Local Push) 🔔
 
 - **Offline Notifications**: Aplikasi menggunakan sistem notifikasi lokal (tanpa internet).
 - **Jadwal Otomatis**:

@@ -166,6 +166,42 @@ export const CARD_THEMES: CardTheme[] = [
     colors: ["#F093FB", "#F5576C"],
     textColor: "#ffffff",
   },
+  {
+    id: "teal",
+    name: "Teal Wave",
+    colors: ["#0D9488", "#2DD4BF"],
+    textColor: "#ffffff",
+  },
+  {
+    id: "rose",
+    name: "Rose Gold",
+    colors: ["#B76E79", "#F8E3E3", "#C9A0A0"],
+    textColor: "#1a1a1a",
+  },
+  {
+    id: "lavender",
+    name: "Lavender Dreams",
+    colors: ["#667EEA", "#764BA2"],
+    textColor: "#ffffff",
+  },
+  {
+    id: "forest",
+    name: "Forest Green",
+    colors: ["#11998E", "#38EF7D"],
+    textColor: "#ffffff",
+  },
+  {
+    id: "bronze",
+    name: "Bronze",
+    colors: ["#8D6E63", "#D7CCC8", "#8D6E63"],
+    textColor: "#ffffff",
+  },
+  {
+    id: "azure",
+    name: "Azure Blue",
+    colors: ["#2196F3", "#21CBF3"],
+    textColor: "#ffffff",
+  },
 ];
 
 export type CardFormData = Omit<

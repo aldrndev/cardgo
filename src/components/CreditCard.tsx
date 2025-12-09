@@ -159,7 +159,7 @@ export const CreditCard = React.memo(
           </View>
 
           {/* Payment Status Badge */}
-          {!compact && (
+          {!compact && (card.statementAmount || 0) > 0 && (
             <PaymentStatusBadge
               isPaid={card.isPaid || false}
               daysUntilDue={daysUntilDue}

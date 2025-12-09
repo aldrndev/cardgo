@@ -105,14 +105,12 @@ export const PaymentHistoryScreen = () => {
           />
         </View>
         <View style={styles.itemContent}>
-          <Text style={styles.itemTitle}>
-            {formatBillingCycle(item.billingCycle)}
-          </Text>
+          {/* Show card name as title when viewing all payments */}
           {!cardIdParam && (
-            <Text style={styles.itemSubtitle}>
-              {item.cardName.toUpperCase()}
-            </Text>
+            <Text style={styles.itemTitle}>{item.cardName.toUpperCase()}</Text>
           )}
+          {/* When viewing from card detail, show "Pembayaran" as title */}
+          {cardIdParam && <Text style={styles.itemTitle}>Pembayaran</Text>}
           <Text style={styles.itemDate}>
             Dibayar: {formatDate(item.paidDate)}
           </Text>

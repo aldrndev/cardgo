@@ -23,6 +23,7 @@ import { formatNumberInput, parseAmount } from "../utils/formatters";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { CreditCard } from "../components/CreditCard";
+import { ColorPickerModal } from "../components/ColorPickerModal";
 import { scale, moderateScale } from "../utils/responsive";
 
 type AddEditCardScreenRouteProp = RouteProp<RootStackParamList, "AddEditCard">;
@@ -75,6 +76,7 @@ export const AddEditCardScreen = () => {
   });
   const [tagInput, setTagInput] = useState("");
   const [monthError, setMonthError] = useState("");
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
 
   useEffect(() => {
     if (isEditing && existingCard) {
@@ -198,6 +200,18 @@ export const AddEditCardScreen = () => {
     setFormData({
       ...formData,
       tags: formData.tags?.filter((tag) => tag !== tagToRemove),
+    });
+  };
+
+  // Handle custom color selection from color picker
+  const handleCustomColorSelect = (
+    primaryColor: string,
+    secondaryColor: string
+  ) => {
+    setFormData({
+      ...formData,
+      themeId: "custom",
+      colorTheme: primaryColor,
     });
   };
 
@@ -378,7 +392,43 @@ export const AddEditCardScreen = () => {
                   </LinearGradient>
                 </TouchableOpacity>
               ))}
+              {/* Custom Color Button */}
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  formData.themeId === "custom" && styles.selectedTheme,
+                ]}
+                onPress={() => setColorPickerVisible(true)}
+              >
+                <View style={styles.customColorButton}>
+                  {formData.themeId === "custom" ? (
+                    <LinearGradient
+                      colors={[formData.colorTheme || "#4F46E5", "#FFFFFF"]}
+                      style={styles.themePreview}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons
+                        name="checkmark"
+                        size={moderateScale(24)}
+                        color="#FFF"
+                      />
+                    </LinearGradient>
+                  ) : (
+                    <View style={styles.customColorInner}>
+                      <Ionicons
+                        name="color-palette-outline"
+                        size={moderateScale(24)}
+                        color={theme.colors.text.secondary}
+                      />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
             </ScrollView>
+            <Text style={styles.customColorHint}>
+              Pilih dari preset atau tap ikon palet untuk warna kustom
+            </Text>
           </View>
 
           {/* Section 3: Detail Keuangan */}
@@ -900,6 +950,14 @@ export const AddEditCardScreen = () => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Custom Color Picker Modal */}
+      <ColorPickerModal
+        visible={colorPickerVisible}
+        onClose={() => setColorPickerVisible(false)}
+        onSelectColor={handleCustomColorSelect}
+        initialColor={formData.colorTheme || theme.colors.primary}
+      />
     </SafeAreaView>
   );
 };
@@ -1035,6 +1093,28 @@ const getStyles = (theme: Theme) =>
       borderRadius: theme.borderRadius.s,
       justifyContent: "center",
       alignItems: "center",
+    },
+    customColorButton: {
+      width: scale(60),
+      height: scale(40),
+      borderRadius: theme.borderRadius.s,
+      overflow: "hidden",
+    },
+    customColorInner: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.s,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderStyle: "dashed",
+    },
+    customColorHint: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing.s,
+      fontSize: moderateScale(11),
     },
     row: {
       flexDirection: "row",

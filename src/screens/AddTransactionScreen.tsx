@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
 import { Transaction } from "../types/card";
 import { categorizeTransaction, CATEGORIES } from "../utils/categorizer";
+import { storage } from "../utils/storage";
 import {
   formatNumberInput,
   parseAmount,
@@ -85,6 +86,19 @@ export const AddTransactionScreen = () => {
   const [tempDay, setTempDay] = useState(new Date().getDate());
   const [tempMonth, setTempMonth] = useState(new Date().getMonth());
   const [tempYear, setTempYear] = useState(new Date().getFullYear());
+
+  // Custom Categories
+  const [customCategories, setCustomCategories] = useState<
+    { name: string; icon: string }[]
+  >([]);
+
+  useEffect(() => {
+    const loadCustomCategories = async () => {
+      const cats = await storage.getCustomCategories();
+      setCustomCategories(cats || []);
+    };
+    loadCustomCategories();
+  }, []);
 
   // Helper to parse localized numbers (remove dots/commas)
   const parseNumber = (value: string) => {
@@ -778,6 +792,51 @@ export const AddTransactionScreen = () => {
                       ]}
                     >
                       {cat}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {/* Custom Categories */}
+              {customCategories.map((customCat) => {
+                const isSelected = category === customCat.name;
+                const iconColor = theme.colors.primary;
+
+                return (
+                  <TouchableOpacity
+                    key={customCat.name}
+                    style={[
+                      styles.categoryItem,
+                      isSelected && {
+                        backgroundColor: iconColor + "20",
+                        borderColor: iconColor,
+                      },
+                    ]}
+                    onPress={() => setCategory(customCat.name)}
+                  >
+                    <View
+                      style={[
+                        styles.categoryIconContainer,
+                        isSelected
+                          ? { backgroundColor: iconColor }
+                          : { backgroundColor: theme.colors.background },
+                      ]}
+                    >
+                      <Ionicons
+                        name={customCat.icon as any}
+                        size={moderateScale(18)}
+                        color={isSelected ? "#FFFFFF" : iconColor}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        isSelected && {
+                          color: theme.colors.text.primary,
+                          fontWeight: "600",
+                        },
+                      ]}
+                    >
+                      {customCat.name}
                     </Text>
                   </TouchableOpacity>
                 );

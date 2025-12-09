@@ -23,7 +23,7 @@ import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { isWeb, platformCapabilities } from "../utils/platform";
 
 import { useCards } from "../context/CardsContext";
-import { createBackup, restoreBackup } from "../utils/backup";
+import { createFullBackup, restoreFullBackup } from "../utils/backup";
 import { useAuth } from "../context/AuthContext";
 import { BiometricService } from "../services/BiometricService";
 import { ExportService } from "../services/ExportService";
@@ -145,6 +145,16 @@ export const SettingsScreen = () => {
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   };
 
+  // Capitalize name helper (Title Case)
+  const capitalizeName = (name: string | undefined): string => {
+    if (!name) return "Pengguna Card Go";
+    return name
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   const loadUserProfile = async () => {
     const profile = await storage.getUserProfile();
     setUserProfile(profile);
@@ -233,52 +243,15 @@ export const SettingsScreen = () => {
   };
 
   const handleRestore = async () => {
-    await restoreBackup(async (data) => {
-      // Restore Cards, Transactions, Subscriptions, Installment Plans
-      await restoreData(
-        data.cards,
-        data.transactions,
-        data.subscriptions || [],
-        data.installmentPlans || []
-      );
-
-      // Restore Limit Increase Records
-      if (data.limitIncreaseRecords && data.limitIncreaseRecords.length > 0) {
-        await storage.saveLimitIncreaseRecords(data.limitIncreaseRecords);
-        // We might need to refresh limit increase context too, but a simple app reload or context refresh would do.
-        // Since LimitIncreaseContext loads on mount, we might need to force reload or just rely on next app start.
-        // Ideally, we should expose a 'refreshRecords' method in LimitIncreaseContext.
-      }
-
-      // Restore settings if needed
-      if (data.settings) {
-        if (data.settings.notificationPrefs) {
-          setNotificationPrefs(data.settings.notificationPrefs);
-          await storage.saveNotificationPreferences(
-            data.settings.notificationPrefs
-          );
-        }
-      }
+    await restoreFullBackup(() => {
+      // Reload notification preferences after restore
+      loadNotificationPrefs();
+      loadUserProfile();
     });
   };
 
   const handleBackup = async () => {
-    // We need to fetch all limit increase records.
-    // Since we can't easily get them from hook if not exposed, let's fetch from storage directly for backup to be safe.
-    const limitIncreaseRecords = await storage.getLimitIncreaseRecords();
-
-    await createBackup(
-      cards,
-      transactions,
-      subscriptions,
-      limitIncreaseRecords,
-      installmentPlans,
-      {
-        themeMode: "light",
-        notificationsEnabled: notificationPrefs.payment, // Backward compatibility
-        notificationPrefs,
-      }
-    );
+    await createFullBackup();
   };
 
   const handleClearData = () => {
@@ -293,7 +266,11 @@ export const SettingsScreen = () => {
           onPress: async () => {
             await storage.clearAll();
             refreshCards();
-            Alert.alert("Sukses", "Semua data berhasil dihapus");
+            // Reset navigation stack to Startup (which will redirect to Onboarding)
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Startup" as never }],
+            });
           },
         },
       ]
@@ -301,10 +278,24 @@ export const SettingsScreen = () => {
   };
 
   const handleResetOnboarding = async () => {
-    await storage.setHasSeenOnboarding(false);
     Alert.alert(
-      "Sukses",
-      "Onboarding di-reset. Restart aplikasi atau kembali untuk melihatnya."
+      "Reset Onboarding",
+      "Apakah Anda yakin ingin menampilkan ulang intro aplikasi? Aplikasi akan di-restart.",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            await storage.setHasSeenOnboarding(false);
+            // Reset navigation stack to Startup
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Startup" as never }],
+            });
+          },
+        },
+      ]
     );
   };
 
@@ -360,7 +351,7 @@ export const SettingsScreen = () => {
           </View>
           <View>
             <Text style={styles.profileName}>
-              {userProfile?.nickname || "Pengguna Card Go"}
+              {capitalizeName(userProfile?.nickname)}
             </Text>
             <Text style={styles.profileSubtitle}>
               Member sejak{" "}
@@ -575,8 +566,8 @@ export const SettingsScreen = () => {
           <Text style={styles.sectionTitle}>Kustomisasi</Text>
           <SettingsItem
             icon="options-outline"
-            label="Preferensi"
-            sublabel="Kategori kustom, mata uang, dan lainnya"
+            label="Kustomisasi"
+            sublabel="Custom Warna & Kategori"
             onPress={() => navigation.navigate("Customization")}
           />
           <SettingsItem

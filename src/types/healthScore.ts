@@ -27,4 +27,5 @@ export interface HealthScore {
   rating: "excellent" | "good" | "fair" | "poor";
   recommendations: string[];
   lastUpdated: Date;
+  hasData: boolean; // true if there are active cards to calculate score from
 }

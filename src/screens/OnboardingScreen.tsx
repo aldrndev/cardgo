@@ -21,6 +21,10 @@ import { useTheme, Theme } from "../context/ThemeContext";
 import { storage } from "../utils/storage";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
+import { restoreFullBackup } from "../utils/backup";
+import { useCards } from "../context/CardsContext";
+import { Ionicons } from "@expo/vector-icons";
+import { moderateScale } from "../utils/responsive";
 
 const SLIDES = [
   {
@@ -55,6 +59,7 @@ export const OnboardingScreen = () => {
   const { width } = useWindowDimensions();
   const navigation = useNavigation<OnboardingScreenNavigationProp>();
   const { theme, isDark } = useTheme();
+  const { refreshCards } = useCards();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -62,6 +67,7 @@ export const OnboardingScreen = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [nickname, setNickname] = useState("");
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -85,6 +91,13 @@ export const OnboardingScreen = () => {
   const allSlides = [
     ...SLIDES,
     {
+      id: "restore",
+      title: "Punya Backup?",
+      description:
+        "Jika kamu pindah dari HP lama, kamu bisa restore data backup.",
+      image: require("../assets/generated/onboarding_security.png"),
+    },
+    {
       id: "input",
       title: "Satu Langkah Lagi",
       description: "Siapa nama panggilanmu?",
@@ -100,6 +113,22 @@ export const OnboardingScreen = () => {
       return () => clearTimeout(timer);
     }
   }, [activeIndex]);
+
+  const handleRestore = async () => {
+    setIsRestoring(true);
+    try {
+      const success = await restoreFullBackup(undefined, true);
+      if (success) {
+        // Refresh cards data immediately
+        await refreshCards();
+        // Mark onboarding as complete and navigate to main
+        await storage.setHasSeenOnboarding(true);
+        navigation.replace("Main");
+      }
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   const handleNext = async () => {
     if (activeIndex < allSlides.length - 1) {
@@ -123,6 +152,48 @@ export const OnboardingScreen = () => {
       setActiveIndex(viewableItems[0].index);
     }
   }).current;
+
+  const renderRestoreSlide = (item: any) => (
+    <View style={[styles.slide, { width }]}>
+      <View style={styles.restoreIconContainer}>
+        <Ionicons
+          name="cloud-download-outline"
+          size={moderateScale(80)}
+          color={theme.colors.primary}
+        />
+      </View>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.description}>{item.description}</Text>
+
+      <View style={styles.restoreButtonsContainer}>
+        <TouchableOpacity
+          style={styles.restoreButton}
+          onPress={handleRestore}
+          disabled={isRestoring}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="folder-open-outline"
+            size={moderateScale(20)}
+            color="#FFFFFF"
+          />
+          <Text style={styles.restoreButtonText}>
+            {isRestoring ? "Memproses..." : "Pilih File Backup"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.skipRestoreButton}
+          onPress={handleNext}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.skipRestoreText}>
+            Tidak punya backup? Lanjut sebagai pengguna baru
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -154,6 +225,11 @@ export const OnboardingScreen = () => {
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}
           renderItem={({ item, index }) => {
+            // Restore slide
+            if (item.id === "restore") {
+              return renderRestoreSlide(item);
+            }
+            // Input slide
             if (item.id === "input") {
               return (
                 <View style={[styles.slide, { width }]}>
@@ -207,6 +283,7 @@ export const OnboardingScreen = () => {
                 </View>
               );
             }
+            // Regular slides
             return (
               <View style={[styles.slide, { width }]}>
                 <View
@@ -243,22 +320,25 @@ export const OnboardingScreen = () => {
             ))}
           </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.button,
-                Platform.OS === "web" && ({ cursor: "pointer" } as any),
-              ]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>
-                {activeIndex === allSlides.length - 1
-                  ? "Mulai Sekarang"
-                  : "Lanjut"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Hide buttons on restore slide (has its own buttons) */}
+          {allSlides[activeIndex]?.id !== "restore" && (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  Platform.OS === "web" && ({ cursor: "pointer" } as any),
+                ]}
+                onPress={handleNext}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>
+                  {activeIndex === allSlides.length - 1
+                    ? "Mulai Sekarang"
+                    : "Lanjut"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -305,7 +385,7 @@ const getStyles = (theme: Theme) =>
     },
     footer: {
       padding: theme.spacing.xl,
-      backgroundColor: theme.colors.background, // Ensure background is opaque
+      backgroundColor: theme.colors.background,
     },
     pagination: {
       flexDirection: "row",
@@ -337,7 +417,6 @@ const getStyles = (theme: Theme) =>
       ...theme.typography.button,
       color: "#FFFFFF",
     },
-
     inputWrapper: {
       paddingHorizontal: theme.spacing.xl,
       alignItems: "center",
@@ -390,5 +469,43 @@ const getStyles = (theme: Theme) =>
       fontWeight: "600",
       marginTop: theme.spacing.l,
       fontSize: 18,
+    },
+    // Restore slide styles
+    restoreIconContainer: {
+      width: 150,
+      height: 150,
+      borderRadius: 75,
+      backgroundColor: theme.colors.primary + "15",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: theme.spacing.xl,
+    },
+    restoreButtonsContainer: {
+      width: "100%",
+      marginTop: theme.spacing.xl,
+      gap: theme.spacing.m,
+    },
+    restoreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.primary,
+      paddingVertical: theme.spacing.m,
+      borderRadius: theme.borderRadius.l,
+      gap: theme.spacing.s,
+      ...theme.shadows.medium,
+    },
+    restoreButtonText: {
+      ...theme.typography.button,
+      color: "#FFFFFF",
+    },
+    skipRestoreButton: {
+      paddingVertical: theme.spacing.m,
+      alignItems: "center",
+    },
+    skipRestoreText: {
+      ...theme.typography.caption,
+      color: theme.colors.text.tertiary,
+      textDecorationLine: "underline",
     },
   });
