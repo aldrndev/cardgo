@@ -14,6 +14,8 @@ import { View, StyleSheet, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { isWeb } from "./src/utils/platform";
 
+import { AutoBackupService } from "./src/services/AutoBackupService";
+
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
@@ -57,6 +59,9 @@ export default function App() {
   useEffect(() => {
     const initApp = async () => {
       try {
+        // Initialize Auto Backup Check
+        await AutoBackupService.init();
+
         // Check biometric (skip on web)
         if (!isWeb) {
           const biometricEnabled = await BiometricService.isEnabled();

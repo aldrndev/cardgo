@@ -345,7 +345,7 @@ export const PrivacyPolicyScreen = () => {
           <Text style={styles.footerText}>
             Terakhir diperbarui: Desember 2025
           </Text>
-          <Text style={styles.footerText}>Card Go v1.0.0</Text>
+          <Text style={styles.footerText}>Card Go v1.2.0</Text>
           <Text style={[styles.footerText, styles.boldFooter]}>
             Privasi Anda adalah prioritas kami. 🔒
           </Text>

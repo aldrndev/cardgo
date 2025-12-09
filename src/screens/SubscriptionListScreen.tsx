@@ -175,7 +175,7 @@ export const SubscriptionListScreen = () => {
 
       <View style={styles.summaryContainer}>
         <LinearGradient
-          colors={[theme.colors.primary, theme.colors.secondary]}
+          colors={[theme.colors.primary, theme.colors.primary + "CC"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.summaryGradient}

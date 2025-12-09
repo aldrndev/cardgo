@@ -74,6 +74,16 @@ export const HomeScreen = () => {
     setUserProfile(profile);
   };
 
+  // Capitalize name helper (Title Case)
+  const capitalizeName = (name: string | undefined): string => {
+    if (!name) return "Pengguna";
+    return name
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   const unarchivedCards = React.useMemo(() => {
     return cards.filter((c) => !c.isArchived);
   }, [cards]);
@@ -345,7 +355,7 @@ export const HomeScreen = () => {
           <View>
             <Text style={styles.greetingText}>{getGreeting()},</Text>
             <Text style={styles.headerTitle}>
-              {userProfile?.nickname || "Pengguna"}
+              {capitalizeName(userProfile?.nickname)}
             </Text>
             <Text style={styles.dateText}>{today}</Text>
           </View>
@@ -375,7 +385,7 @@ export const HomeScreen = () => {
         <View style={styles.headerLeft}>
           <Text style={styles.greetingText}>{getGreeting()} 👋</Text>
           <Text style={styles.headerTitle}>
-            {userProfile?.nickname || "Pengguna"}
+            {capitalizeName(userProfile?.nickname)}
           </Text>
           <Text style={styles.dateText}>{today}</Text>
         </View>
@@ -399,7 +409,7 @@ export const HomeScreen = () => {
           {/* Summary Card */}
           <View style={styles.summaryContainer}>
             <LinearGradient
-              colors={["#4F46E5", "#3730A3"]}
+              colors={[theme.colors.primary, theme.colors.primary + "CC"]} // Use accent color
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.summaryCard}
@@ -487,7 +497,7 @@ export const HomeScreen = () => {
                 onPress={() => navigation.navigate("AddEditCard", {})}
               >
                 <LinearGradient
-                  colors={["#4F46E5", "#4338CA"]}
+                  colors={[theme.colors.primary, theme.colors.primary + "CC"]} // Accent color
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.actionIcon}
@@ -588,10 +598,19 @@ export const HomeScreen = () => {
                     All Credit Health Score
                   </Text>
                   <Text style={styles.healthScoreSubtitle}>
-                    {healthScore.rating === "excellent" && "🎉 Sangat Baik"}
-                    {healthScore.rating === "good" && "👍 Baik"}
-                    {healthScore.rating === "fair" && "⚠️ Cukup"}
-                    {healthScore.rating === "poor" && "📉 Perlu Perbaikan"}
+                    {!healthScore.hasData && "📊 Belum ada data"}
+                    {healthScore.hasData &&
+                      healthScore.rating === "excellent" &&
+                      "🎉 Sangat Baik"}
+                    {healthScore.hasData &&
+                      healthScore.rating === "good" &&
+                      "👍 Baik"}
+                    {healthScore.hasData &&
+                      healthScore.rating === "fair" &&
+                      "⚠️ Cukup"}
+                    {healthScore.hasData &&
+                      healthScore.rating === "poor" &&
+                      "📉 Perlu Perbaikan"}
                   </Text>
                   <TouchableOpacity
                     style={styles.healthScoreButton}
@@ -612,18 +631,35 @@ export const HomeScreen = () => {
                   <View
                     style={[
                       styles.healthScoreCircle,
-                      { borderColor: getScoreColor(healthScore.rating) },
+                      {
+                        borderColor: healthScore.hasData
+                          ? getScoreColor(healthScore.rating)
+                          : theme.colors.border,
+                      },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.healthScoreNumber,
-                        { color: getScoreColor(healthScore.rating) },
-                      ]}
-                    >
-                      {healthScore.totalScore}
-                    </Text>
-                    <Text style={styles.healthScoreMax}>/100</Text>
+                    {healthScore.hasData ? (
+                      <>
+                        <Text
+                          style={[
+                            styles.healthScoreNumber,
+                            { color: getScoreColor(healthScore.rating) },
+                          ]}
+                        >
+                          {healthScore.totalScore}
+                        </Text>
+                        <Text style={styles.healthScoreMax}>/100</Text>
+                      </>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.healthScoreNumber,
+                          { color: theme.colors.text.tertiary, fontSize: 16 },
+                        ]}
+                      >
+                        --
+                      </Text>
+                    )}
                   </View>
                 </View>
               </View>

@@ -212,8 +212,10 @@ export const storage = {
       };
     }
   },
-
-  async saveCustomCategories(categories: string[]): Promise<void> {
+  // Custom categories with icons
+  async saveCustomCategories(
+    categories: { name: string; icon: string }[]
+  ): Promise<void> {
     try {
       const jsonValue = JSON.stringify(categories);
       await AsyncStorage.setItem("@card_go_custom_categories", jsonValue);
@@ -222,12 +224,21 @@ export const storage = {
     }
   },
 
-  async getCustomCategories(): Promise<string[]> {
+  async getCustomCategories(): Promise<{ name: string; icon: string }[]> {
     try {
       const jsonValue = await AsyncStorage.getItem(
         "@card_go_custom_categories"
       );
-      return jsonValue != null ? JSON.parse(jsonValue) : [];
+      if (!jsonValue) return [];
+      const parsed = JSON.parse(jsonValue);
+      // Handle migration from old string[] format
+      if (parsed.length > 0 && typeof parsed[0] === "string") {
+        return parsed.map((name: string) => ({
+          name,
+          icon: "pricetag-outline",
+        }));
+      }
+      return parsed;
     } catch (e) {
       console.error("Failed to fetch custom categories", e);
       return [];

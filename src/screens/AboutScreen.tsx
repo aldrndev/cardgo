@@ -41,7 +41,7 @@ export const AboutScreen = () => {
         <View style={styles.appInfoCard}>
           <Text style={styles.appIcon}>💳</Text>
           <Text style={styles.appName}>Card Go</Text>
-          <Text style={styles.appVersion}>Versi 1.0.0</Text>
+          <Text style={styles.appVersion}>Versi 1.2.0</Text>
           <Text style={styles.description}>
             Aplikasi pelacak kartu kredit yang aman dan offline-first untuk
             memantau limit, tagihan, dan jatuh tempo.
@@ -59,9 +59,9 @@ export const AboutScreen = () => {
             <Text style={styles.sectionTitle}>Kebijakan Privasi</Text>
           </View>
           <Text style={styles.text}>
-            Card Go adalah aplikasi offline-first. Semua data kamu tersimpan
-            secara lokal di perangkatmu menggunakan mekanisme penyimpanan yang
-            aman.
+            Card Go adalah aplikasi offline-first. Semua data kamu, termasuk
+            backup otomatis, tersimpan secara lokal di perangkatmu. Kami
+            menggunakan penyimpanan internal yang aman.
           </Text>
           <Text style={styles.text}>
             Kami tidak mengumpulkan, mengirimkan, atau menyimpan informasi
@@ -131,7 +131,47 @@ export const AboutScreen = () => {
               />
               <Text style={styles.featureText}>Backup & Export data</Text>
             </View>
+            <View style={styles.featureItem}>
+              <Ionicons
+                name="heart" // Changed icon to heart for Health Score
+                size={18}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.featureText}>Health Score Keuangan</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="bulb" size={18} color={theme.colors.primary} />
+              <Text style={styles.featureText}>Smart Spending Insights</Text>
+            </View>
           </View>
+        </View>
+
+        {/* Terms & Conditions Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons
+              name="document-text"
+              size={20}
+              color={theme.colors.text.primary}
+            />
+            <Text style={styles.sectionTitle}>Syarat & Ketentuan</Text>
+          </View>
+          <Text style={styles.text}>
+            1. <Text style={{ fontWeight: "bold" }}>Penggunaan Gratis:</Text>{" "}
+            Aplikasi ini disediakan gratis untuk penggunaan pribadi.
+          </Text>
+          <Text style={styles.text}>
+            2. <Text style={{ fontWeight: "bold" }}>Tanggung Jawab Data:</Text>{" "}
+            Karena bersifat offline, pengguna bertanggung jawab penuh atas
+            keamanan perangkat dan backup data mereka. Kami tidak memiliki akses
+            untuk memulihkan data yang hilang jika perangkat rusak atau hilang
+            tanpa backup.
+          </Text>
+          <Text style={[styles.text, { marginBottom: 0 }]}>
+            3. <Text style={{ fontWeight: "bold" }}>Perubahan:</Text> Pengembang
+            berhak memperbarui fitur aplikasi sewaktu-waktu untuk peningkatan
+            kualitas layanan.
+          </Text>
         </View>
 
         {/* Disclaimer Section */}
@@ -146,9 +186,10 @@ export const AboutScreen = () => {
           </View>
           <Text style={styles.disclaimerText}>
             Aplikasi ini adalah alat pelacak dan tidak berafiliasi dengan bank
-            atau lembaga keuangan mana pun. Informasi yang disediakan hanya
-            untuk tujuan pelacakan pribadi. Selalu merujuk pada laporan bank
-            resmi untuk informasi tagihan yang akurat.
+            mana pun. Skor Kesehatan Finansial (Health Score) hanyalah indikasi
+            berdasarkan data yang Anda input, bukan penilaian kredit resmi (BI
+            Checking/SLIK). Selalu merujuk pada laporan bank resmi untuk
+            informasi tagihan yang akurat.
           </Text>
         </View>
 

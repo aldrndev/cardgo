@@ -89,7 +89,7 @@ export const InsightsScreen = () => {
       });
     } else if (insight.type === "milestone") {
       // Milestone is about credit limit usage, so go to Cards Tab
-      navigation.navigate("CardsTab");
+      navigation.navigate("CardsTab" as never);
     }
   };
 
@@ -427,7 +427,7 @@ export const InsightsScreen = () => {
       >
         {/* Summary Card */}
         <LinearGradient
-          colors={["#00A896", "#028090"]}
+          colors={[theme.colors.primary, theme.colors.primary + "CC"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.summaryCard}
@@ -502,10 +502,10 @@ export const InsightsScreen = () => {
                     : ["#EEF2FF", "#E0E7FF"];
                 const darkGradientColors: [string, string] =
                   insight.severity === "warning"
-                    ? ["#78350F", "#92400E"]
+                    ? ["#FACC1530", "#CA8A0430"] // Warning: translucent yellow/amber
                     : insight.severity === "success"
-                    ? ["#064E3B", "#065F46"]
-                    : ["#312E81", "#3730A3"];
+                    ? ["#22C55E30", "#16A34A30"] // Success: translucent green
+                    : ["#6366F130", "#4F46E530"]; // Info: translucent indigo
 
                 return (
                   <TouchableOpacity
@@ -613,148 +613,190 @@ export const InsightsScreen = () => {
             <View
               style={[
                 styles.scoreCircle,
-                { borderColor: getScoreColor(healthScore.rating) },
+                {
+                  borderColor: healthScore.hasData
+                    ? getScoreColor(healthScore.rating)
+                    : theme.colors.border,
+                },
               ]}
             >
+              {healthScore.hasData ? (
+                <>
+                  <Text
+                    style={[
+                      styles.scoreNumber,
+                      { color: getScoreColor(healthScore.rating) },
+                    ]}
+                  >
+                    {healthScore.totalScore}
+                  </Text>
+                  <Text style={styles.scoreLabel}>/ 100</Text>
+                </>
+              ) : (
+                <Text
+                  style={[
+                    styles.scoreNumber,
+                    { color: theme.colors.text.tertiary, fontSize: 32 },
+                  ]}
+                >
+                  --
+                </Text>
+              )}
+            </View>
+            {!healthScore.hasData && (
               <Text
-                style={[
-                  styles.scoreNumber,
-                  { color: getScoreColor(healthScore.rating) },
-                ]}
+                style={{
+                  marginTop: 12,
+                  color: theme.colors.text.secondary,
+                  textAlign: "center",
+                }}
               >
-                {healthScore.totalScore}
+                Tambahkan kartu dan transaksi untuk melihat skor kesehatan
+                kredit Anda.
               </Text>
-              <Text style={styles.scoreLabel}>/ 100</Text>
-            </View>
+            )}
           </View>
 
-          {/* Breakdown */}
-          <Text style={styles.breakdownTitle}>Rincian Skor</Text>
+          {healthScore.hasData && (
+            <>
+              {/* Breakdown */}
+              <Text style={styles.breakdownTitle}>Rincian Skor</Text>
 
-          {/* Penggunaan Limit */}
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
-              <Text style={styles.breakdownLabel}>Penggunaan Limit</Text>
-              <Text style={styles.breakdownScore}>
-                {healthScore.breakdown.creditUtilization.score}/40
-              </Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${
-                      (healthScore.breakdown.creditUtilization.score / 40) * 100
-                    }%`,
-                    backgroundColor: getScoreColor(
-                      healthScore.breakdown.creditUtilization.rating
-                    ),
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.breakdownDetail}>
-              {healthScore.breakdown.creditUtilization.percentage.toFixed(1)}%
-              dari limit terpakai
-            </Text>
-          </View>
+              {/* Penggunaan Limit */}
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownHeader}>
+                  <Text style={styles.breakdownLabel}>Penggunaan Limit</Text>
+                  <Text style={styles.breakdownScore}>
+                    {healthScore.breakdown.creditUtilization.score}/40
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${
+                          (healthScore.breakdown.creditUtilization.score / 40) *
+                          100
+                        }%`,
+                        backgroundColor: getScoreColor(
+                          healthScore.breakdown.creditUtilization.rating
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.breakdownDetail}>
+                  {healthScore.breakdown.creditUtilization.percentage.toFixed(
+                    1
+                  )}
+                  % dari limit terpakai
+                </Text>
+              </View>
 
-          {/* Riwayat Pembayaran */}
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
-              <Text style={styles.breakdownLabel}>Riwayat Pembayaran</Text>
-              <Text style={styles.breakdownScore}>
-                {healthScore.breakdown.paymentHistory.score}/30
-              </Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${
-                      (healthScore.breakdown.paymentHistory.score / 30) * 100
-                    }%`,
-                    backgroundColor: getScoreColor(
-                      healthScore.breakdown.paymentHistory.rating
-                    ),
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.breakdownDetail}>
-              {healthScore.breakdown.paymentHistory.onTimeCount} tepat waktu,{" "}
-              {healthScore.breakdown.paymentHistory.lateCount} telat
-            </Text>
-          </View>
+              {/* Riwayat Pembayaran */}
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownHeader}>
+                  <Text style={styles.breakdownLabel}>Riwayat Pembayaran</Text>
+                  <Text style={styles.breakdownScore}>
+                    {healthScore.breakdown.paymentHistory.score}/30
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${
+                          (healthScore.breakdown.paymentHistory.score / 30) *
+                          100
+                        }%`,
+                        backgroundColor: getScoreColor(
+                          healthScore.breakdown.paymentHistory.rating
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.breakdownDetail}>
+                  {healthScore.breakdown.paymentHistory.lateCount === 0
+                    ? "Selalu tepat waktu ✓"
+                    : `${healthScore.breakdown.paymentHistory.lateCount}x terlambat`}
+                </Text>
+              </View>
 
-          {/* Disiplin Budget */}
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
-              <Text style={styles.breakdownLabel}>Disiplin Budget</Text>
-              <Text style={styles.breakdownScore}>
-                {healthScore.breakdown.spendingDiscipline.score}/20
-              </Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${
-                      (healthScore.breakdown.spendingDiscipline.score / 20) *
-                      100
-                    }%`,
-                    backgroundColor: getScoreColor(
-                      healthScore.breakdown.spendingDiscipline.rating
-                    ),
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.breakdownDetail}>
-              {healthScore.breakdown.spendingDiscipline.budgetUsage > 0
-                ? `${healthScore.breakdown.spendingDiscipline.budgetUsage.toFixed(
-                    0
-                  )}% dari budget`
-                : "Belum ada budget"}
-            </Text>
-          </View>
+              {/* Disiplin Budget */}
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownHeader}>
+                  <Text style={styles.breakdownLabel}>Disiplin Budget</Text>
+                  <Text style={styles.breakdownScore}>
+                    {healthScore.breakdown.spendingDiscipline.score}/20
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${
+                          (healthScore.breakdown.spendingDiscipline.score /
+                            20) *
+                          100
+                        }%`,
+                        backgroundColor: getScoreColor(
+                          healthScore.breakdown.spendingDiscipline.rating
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.breakdownDetail}>
+                  {healthScore.breakdown.spendingDiscipline.budgetUsage > 0
+                    ? `${healthScore.breakdown.spendingDiscipline.budgetUsage.toFixed(
+                        0
+                      )}% dari budget`
+                    : "Belum ada budget"}
+                </Text>
+              </View>
 
-          {/* Trend */}
-          <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
-              <Text style={styles.breakdownLabel}>Trend (3 Bulan)</Text>
-              <Text style={styles.breakdownScore}>
-                {healthScore.breakdown.trend.score}/10
-              </Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${(healthScore.breakdown.trend.score / 10) * 100}%`,
-                    backgroundColor:
-                      healthScore.breakdown.trend.direction === "improving"
-                        ? "#10B981"
-                        : healthScore.breakdown.trend.direction === "declining"
-                        ? "#EF4444"
-                        : "#6B7280",
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.breakdownDetail}>
-              Spending{" "}
-              {healthScore.breakdown.trend.direction === "improving"
-                ? "menurun ✓"
-                : healthScore.breakdown.trend.direction === "declining"
-                ? "meningkat ↑"
-                : "stabil"}
-            </Text>
-          </View>
+              {/* Trend */}
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownHeader}>
+                  <Text style={styles.breakdownLabel}>Trend (3 Bulan)</Text>
+                  <Text style={styles.breakdownScore}>
+                    {healthScore.breakdown.trend.score}/10
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${
+                          (healthScore.breakdown.trend.score / 10) * 100
+                        }%`,
+                        backgroundColor:
+                          healthScore.breakdown.trend.direction === "improving"
+                            ? "#10B981"
+                            : healthScore.breakdown.trend.direction ===
+                              "declining"
+                            ? "#EF4444"
+                            : "#6B7280",
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.breakdownDetail}>
+                  Spending{" "}
+                  {healthScore.breakdown.trend.direction === "improving"
+                    ? "menurun ✓"
+                    : healthScore.breakdown.trend.direction === "declining"
+                    ? "meningkat ↑"
+                    : "stabil"}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Weekly Trend */}

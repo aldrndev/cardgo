@@ -28,6 +28,7 @@ import { TermsScreen } from "../screens/TermsScreen";
 import { BackupExportScreen } from "../screens/BackupExportScreen";
 import { CategoryBudgetScreen } from "../screens/CategoryBudgetScreen";
 import { LinkedLimitsScreen } from "../screens/LinkedLimitsScreen";
+import { CustomizationScreen } from "../screens/CustomizationScreen";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -130,6 +131,11 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="LinkedLimits"
           component={LinkedLimitsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Customization"
+          component={CustomizationScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

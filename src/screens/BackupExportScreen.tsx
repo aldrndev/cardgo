@@ -8,6 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Platform,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -22,6 +25,14 @@ import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { formatCurrencyExact } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
 import { storage } from "../utils/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  AutoBackupService,
+  AutoBackupFrequency,
+} from "../services/AutoBackupService";
+import { Switch } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useEffect } from "react";
 
 export const BackupExportScreen = () => {
   const navigation = useNavigation();
@@ -107,11 +118,77 @@ export const BackupExportScreen = () => {
     return Array.from(new Set(transactions.map((t) => t.category))).sort();
   }, [transactions]);
 
-  // Create JSON backup
+  // Auto backup state
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(false);
+  const [autoBackupTime, setAutoBackupTime] = useState<Date>(new Date());
+  const [autoBackupFrequency, setAutoBackupFrequency] =
+    useState<AutoBackupFrequency>("daily");
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Load auto backup settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      const enabled = await AutoBackupService.isEnabled();
+      const time = await AutoBackupService.getPreferredTime();
+      const frequency = await AutoBackupService.getFrequency();
+
+      setAutoBackupEnabled(enabled);
+      setAutoBackupFrequency(frequency);
+
+      if (time) {
+        setAutoBackupTime(time);
+      } else {
+        // Default 00:00
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        setAutoBackupTime(d);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleToggleAutoBackup = async (value: boolean) => {
+    setAutoBackupEnabled(value);
+    await AutoBackupService.setEnabled(value);
+  };
+
+  const handleTimeChange = async (event: any, selectedDate?: Date) => {
+    setShowTimePicker(false);
+    if (selectedDate) {
+      setAutoBackupTime(selectedDate);
+      await AutoBackupService.setPreferredTime(selectedDate);
+    }
+  };
+
+  const handleFrequencyChange = async (freq: AutoBackupFrequency) => {
+    setAutoBackupFrequency(freq);
+    await AutoBackupService.setFrequency(freq);
+  };
+
+  // Create JSON backup - Full backup with all user data
   const handleJsonBackup = async () => {
     setIsExporting(true);
     setExportType("json");
     try {
+      // Gather additional data from storage
+      const [
+        notificationPrefs,
+        userProfile,
+        customCategories,
+        accentColor,
+        categoryBudgets,
+        linkedLimitGroups,
+        defaultCurrency,
+      ] = await Promise.all([
+        storage.getNotificationPreferences(),
+        storage.getUserProfile(),
+        storage.getCustomCategories(),
+        AsyncStorage.getItem("@card_go_accent_color"),
+        storage.getCategoryBudgets(),
+        storage.getLinkedLimitGroups(),
+        storage.getDefaultCurrency(),
+      ]);
+
       const backupData = {
         version: 3,
         timestamp: new Date().toISOString(),
@@ -130,8 +207,20 @@ export const BackupExportScreen = () => {
         installmentPlans,
         settings: {
           themeMode: "light",
-          notificationsEnabled: true,
+          notificationsEnabled: notificationPrefs.payment,
+          notificationPrefs,
         },
+        // Full backup data
+        userProfile: userProfile ?? undefined,
+        customCategories:
+          customCategories.length > 0 ? customCategories : undefined,
+        accentColor: accentColor ?? undefined,
+        categoryBudgets:
+          categoryBudgets.length > 0 ? categoryBudgets : undefined,
+        linkedLimitGroups:
+          linkedLimitGroups.length > 0 ? linkedLimitGroups : undefined,
+        defaultCurrency:
+          defaultCurrency !== "IDR" ? defaultCurrency : undefined,
       };
 
       const fileName = `cardgo-backup-${new Date()
@@ -151,6 +240,7 @@ export const BackupExportScreen = () => {
           mimeType: "application/json",
           dialogTitle: "Backup CardGo",
         });
+        Alert.alert("Berhasil", "Backup berhasil dibuat dan disimpan!");
       }
     } catch (error) {
       console.error("Backup failed:", error);
@@ -199,6 +289,7 @@ export const BackupExportScreen = () => {
           mimeType: "text/csv",
           dialogTitle: "Export Transaksi",
         });
+        Alert.alert("Berhasil", "Export transaksi berhasil!");
       }
     } catch (error) {
       console.error("CSV export failed:", error);
@@ -236,6 +327,7 @@ export const BackupExportScreen = () => {
           mimeType: "text/csv",
           dialogTitle: "Export Ringkasan Kartu",
         });
+        Alert.alert("Berhasil", "Export ringkasan kartu berhasil!");
       }
     } catch (error) {
       console.error("CSV export failed:", error);
@@ -330,6 +422,7 @@ export const BackupExportScreen = () => {
           mimeType: "text/plain",
           dialogTitle: "Laporan Bulanan",
         });
+        Alert.alert("Berhasil", "Laporan bulanan berhasil dibuat!");
       }
     } catch (error) {
       console.error("Report export failed:", error);
@@ -340,7 +433,7 @@ export const BackupExportScreen = () => {
     }
   };
 
-  // Restore from backup
+  // Restore from backup - Full restore with all user data
   const handleRestore = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -372,8 +465,11 @@ export const BackupExportScreen = () => {
           `Isi backup:\n` +
           `• ${data.cards?.length || 0} kartu\n` +
           `• ${data.transactions?.length || 0} transaksi\n` +
-          `• ${data.subscriptions?.length || 0} langganan\n\n` +
-          `Data saat ini akan ditimpa. Lanjutkan?`,
+          `• ${data.subscriptions?.length || 0} langganan\n` +
+          `${
+            data.userProfile ? `• User: ${data.userProfile.nickname}\n` : ""
+          }` +
+          `\nData saat ini akan ditimpa. Lanjutkan?`,
         [
           { text: "Batal", style: "cancel" },
           {
@@ -388,6 +484,7 @@ export const BackupExportScreen = () => {
                   data.subscriptions || [],
                   data.installmentPlans || []
                 );
+
                 // Restore limit increase records if available
                 if (
                   data.limitIncreaseRecords &&
@@ -397,8 +494,61 @@ export const BackupExportScreen = () => {
                     data.limitIncreaseRecords
                   );
                 }
-                Alert.alert("Sukses", "Data berhasil di-restore!");
+
+                // Restore notification preferences
+                if (data.settings?.notificationPrefs) {
+                  await storage.saveNotificationPreferences(
+                    data.settings.notificationPrefs
+                  );
+                }
+
+                // Restore User Profile
+                if (data.userProfile) {
+                  await storage.saveUserProfile(data.userProfile);
+                }
+
+                // Restore Custom Categories
+                if (data.customCategories && data.customCategories.length > 0) {
+                  await storage.saveCustomCategories(data.customCategories);
+                }
+
+                // Restore Accent Color
+                if (data.accentColor) {
+                  await AsyncStorage.setItem(
+                    "@card_go_accent_color",
+                    data.accentColor
+                  );
+                }
+
+                // Restore Category Budgets
+                if (data.categoryBudgets && data.categoryBudgets.length > 0) {
+                  await storage.saveCategoryBudgets(data.categoryBudgets);
+                }
+
+                // Restore Linked Limit Groups
+                if (
+                  data.linkedLimitGroups &&
+                  data.linkedLimitGroups.length > 0
+                ) {
+                  await storage.saveLinkedLimitGroups(data.linkedLimitGroups);
+                }
+
+                // Restore Default Currency
+                if (data.defaultCurrency) {
+                  await storage.saveDefaultCurrency(data.defaultCurrency);
+                }
+
+                // Show success with note about accent color requiring restart
+                const needsRestart =
+                  data.accentColor || data.limitIncreaseRecords?.length > 0;
+                Alert.alert(
+                  "Sukses",
+                  needsRestart
+                    ? "Semua data berhasil di-restore!\n\nUntuk menerapkan warna aksen dan riwayat kenaikan limit, silakan restart aplikasi."
+                    : "Semua data berhasil di-restore!"
+                );
               } catch (err) {
+                console.error("Restore error:", err);
                 Alert.alert("Error", "Gagal restore data");
               }
             },
@@ -635,6 +785,7 @@ export const BackupExportScreen = () => {
             mimeType: "text/csv",
             dialogTitle: "Export Kustom CardGo",
           });
+          Alert.alert("Berhasil", "Export CSV berhasil!");
         }
       } else if (format === "txt") {
         // Generate TXT Report
@@ -784,6 +935,7 @@ export const BackupExportScreen = () => {
             mimeType: "text/plain",
             dialogTitle: "Laporan Kustom CardGo",
           });
+          Alert.alert("Berhasil", "Export TXT berhasil!");
         }
       } else if (format === "pdf") {
         // Generate PDF with enhanced HTML design
@@ -1256,7 +1408,145 @@ export const BackupExportScreen = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Auto Backup Section */}
+        <View style={styles.section}>
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 16 }}>
+              <Text style={styles.label}>Aktifkan Auto Backup</Text>
+              <Text style={styles.description}>
+                Backup data otomatis ke penyimpanan internal.
+              </Text>
+            </View>
+            <Switch
+              value={autoBackupEnabled}
+              onValueChange={handleToggleAutoBackup}
+              trackColor={{
+                false: theme.colors.border,
+                true: theme.colors.primary,
+              }}
+              thumbColor={"#FFFFFF"}
+            />
+          </View>
+
+          {autoBackupEnabled && (
+            <View style={{ marginTop: 24, gap: 20 }}>
+              {/* Frequency Selection */}
+              <View>
+                <Text style={styles.label}>Frekuensi Backup</Text>
+                <View style={styles.toggleRow}>
+                  {[
+                    { label: "Harian", value: "daily" },
+                    { label: "3 Hari", value: "3days" },
+                    { label: "Mingguan", value: "weekly" },
+                    { label: "Bulanan", value: "monthly" },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.toggleChip,
+                        autoBackupFrequency === option.value &&
+                          styles.toggleChipActive,
+                      ]}
+                      onPress={() =>
+                        handleFrequencyChange(
+                          option.value as AutoBackupFrequency
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.toggleText,
+                          autoBackupFrequency === option.value && {
+                            color: theme.colors.primary,
+                            fontWeight: "bold",
+                          },
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Time Selection */}
+              {/* Time Selection */}
+              <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={styles.label}>Waktu Backup</Text>
+                  <Text style={styles.description}>
+                    Aplikasi akan memproses data pada jam ini.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.timeButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={styles.timeButtonText}>
+                    {autoBackupTime
+                      .toLocaleTimeString("id-ID", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })
+                      .replace(".", ":")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Platform specific picker */}
+        {showTimePicker &&
+          (Platform.OS === "ios" ? (
+            <Modal
+              transparent={true}
+              animationType="fade"
+              visible={showTimePicker}
+              onRequestClose={() => setShowTimePicker(false)}
+            >
+              <TouchableWithoutFeedback
+                onPress={() => setShowTimePicker(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <TouchableWithoutFeedback>
+                    <View style={styles.modalContent}>
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Pilih Waktu</Text>
+                        <TouchableOpacity
+                          onPress={(e) => handleTimeChange(e, autoBackupTime)}
+                        >
+                          <Text style={styles.modalDoneButton}>Selesai</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <DateTimePicker
+                        value={autoBackupTime}
+                        mode="time"
+                        is24Hour={true}
+                        display="spinner"
+                        onChange={handleTimeChange}
+                        style={{ height: 200 }}
+                      />
+                    </View>
+                  </TouchableWithoutFeedback>
+                </View>
+              </TouchableWithoutFeedback>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={autoBackupTime}
+              mode="time"
+              is24Hour={true}
+              display="default"
+              onChange={handleTimeChange}
+            />
+          ))}
+
         {/* Data Summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Ringkasan Data</Text>
@@ -1968,25 +2258,29 @@ const getStyles = (theme: Theme) =>
       flexDirection: "row",
       flexWrap: "wrap",
       gap: theme.spacing.s,
-      rowGap: theme.spacing.m,
-      marginBottom: theme.spacing.s,
     },
     toggleChip: {
-      flex: 1,
+      // Switch to 2-column grid pattern
+      width: "48%",
       flexDirection: "row",
       alignItems: "center",
-      gap: theme.spacing.s,
-      paddingVertical: theme.spacing.s,
+      justifyContent: "center",
+      paddingVertical: theme.spacing.m, // Increased padding
       paddingHorizontal: theme.spacing.m,
       borderRadius: theme.borderRadius.m,
       backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     toggleChipActive: {
       backgroundColor: theme.colors.primary + "10",
+      borderColor: theme.colors.primary,
     },
     toggleText: {
-      ...theme.typography.caption,
+      ...theme.typography.body, // Increased font size from caption
+      fontWeight: "500",
       color: theme.colors.text.primary,
+      textAlign: "center",
     },
     inlineExportButton: {
       flexDirection: "row",
@@ -2067,5 +2361,73 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
       borderColor: theme.colors.primary + "40",
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.l,
+      ...theme.shadows.medium,
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    label: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    description: {
+      ...theme.typography.caption,
+      color: theme.colors.text.secondary,
+      lineHeight: 18,
+    },
+    timeButton: {
+      backgroundColor: theme.colors.surface,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      minWidth: 90,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    timeButtonText: {
+      ...theme.typography.h2, // Even bigger
+      fontSize: 20,
+      fontWeight: "700",
+      color: theme.colors.primary,
+    },
+    // Modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderTopLeftRadius: theme.borderRadius.l,
+      borderTopRightRadius: theme.borderRadius.l,
+      paddingBottom: theme.spacing.xl,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: theme.spacing.m,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text.primary,
+    },
+    modalDoneButton: {
+      ...theme.typography.body,
+      fontWeight: "600",
+      color: theme.colors.primary,
     },
   });

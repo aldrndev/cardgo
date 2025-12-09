@@ -96,22 +96,11 @@ export const PaymentHistorySection: React.FC<PaymentHistorySectionProps> = ({
 
             <View style={styles.recordContent}>
               <View style={styles.recordHeader}>
-                <Text style={styles.billingCycle}>
-                  {formatBillingCycle(record.billingCycle)}
+                <Text style={styles.dateText}>
+                  Dibayar: {formatDate(record.paidDate)}
                 </Text>
                 <Text style={styles.amount}>
                   {formatCurrency(record.amount)}
-                </Text>
-              </View>
-
-              <View style={styles.recordDetails}>
-                <Ionicons
-                  name="calendar"
-                  size={14}
-                  color={theme.colors.text.tertiary}
-                />
-                <Text style={styles.dateText}>
-                  Dibayar: {formatDate(record.paidDate)}
                 </Text>
               </View>
 

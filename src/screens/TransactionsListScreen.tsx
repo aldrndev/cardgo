@@ -391,7 +391,7 @@ export const TransactionsListScreen = () => {
 
       <View style={styles.summaryWrapper}>
         <LinearGradient
-          colors={[theme.colors.primary, theme.colors.secondary]}
+          colors={[theme.colors.primary, theme.colors.primary + "CC"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.summaryCard}

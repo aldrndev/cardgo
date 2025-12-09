@@ -244,7 +244,7 @@ export const TermsScreen = () => {
             <Text style={styles.sectionTitle}>6. Hak Cipta & Kepemilikan</Text>
           </View>
           <Text style={styles.text}>
-            <Text style={styles.bold}>© 2024 Card Go.</Text> All rights
+            <Text style={styles.bold}>© 2025 Card Go.</Text> All rights
             reserved.
           </Text>
           <Text style={styles.text}>
@@ -390,7 +390,7 @@ export const TermsScreen = () => {
           <Text style={styles.footerText}>
             Terakhir diperbarui: Desember 2025
           </Text>
-          <Text style={styles.footerText}>Card Go v1.0.0</Text>
+          <Text style={styles.footerText}>Card Go v1.2.0</Text>
           <View style={styles.acknowledgement}>
             <Ionicons
               name="checkmark-circle"

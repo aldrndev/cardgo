@@ -9,6 +9,9 @@ export const HealthScoreService = {
     cards: Card[],
     transactions: Transaction[]
   ): HealthScore {
+    const activeCards = cards.filter((c) => !c.isArchived);
+    const hasData = activeCards.length > 0;
+
     const breakdown = this.calculateBreakdown(cards, transactions);
 
     const totalScore =
@@ -23,6 +26,7 @@ export const HealthScoreService = {
       rating: this.getRating(totalScore),
       recommendations: this.generateRecommendations(breakdown),
       lastUpdated: new Date(),
+      hasData,
     };
   },
 
@@ -129,9 +133,9 @@ export const HealthScoreService = {
     let rating: "excellent" | "good" | "fair" | "poor" = "poor";
 
     if (totalPayments === 0) {
-      // No payment history yet
-      score = 15; // neutral
-      rating = "fair";
+      // Clean slate for new cards/users
+      score = 30;
+      rating = "excellent";
     } else if (lateCount === 0) {
       score = 30;
       rating = "excellent";
@@ -154,16 +158,43 @@ export const HealthScoreService = {
    * Based on budget adherence
    */
   calculateSpendingDiscipline(cards: Card[], transactions: Transaction[]) {
-    const activeCards = cards.filter(
+    const activeCardsWithBudget = cards.filter(
       (c) => !c.isArchived && c.monthlyBudget && c.monthlyBudget > 0
     );
 
-    if (activeCards.length === 0) {
-      return { score: 10, budgetUsage: 0, rating: "fair" as const };
+    // If no active cards have budgets set
+    if (activeCardsWithBudget.length === 0) {
+      // Check global utilization as a proxy for discipline
+      const activeCards = cards.filter((c) => !c.isArchived);
+
+      // If no cards at all, neutral/bad (handled in main function by hasData check)
+      if (activeCards.length === 0) {
+        return { score: 10, budgetUsage: 0, rating: "fair" as const };
+      }
+
+      const totalLimit = activeCards.reduce((sum, c) => sum + c.creditLimit, 0);
+      const totalUsage = activeCards.reduce(
+        (sum, c) => sum + c.currentUsage,
+        0
+      );
+
+      if (totalLimit === 0)
+        return { score: 20, budgetUsage: 0, rating: "excellent" as const };
+
+      const utilizationPercentage = (totalUsage / totalLimit) * 100;
+
+      // If utilization is low, assume good discipline even without budget
+      if (utilizationPercentage < 30) {
+        return { score: 20, budgetUsage: 0, rating: "excellent" as const };
+      } else if (utilizationPercentage < 50) {
+        return { score: 15, budgetUsage: 0, rating: "good" as const };
+      } else {
+        return { score: 10, budgetUsage: 0, rating: "fair" as const };
+      }
     }
 
     // Calculate average budget usage
-    const budgetUsages = activeCards.map((card) => {
+    const budgetUsages = activeCardsWithBudget.map((card) => {
       return (card.currentUsage / card.monthlyBudget!) * 100;
     });
     const avgBudgetUsage =
@@ -216,16 +247,25 @@ export const HealthScoreService = {
 
     const [thisMonth, lastMonth, twoMonthsAgo] = monthlySpending;
 
+    // Check if we have enough history (simple check: if total spending is 0 for past months)
+    const hasHistory = lastMonth > 0 || twoMonthsAgo > 0;
+
     let direction: "improving" | "stable" | "declining" = "stable";
     let score = 5;
 
-    // Improving = spending decreasing
-    if (thisMonth < lastMonth && lastMonth < twoMonthsAgo) {
+    if (!hasHistory) {
+      // New user / New data -> Start Strong
+      direction = "stable";
+      score = 10;
+    } else if (thisMonth < lastMonth && lastMonth < twoMonthsAgo) {
       direction = "improving";
       score = 10;
     } else if (thisMonth > lastMonth && lastMonth > twoMonthsAgo) {
       direction = "declining";
       score = 0;
+    } else {
+      // Stable or fluctuation
+      score = 5;
     }
 
     return { score, direction };
@@ -483,6 +523,7 @@ export const HealthScoreService = {
       rating: this.getRating(totalScore),
       recommendations,
       lastUpdated: new Date(),
+      hasData: true, // Single card always has data
     };
   },
 };
