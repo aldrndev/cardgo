@@ -182,13 +182,20 @@ export const OnboardingScreen = () => {
           </Text>
         </TouchableOpacity>
 
+        <Text style={styles.orText}>Tidak punya backup?</Text>
+
         <TouchableOpacity
           style={styles.skipRestoreButton}
           onPress={handleNext}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
-          <Text style={styles.skipRestoreText}>
-            Tidak punya backup? Lanjut sebagai pengguna baru
+          <Ionicons
+            name="person-add-outline"
+            size={moderateScale(18)}
+            color={theme.colors.primary}
+          />
+          <Text style={styles.skipRestoreButtonText}>
+            Lanjut sebagai Pengguna Baru
           </Text>
         </TouchableOpacity>
       </View>
@@ -499,13 +506,26 @@ const getStyles = (theme: Theme) =>
       ...theme.typography.button,
       color: "#FFFFFF",
     },
-    skipRestoreButton: {
-      paddingVertical: theme.spacing.m,
-      alignItems: "center",
+    orText: {
+      ...theme.typography.body,
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      fontSize: 14,
     },
-    skipRestoreText: {
-      ...theme.typography.caption,
-      color: theme.colors.text.tertiary,
-      textDecorationLine: "underline",
+    skipRestoreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+      paddingVertical: theme.spacing.m,
+      paddingHorizontal: theme.spacing.l,
+      borderRadius: theme.borderRadius.l,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      gap: theme.spacing.s,
+    },
+    skipRestoreButtonText: {
+      ...theme.typography.button,
+      color: theme.colors.primary,
     },
   });

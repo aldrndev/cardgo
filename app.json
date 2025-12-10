@@ -4,11 +4,11 @@
     "slug": "card-go",
     "version": "1.2.0",
     "orientation": "portrait",
-    "icon": "./assets/icon-new2.png",
+    "icon": "./assets/new-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-new.png",
+      "image": "./assets/new-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#00A896"
     },
@@ -22,7 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-new2.png",
+        "foregroundImage": "./assets/new-icon.png",
         "backgroundColor": "#00A896"
       },
       "package": "com.aldrnmrsd.cardgo",
@@ -31,7 +31,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/icon-new2.png",
+      "favicon": "./assets/new-icon.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -39,7 +39,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon-new2.png",
+          "icon": "./assets/new-icon.png",
           "color": "#00A896"
         }
       ]
