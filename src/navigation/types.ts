@@ -22,6 +22,7 @@ export type RootStackParamList = {
   Customization: undefined;
   LinkedLimits: undefined;
   CategoryBudget: undefined;
+  Paywall: undefined;
 };
 
 export type TabParamList = {

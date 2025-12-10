@@ -14,10 +14,12 @@ import { useTheme } from "../context/ThemeContext";
 import { Card } from "../types/card";
 import { MonthlyRecap } from "../components/MonthlyRecap";
 import { useCards } from "../context/CardsContext";
+import { usePremium } from "../context/PremiumContext";
 import { useLimitIncrease } from "../context/LimitIncreaseContext";
 import { EmptyState } from "../components/EmptyState";
 import { CreditCard } from "../components/CreditCard";
 import { ExpandableFAB } from "../components/FloatingActionButton";
+import { FeatureLockedModal } from "../components/FeatureLockedModal";
 
 import { storage } from "../utils/storage";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -52,9 +54,11 @@ export const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { theme, isDark } = useTheme();
   const { cards, transactions, isLoading } = useCards();
+  const { canAddCard } = usePremium();
   const { getRecordsByCardId } = useLimitIncrease();
   const [selectedTag, setSelectedTag] = React.useState<string | null>(null);
   const [showRecap, setShowRecap] = React.useState(false);
+  const [showPaywall, setShowPaywall] = React.useState(false);
   const [tip] = React.useState(TIPS[Math.floor(Math.random() * TIPS.length)]);
   const [userProfile, setUserProfile] = React.useState<{
     nickname: string;
@@ -87,6 +91,15 @@ export const HomeScreen = () => {
   const unarchivedCards = React.useMemo(() => {
     return cards.filter((c) => !c.isArchived);
   }, [cards]);
+
+  // Handler for adding card with premium check
+  const handleAddCard = () => {
+    if (!canAddCard(unarchivedCards.length)) {
+      setShowPaywall(true);
+    } else {
+      navigation.navigate("AddEditCard", {});
+    }
+  };
 
   const activeCards = React.useMemo(() => {
     return unarchivedCards.filter((card) => {
@@ -494,7 +507,7 @@ export const HomeScreen = () => {
 
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => navigation.navigate("AddEditCard", {})}
+                onPress={handleAddCard}
               >
                 <LinearGradient
                   colors={[theme.colors.primary, theme.colors.primary + "CC"]} // Accent color
@@ -999,7 +1012,7 @@ export const HomeScreen = () => {
                     alignItems: "center",
                     gap: theme.spacing.s,
                   }}
-                  onPress={() => navigation.navigate("AddEditCard", {})}
+                  onPress={handleAddCard}
                 >
                   <Ionicons name="add" size={20} color="#FFF" />
                   <Text style={{ color: "#FFF", fontWeight: "600" }}>
@@ -1263,7 +1276,7 @@ export const HomeScreen = () => {
           {
             icon: "card-outline",
             label: "Tambah Kartu",
-            onPress: () => navigation.navigate("AddEditCard", {}),
+            onPress: handleAddCard,
             color: "#4F46E5",
           },
           {
@@ -1281,6 +1294,18 @@ export const HomeScreen = () => {
         ]}
       />
       <MonthlyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
+
+      {/* Premium Paywall Modal */}
+      <FeatureLockedModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onUpgrade={() => {
+          setShowPaywall(false);
+          navigation.navigate("Paywall");
+        }}
+        featureName="Batas Kartu Tercapai"
+        featureDescription="Versi gratis dibatasi maksimal 3 kartu. Upgrade ke Premium untuk menambahkan kartu tanpa batas."
+      />
     </SafeAreaView>
   );
 };

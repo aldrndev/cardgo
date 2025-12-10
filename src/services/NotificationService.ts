@@ -430,4 +430,390 @@ export const NotificationService = {
       await storage.setNotificationSent(notifKey, false);
     }
   },
+
+  // ===== GROUPED NOTIFICATIONS =====
+  // Schedule grouped payment reminders for cards with same due date
+  async scheduleGroupedPaymentReminders(cards: Card[]) {
+    // Cancel all existing payment notifications first
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      if (notif.identifier.startsWith("payment-group-")) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const prefs = await storage.getNotificationPreferences();
+    if (!prefs.payment) return;
+
+    // Filter active unpaid cards
+    const activeCards = cards.filter((c) => !c.isArchived && !c.isPaid);
+    if (activeCards.length === 0) return;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+
+    // Group cards by due day
+    const cardsByDueDay: { [key: number]: Card[] } = {};
+    activeCards.forEach((card) => {
+      if (!cardsByDueDay[card.dueDay]) {
+        cardsByDueDay[card.dueDay] = [];
+      }
+      cardsByDueDay[card.dueDay].push(card);
+    });
+
+    // Schedule grouped notifications for each due day
+    for (const [dueDayStr, dueDayCards] of Object.entries(cardsByDueDay)) {
+      const dueDay = parseInt(dueDayStr);
+      let dueDate = new Date(currentYear, currentMonth, dueDay);
+
+      // If due date has passed this month, schedule for next month
+      if (dueDate < today) {
+        dueDate = new Date(currentYear, currentMonth + 1, dueDay);
+      }
+
+      const cardNames = dueDayCards.map((c) => c.alias).join(", ");
+      const cardCount = dueDayCards.length;
+      const cardIds = dueDayCards.map((c) => c.id);
+
+      const scheduleGrouped = async (
+        daysBefore: number,
+        title: string,
+        bodyTemplate: string
+      ) => {
+        const triggerDate = new Date(dueDate);
+        triggerDate.setDate(dueDate.getDate() - daysBefore);
+        triggerDate.setHours(9, 0, 0, 0);
+
+        if (triggerDate > today) {
+          const body =
+            cardCount === 1
+              ? `Tagihan ${cardNames} jatuh tempo ${bodyTemplate}.`
+              : `${cardCount} kartu jatuh tempo ${bodyTemplate}: ${cardNames}`;
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title,
+              body,
+              data: { cardIds, type: "payment-group", dueDay },
+            },
+            trigger: { type: "date", date: triggerDate } as any,
+            identifier: `payment-group-${dueDay}-${daysBefore}days`,
+          });
+        }
+      };
+
+      await scheduleGrouped(
+        7,
+        "Pengingat Tagihan",
+        `dalam 7 hari (Tgl ${dueDay})`
+      );
+      await scheduleGrouped(
+        3,
+        "Pengingat Tagihan",
+        `dalam 3 hari (Tgl ${dueDay})`
+      );
+      await scheduleGrouped(
+        1,
+        "Tagihan Jatuh Tempo Besok!",
+        `besok (Tgl ${dueDay})`
+      );
+
+      // On due date
+      const onDueDate = new Date(dueDate);
+      onDueDate.setHours(8, 0, 0, 0);
+
+      if (onDueDate > today) {
+        const body =
+          cardCount === 1
+            ? `Segera bayar tagihan ${cardNames} hari ini!`
+            : `${cardCount} kartu jatuh tempo hari ini: ${cardNames}`;
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Tagihan Jatuh Tempo Hari Ini!",
+            body,
+            data: { cardIds, type: "payment-group", dueDay },
+          },
+          trigger: { type: "date", date: onDueDate } as any,
+          identifier: `payment-group-${dueDay}-today`,
+        });
+      }
+    }
+  },
+
+  // Schedule grouped limit increase reminders
+  async scheduleGroupedLimitReminders(cards: Card[]) {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      if (notif.identifier.startsWith("limit-group-")) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const prefs = await storage.getNotificationPreferences();
+    if (!prefs.limitIncrease) return;
+
+    const activeCards = cards.filter(
+      (c) =>
+        !c.isArchived &&
+        c.isLimitIncreaseReminderEnabled &&
+        c.nextLimitIncreaseDate
+    );
+    if (activeCards.length === 0) return;
+
+    const today = new Date();
+
+    // Group cards by next limit increase date
+    const cardsByDate: { [key: string]: Card[] } = {};
+    activeCards.forEach((card) => {
+      const dateStr = card.nextLimitIncreaseDate!.split("T")[0];
+      if (!cardsByDate[dateStr]) {
+        cardsByDate[dateStr] = [];
+      }
+      cardsByDate[dateStr].push(card);
+    });
+
+    for (const [dateStr, dateCards] of Object.entries(cardsByDate)) {
+      const targetDate = new Date(dateStr);
+      if (targetDate < today) continue;
+
+      const cardNames = dateCards.map((c) => c.alias).join(", ");
+      const cardCount = dateCards.length;
+      const cardIds = dateCards.map((c) => c.id);
+
+      const scheduleGrouped = async (daysBefore: number) => {
+        const triggerDate = new Date(targetDate);
+        triggerDate.setDate(targetDate.getDate() - daysBefore);
+        triggerDate.setHours(10, 0, 0, 0);
+
+        if (triggerDate > today) {
+          const body =
+            cardCount === 1
+              ? `Kamu bisa ajukan kenaikan limit ${cardNames} dalam ${daysBefore} hari lagi.`
+              : `${cardCount} kartu bisa ajukan kenaikan limit dalam ${daysBefore} hari: ${cardNames}`;
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Pengingat Kenaikan Limit",
+              body,
+              data: { cardIds, type: "limit-group" },
+            },
+            trigger: { type: "date", date: triggerDate } as any,
+            identifier: `limit-group-${dateStr}-${daysBefore}days`,
+          });
+        }
+      };
+
+      await scheduleGrouped(7);
+      await scheduleGrouped(3);
+      await scheduleGrouped(1);
+
+      // On target date
+      const onTargetDate = new Date(targetDate);
+      onTargetDate.setHours(10, 0, 0, 0);
+
+      if (onTargetDate > today) {
+        const body =
+          cardCount === 1
+            ? `Yeayy hari ini kamu sudah bisa ajukan kenaikan limit ${cardNames}!`
+            : `${cardCount} kartu sudah bisa ajukan kenaikan limit hari ini: ${cardNames}`;
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Hari Ini: Ajukan Kenaikan Limit!",
+            body,
+            data: { cardIds, type: "limit-group" },
+          },
+          trigger: { type: "date", date: onTargetDate } as any,
+          identifier: `limit-group-${dateStr}-today`,
+        });
+      }
+    }
+  },
+
+  // Schedule grouped annual fee reminders
+  async scheduleGroupedAnnualFeeReminders(cards: Card[]) {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      if (notif.identifier.startsWith("annual-group-")) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const prefs = await storage.getNotificationPreferences();
+    if (!prefs.annualFee) return;
+
+    const activeCards = cards.filter(
+      (c) => !c.isArchived && c.isAnnualFeeReminderEnabled && c.expiryMonth
+    );
+    if (activeCards.length === 0) return;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    // Group cards by expiry month
+    const cardsByMonth: { [key: number]: Card[] } = {};
+    activeCards.forEach((card) => {
+      if (!cardsByMonth[card.expiryMonth!]) {
+        cardsByMonth[card.expiryMonth!] = [];
+      }
+      cardsByMonth[card.expiryMonth!].push(card);
+    });
+
+    for (const [monthStr, monthCards] of Object.entries(cardsByMonth)) {
+      const expiryMonth = parseInt(monthStr);
+      let targetDate = new Date(currentYear, expiryMonth - 1, 1);
+
+      if (targetDate < today) {
+        targetDate = new Date(currentYear + 1, expiryMonth - 1, 1);
+      }
+
+      const cardNames = monthCards.map((c) => c.alias).join(", ");
+      const cardCount = monthCards.length;
+      const cardIds = monthCards.map((c) => c.id);
+      const monthName = targetDate.toLocaleDateString("id-ID", {
+        month: "long",
+      });
+
+      const scheduleGrouped = async (daysBefore: number) => {
+        const triggerDate = new Date(targetDate);
+        triggerDate.setDate(targetDate.getDate() - daysBefore);
+        triggerDate.setHours(11, 0, 0, 0);
+
+        if (triggerDate > today) {
+          const body =
+            cardCount === 1
+              ? `Annual Fee ${cardNames} akan ditagihkan dalam ${daysBefore} hari.`
+              : `${cardCount} kartu annual fee ditagihkan dalam ${daysBefore} hari: ${cardNames}`;
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Pengingat Annual Fee",
+              body,
+              data: { cardIds, type: "annual-group" },
+            },
+            trigger: { type: "date", date: triggerDate } as any,
+            identifier: `annual-group-${expiryMonth}-${daysBefore}days`,
+          });
+        }
+      };
+
+      await scheduleGrouped(7);
+      await scheduleGrouped(3);
+      await scheduleGrouped(1);
+
+      // On target date
+      const onTargetDate = new Date(targetDate);
+      onTargetDate.setHours(11, 0, 0, 0);
+
+      if (onTargetDate > today) {
+        const body =
+          cardCount === 1
+            ? `Annual Fee ${cardNames} ditagihkan bulan ${monthName} ini.`
+            : `${cardCount} kartu annual fee ditagihkan bulan ini (${monthName}): ${cardNames}`;
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Annual Fee Ditagihkan Bulan Ini",
+            body,
+            data: { cardIds, type: "annual-group" },
+          },
+          trigger: { type: "date", date: onTargetDate } as any,
+          identifier: `annual-group-${expiryMonth}-today`,
+        });
+      }
+    }
+  },
+
+  // Schedule grouped limit increase STATUS reminders (after 7 days from request)
+  async scheduleGroupedStatusReminders(
+    records: {
+      id: string;
+      cardId: string;
+      requestDate: string;
+      status: string;
+    }[],
+    cards: Card[]
+  ) {
+    // Cancel existing grouped status notifications
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      if (notif.identifier.startsWith("status-group-")) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const prefs = await storage.getNotificationPreferences();
+    if (!prefs.applicationStatus) return;
+
+    // Filter only pending records
+    const pendingRecords = records.filter((r) => r.status === "pending");
+    if (pendingRecords.length === 0) return;
+
+    const today = new Date();
+
+    // Group records by reminder date (7 days after request)
+    const recordsByReminderDate: { [key: string]: typeof pendingRecords } = {};
+    pendingRecords.forEach((record) => {
+      const requestDate = new Date(record.requestDate);
+      const reminderDate = new Date(requestDate);
+      reminderDate.setDate(requestDate.getDate() + 7);
+      const dateStr = reminderDate.toISOString().split("T")[0];
+
+      if (!recordsByReminderDate[dateStr]) {
+        recordsByReminderDate[dateStr] = [];
+      }
+      recordsByReminderDate[dateStr].push(record);
+    });
+
+    for (const [dateStr, dateRecords] of Object.entries(
+      recordsByReminderDate
+    )) {
+      const triggerDate = new Date(dateStr);
+      triggerDate.setHours(12, 0, 0, 0);
+
+      if (triggerDate <= today) continue; // Past date
+
+      const cardNames = dateRecords
+        .map((r) => cards.find((c) => c.id === r.cardId)?.alias || "Unknown")
+        .join(", ");
+      const recordCount = dateRecords.length;
+      const recordIds = dateRecords.map((r) => r.id);
+
+      const body =
+        recordCount === 1
+          ? `Sudah 7 hari sejak pengajuan kenaikan limit ${cardNames}. Update statusnya!`
+          : `${recordCount} pengajuan kenaikan limit perlu dicek statusnya: ${cardNames}`;
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Cek Status Kenaikan Limit",
+          body,
+          data: { recordIds, type: "status-group" },
+        },
+        trigger: { type: "date", date: triggerDate } as any,
+        identifier: `status-group-${dateStr}`,
+      });
+    }
+  },
+
+  // Helper: Reschedule all grouped notifications
+  async rescheduleAllGroupedNotifications(
+    cards: Card[],
+    limitRecords?: {
+      id: string;
+      cardId: string;
+      requestDate: string;
+      status: string;
+    }[]
+  ) {
+    await this.scheduleGroupedPaymentReminders(cards);
+    await this.scheduleGroupedLimitReminders(cards);
+    await this.scheduleGroupedAnnualFeeReminders(cards);
+
+    if (limitRecords) {
+      await this.scheduleGroupedStatusReminders(limitRecords, cards);
+    }
+  },
 };

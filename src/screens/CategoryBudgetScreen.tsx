@@ -17,6 +17,9 @@ import { storage } from "../utils/storage";
 import { formatCurrency } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
 import { getCategoryIcon } from "../utils/categoryIcons";
+import { usePremium } from "../context/PremiumContext";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../navigation/types";
 
 interface CategoryBudget {
   category: string;
@@ -25,13 +28,15 @@ interface CategoryBudget {
 }
 
 export const CategoryBudgetScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { transactions } = useCards();
   const { theme, isDark } = useTheme();
+  const { canUseCategoryBudget } = usePremium();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
 
+  // ALL HOOKS MUST BE BEFORE ANY CONDITIONAL RETURNS
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [budgetInput, setBudgetInput] = useState("");
@@ -82,6 +87,45 @@ export const CategoryBudgetScreen = () => {
   useEffect(() => {
     loadBudgets();
   }, []);
+
+  // Premium check - show locked state for free users
+  if (!canUseCategoryBudget()) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={theme.colors.text.primary}
+            />
+          </TouchableOpacity>
+          <Text style={styles.title}>Budget per Kategori</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.lockedContainer}>
+          <View style={styles.lockedIconContainer}>
+            <Ionicons name="diamond" size={48} color={theme.colors.primary} />
+          </View>
+          <Text style={styles.lockedTitle}>Category Budget</Text>
+          <Text style={styles.lockedDescription}>
+            Atur batas pengeluaran per kategori dan dapatkan peringatan
+            otomatis. Upgrade ke Premium untuk membuka fitur ini.
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate("Paywall")}
+          >
+            <Ionicons name="diamond" size={18} color="#FFF" />
+            <Text style={styles.upgradeButtonText}>Upgrade ke Premium</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const loadBudgets = async () => {
     const saved = await storage.getCategoryBudgets();
@@ -814,5 +858,48 @@ const getStyles = (theme: Theme) =>
       fontWeight: "700",
       color: theme.colors.text.primary,
       marginBottom: theme.spacing.m,
+    },
+    lockedContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: scale(40),
+    },
+    lockedIconContainer: {
+      width: scale(100),
+      height: scale(100),
+      borderRadius: scale(50),
+      backgroundColor: theme.colors.primary + "15",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: scale(24),
+    },
+    lockedTitle: {
+      fontSize: moderateScale(22),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: scale(12),
+      textAlign: "center",
+    },
+    lockedDescription: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      lineHeight: moderateScale(22),
+      marginBottom: scale(32),
+    },
+    upgradeButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: scale(28),
+      paddingVertical: scale(14),
+      borderRadius: scale(25),
+      gap: scale(8),
+    },
+    upgradeButtonText: {
+      fontSize: moderateScale(15),
+      fontWeight: "600",
+      color: "#FFF",
     },
   });

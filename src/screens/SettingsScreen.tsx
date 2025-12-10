@@ -25,9 +25,11 @@ import { isWeb, platformCapabilities } from "../utils/platform";
 import { useCards } from "../context/CardsContext";
 import { createFullBackup, restoreFullBackup } from "../utils/backup";
 import { useAuth } from "../context/AuthContext";
+import { usePremium } from "../context/PremiumContext";
 import { BiometricService } from "../services/BiometricService";
 import { ExportService } from "../services/ExportService";
 import { NotificationService } from "../services/NotificationService";
+import { FeatureLockedModal } from "../components/FeatureLockedModal";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/types";
 
@@ -57,6 +59,12 @@ export const SettingsScreen = () => {
   const { getRecordsByCardId } = useLimitIncrease();
   const { hasPin, removePin, refreshBiometricStatus } = useAuth();
   const { themeMode, isDark, setThemeMode, theme } = useTheme();
+  const {
+    isPremium,
+    subscriptionType,
+    canUseLimitReminder,
+    canUseAnnualFeeReminder,
+  } = usePremium();
 
   const styles = useMemo(() => getStyles(theme), [theme]);
 
@@ -130,6 +138,13 @@ export const SettingsScreen = () => {
     applicationStatus: true,
   });
 
+  // Paywall modal state
+  const [showPaywall, setShowPaywall] = React.useState(false);
+  const [paywallFeature, setPaywallFeature] = React.useState<{
+    name: string;
+    desc: string;
+  }>({ name: "", desc: "" });
+
   React.useEffect(() => {
     checkBiometricStatus();
     loadUserProfile();
@@ -199,15 +214,33 @@ export const SettingsScreen = () => {
     key: keyof typeof notificationPrefs,
     value: boolean
   ) => {
+    // Premium check for limit increase and annual fee notifications
+    if (value && (key === "limitIncrease" || key === "annualFee")) {
+      const canEnable =
+        key === "limitIncrease"
+          ? canUseLimitReminder()
+          : canUseAnnualFeeReminder();
+
+      if (!canEnable) {
+        setPaywallFeature({
+          name:
+            key === "limitIncrease"
+              ? "Pengingat Kenaikan Limit"
+              : "Pengingat Annual Fee",
+          desc: `Pengingat ${
+            key === "limitIncrease" ? "Kenaikan Limit" : "Annual Fee"
+          } tersedia untuk pengguna Premium.`,
+        });
+        setShowPaywall(true);
+        return;
+      }
+    }
+
     const newPrefs = { ...notificationPrefs, [key]: value };
     setNotificationPrefs(newPrefs);
     await storage.saveNotificationPreferences(newPrefs);
 
     // Reschedule or cancel notifications based on preference change
-    // We need to wait for storage save because NotificationService reads from storage
-    // But since we pass newPrefs to storage, it should be fine.
-    // However, NotificationService reads from storage asynchronously.
-    // To be safe, we rely on the fact that we just saved it.
 
     if (value) {
       // Enabled: Reschedule
@@ -380,6 +413,63 @@ export const SettingsScreen = () => {
             </Text>
           </View>
         </View>
+
+        {/* Premium Status Card */}
+        <TouchableOpacity
+          style={[
+            styles.premiumCard,
+            {
+              backgroundColor: isPremium
+                ? theme.colors.primary
+                : theme.colors.surface,
+            },
+          ]}
+          onPress={() => navigation.navigate("Paywall")}
+          activeOpacity={0.8}
+        >
+          <View style={styles.premiumCardContent}>
+            <Ionicons
+              name="diamond"
+              size={moderateScale(28)}
+              color={isPremium ? "#FFF" : theme.colors.primary}
+            />
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <Text
+                style={[
+                  styles.premiumCardTitle,
+                  { color: isPremium ? "#FFF" : theme.colors.text.primary },
+                ]}
+              >
+                {isPremium ? "Premium Aktif" : "Upgrade ke Premium"}
+              </Text>
+              <Text
+                style={[
+                  styles.premiumCardSubtitle,
+                  {
+                    color: isPremium
+                      ? "rgba(255,255,255,0.8)"
+                      : theme.colors.text.secondary,
+                  },
+                ]}
+              >
+                {isPremium
+                  ? subscriptionType === "lifetime"
+                    ? "Lifetime Access"
+                    : subscriptionType === "yearly"
+                    ? "Langganan Tahunan"
+                    : "Langganan Bulanan"
+                  : "Unlock semua fitur tanpa batas"}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={moderateScale(20)}
+              color={
+                isPremium ? "rgba(255,255,255,0.8)" : theme.colors.text.tertiary
+              }
+            />
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Keamanan</Text>
@@ -565,8 +655,8 @@ export const SettingsScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Kustomisasi</Text>
           <SettingsItem
-            icon="options-outline"
-            label="Kustomisasi"
+            icon="color-palette"
+            label="Custom Aplikasi & Kategori"
             sublabel="Custom Warna & Kategori"
             onPress={() => navigation.navigate("Customization")}
           />
@@ -707,8 +797,20 @@ export const SettingsScreen = () => {
           />
         </View>
 
-        <Text style={styles.versionText}>Versi 1.0.0 • Card Go</Text>
+        <Text style={styles.versionText}>Versi 1.2.0 • Card Go</Text>
       </ScrollView>
+
+      {/* Premium Feature Modal */}
+      <FeatureLockedModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        featureName={paywallFeature.name}
+        featureDescription={paywallFeature.desc}
+        onUpgrade={() => {
+          setShowPaywall(false);
+          navigation.navigate("Paywall");
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -746,8 +848,26 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.surface,
       padding: theme.spacing.l,
       borderRadius: theme.borderRadius.l,
+      marginBottom: theme.spacing.m,
+      ...theme.shadows.small,
+    },
+    premiumCard: {
+      borderRadius: theme.borderRadius.l,
+      padding: theme.spacing.m,
       marginBottom: theme.spacing.l,
       ...theme.shadows.small,
+    },
+    premiumCardContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    premiumCardTitle: {
+      fontSize: moderateScale(16),
+      fontWeight: "600",
+    },
+    premiumCardSubtitle: {
+      fontSize: moderateScale(12),
+      marginTop: 2,
     },
     avatarContainer: {
       width: 60,
