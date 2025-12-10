@@ -29,6 +29,7 @@ import { BackupExportScreen } from "../screens/BackupExportScreen";
 import { CategoryBudgetScreen } from "../screens/CategoryBudgetScreen";
 import { LinkedLimitsScreen } from "../screens/LinkedLimitsScreen";
 import { CustomizationScreen } from "../screens/CustomizationScreen";
+import { PaywallScreen } from "../screens/PaywallScreen";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -136,6 +137,11 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Customization"
           component={CustomizationScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Paywall"
+          component={PaywallScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

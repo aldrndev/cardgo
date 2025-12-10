@@ -25,6 +25,7 @@ import {
   SpendingInsightsService,
   SpendingInsight,
 } from "../services/SpendingInsightsService";
+import { usePremium } from "../context/PremiumContext";
 
 const { width } = Dimensions.get("window");
 
@@ -46,10 +47,12 @@ export const InsightsScreen = () => {
   const { cards, transactions } = useCards();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { theme, isDark } = useTheme();
+  const { canUseAdvancedInsights } = usePremium();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
 
+  // ALL HOOKS MUST BE BEFORE ANY CONDITIONAL RETURNS
   const [selectedPeriod, setSelectedPeriod] = useState<"month" | "year">(
     "month"
   );
@@ -66,6 +69,8 @@ export const InsightsScreen = () => {
     };
     loadBudgets();
   }, []);
+  // Store premium status for conditional rendering (no early return!)
+  const isPremiumInsights = canUseAdvancedInsights();
 
   // Generate smart spending insights
   const spendingInsights = useMemo(() => {
@@ -353,766 +358,817 @@ export const InsightsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Period Selector */}
-      <View style={styles.periodSelector}>
-        <TouchableOpacity
-          style={[
-            styles.periodButton,
-            selectedPeriod === "month" && styles.periodButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod("month")}
-        >
-          <Text
-            style={[
-              styles.periodText,
-              selectedPeriod === "month" && styles.periodTextActive,
-            ]}
-          >
-            Bulanan
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.periodButton,
-            selectedPeriod === "year" && styles.periodButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod("year")}
-        >
-          <Text
-            style={[
-              styles.periodText,
-              selectedPeriod === "year" && styles.periodTextActive,
-            ]}
-          >
-            Tahunan
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Date Navigator */}
-      <View style={styles.dateNavigator}>
-        <TouchableOpacity
-          onPress={() => navigateDate(-1)}
-          style={styles.navButton}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={theme.colors.text.primary}
-          />
-        </TouchableOpacity>
-        <Text style={styles.dateLabel}>
-          {selectedPeriod === "month"
-            ? selectedDate.toLocaleDateString("id-ID", {
-                month: "long",
-                year: "numeric",
-              })
-            : selectedDate.getFullYear().toString()}
-        </Text>
-        <TouchableOpacity
-          onPress={() => navigateDate(1)}
-          style={styles.navButton}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={24}
-            color={theme.colors.text.primary}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        {/* Summary Card */}
-        <LinearGradient
-          colors={[theme.colors.primary, theme.colors.primary + "CC"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.summaryCard}
-        >
-          <Text style={styles.summaryLabel}>Total Pengeluaran</Text>
-          <Text style={styles.summaryAmount}>
-            {formatCurrency(totalSpending, Number.MAX_SAFE_INTEGER)}
-          </Text>
-
-          <View style={styles.summaryDivider} />
-
-          <View style={styles.summaryStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {filteredTransactions.length}
-              </Text>
-              <Text style={styles.statLabel}>Transaksi</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {formatCompactCurrency(avgTransaction)}
-              </Text>
-              <Text style={styles.statLabel}>Rata-rata</Text>
-            </View>
-            <View style={styles.statItem}>
-              <View style={styles.changeRow}>
-                <Ionicons
-                  name={changePercent >= 0 ? "arrow-up" : "arrow-down"}
-                  size={14}
-                  color="#FFF"
-                />
-                <Text style={styles.statValue}>
-                  {Math.abs(changePercent).toFixed(0)}%
-                </Text>
-              </View>
-              <Text style={styles.statLabel}>vs Sebelum</Text>
-            </View>
+      {!isPremiumInsights ? (
+        // Show locked state for non-premium users
+        <View style={styles.lockedContainer}>
+          <View style={styles.lockedIconContainer}>
+            <Ionicons name="diamond" size={48} color={theme.colors.primary} />
           </View>
-        </LinearGradient>
-
-        {/* Smart Spending Insights */}
-        <View style={styles.insightsSection}>
-          <View style={styles.insightsSectionHeader}>
-            <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
-            <Text style={styles.insightsSectionTitle}>Smart Insights</Text>
-            {spendingInsights.length > 0 && (
-              <View style={styles.insightsBadge}>
-                <Text style={styles.insightsBadgeText}>
-                  {spendingInsights.length}
-                </Text>
-              </View>
-            )}
-          </View>
-          {spendingInsights.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.insightsScrollContent}
-              decelerationRate="fast"
-              snapToInterval={scale(240) + theme.spacing.m}
+          <Text style={styles.lockedTitle}>Insights Premium</Text>
+          <Text style={styles.lockedDescription}>
+            Analisis pengeluaran lengkap, health score kredit, dan tips
+            finansial cerdas. Upgrade ke Premium untuk membuka fitur ini.
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate("Paywall")}
+          >
+            <Ionicons name="diamond" size={18} color="#FFF" />
+            <Text style={styles.upgradeButtonText}>Upgrade ke Premium</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        // Premium content
+        <>
+          {/* Period Selector */}
+          <View style={styles.periodSelector}>
+            <TouchableOpacity
+              style={[
+                styles.periodButton,
+                selectedPeriod === "month" && styles.periodButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod("month")}
             >
-              {spendingInsights.slice(0, 5).map((insight, index) => {
-                const severityColor = SpendingInsightsService.getSeverityColor(
-                  insight.severity,
-                  theme
-                );
-                const gradientColors: [string, string] =
-                  insight.severity === "warning"
-                    ? ["#FEF3C7", "#FDE68A"]
-                    : insight.severity === "success"
-                    ? ["#D1FAE5", "#A7F3D0"]
-                    : ["#EEF2FF", "#E0E7FF"];
-                const darkGradientColors: [string, string] =
-                  insight.severity === "warning"
-                    ? ["#FACC1530", "#CA8A0430"] // Warning: translucent yellow/amber
-                    : insight.severity === "success"
-                    ? ["#22C55E30", "#16A34A30"] // Success: translucent green
-                    : ["#6366F130", "#4F46E530"]; // Info: translucent indigo
+              <Text
+                style={[
+                  styles.periodText,
+                  selectedPeriod === "month" && styles.periodTextActive,
+                ]}
+              >
+                Bulanan
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.periodButton,
+                selectedPeriod === "year" && styles.periodButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod("year")}
+            >
+              <Text
+                style={[
+                  styles.periodText,
+                  selectedPeriod === "year" && styles.periodTextActive,
+                ]}
+              >
+                Tahunan
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-                return (
-                  <TouchableOpacity
-                    key={insight.id}
-                    style={styles.insightCardWrapper}
-                    activeOpacity={0.9}
-                    onPress={() => handleInsightPress(insight)}
-                  >
-                    <LinearGradient
-                      colors={isDark ? darkGradientColors : gradientColors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.insightCard}
-                    >
-                      {/* Severity Indicator */}
-                      <View
-                        style={[
-                          styles.insightSeverityDot,
-                          { backgroundColor: severityColor },
-                        ]}
-                      />
+          {/* Date Navigator */}
+          <View style={styles.dateNavigator}>
+            <TouchableOpacity
+              onPress={() => navigateDate(-1)}
+              style={styles.navButton}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={theme.colors.text.primary}
+              />
+            </TouchableOpacity>
+            <Text style={styles.dateLabel}>
+              {selectedPeriod === "month"
+                ? selectedDate.toLocaleDateString("id-ID", {
+                    month: "long",
+                    year: "numeric",
+                  })
+                : selectedDate.getFullYear().toString()}
+            </Text>
+            <TouchableOpacity
+              onPress={() => navigateDate(1)}
+              style={styles.navButton}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={theme.colors.text.primary}
+              />
+            </TouchableOpacity>
+          </View>
 
-                      {/* Icon with Background */}
-                      <View
-                        style={[
-                          styles.insightIconContainer,
-                          {
-                            backgroundColor: "rgba(255,255,255,0.95)",
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={insight.icon as any}
-                          size={20}
-                          color={severityColor}
-                        />
-                      </View>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}
+          >
+            {/* Summary Card */}
+            <LinearGradient
+              colors={[theme.colors.primary, theme.colors.primary + "CC"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.summaryCard}
+            >
+              <Text style={styles.summaryLabel}>Total Pengeluaran</Text>
+              <Text style={styles.summaryAmount}>
+                {formatCurrency(totalSpending, Number.MAX_SAFE_INTEGER)}
+              </Text>
 
-                      {/* Content */}
-                      <Text
-                        style={[
-                          styles.insightTitle,
-                          isDark && { color: "#FFFFFF" },
-                        ]}
-                        numberOfLines={2}
-                      >
-                        {insight.title}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.insightDescription,
-                          isDark && { color: "rgba(255,255,255,0.8)" },
-                        ]}
-                        numberOfLines={3}
-                      >
-                        {insight.description}
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          ) : (
-            <View style={styles.insightsEmptyState}>
-              <View style={styles.insightsEmptyIcon}>
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.summaryStats}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>
+                    {filteredTransactions.length}
+                  </Text>
+                  <Text style={styles.statLabel}>Transaksi</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>
+                    {formatCompactCurrency(avgTransaction)}
+                  </Text>
+                  <Text style={styles.statLabel}>Rata-rata</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <View style={styles.changeRow}>
+                    <Ionicons
+                      name={changePercent >= 0 ? "arrow-up" : "arrow-down"}
+                      size={14}
+                      color="#FFF"
+                    />
+                    <Text style={styles.statValue}>
+                      {Math.abs(changePercent).toFixed(0)}%
+                    </Text>
+                  </View>
+                  <Text style={styles.statLabel}>vs Sebelum</Text>
+                </View>
+              </View>
+            </LinearGradient>
+
+            {/* Smart Spending Insights */}
+            <View style={styles.insightsSection}>
+              <View style={styles.insightsSectionHeader}>
                 <Ionicons
                   name="sparkles"
-                  size={32}
+                  size={20}
                   color={theme.colors.primary}
                 />
+                <Text style={styles.insightsSectionTitle}>Smart Insights</Text>
+                {spendingInsights.length > 0 && (
+                  <View style={styles.insightsBadge}>
+                    <Text style={styles.insightsBadgeText}>
+                      {spendingInsights.length}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <Text style={styles.insightsEmptyTitle}>Belum Ada Insight</Text>
-              <Text style={styles.insightsEmptyText}>
-                Tambahkan lebih banyak transaksi untuk mendapatkan analisis
-                pengeluaran cerdas.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Credit Health Score */}
-        <View style={styles.card}>
-          <View style={styles.healthScoreHeader}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Text style={[styles.cardTitle, { marginBottom: 0 }]}>
-                All Credit Health Score
-              </Text>
-              <TouchableOpacity
-                onPress={showHealthScoreInfo}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="information-circle-outline"
-                  size={18}
-                  color={theme.colors.text.secondary}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Score Circle */}
-          <View style={styles.scoreContainer}>
-            <View
-              style={[
-                styles.scoreCircle,
-                {
-                  borderColor: healthScore.hasData
-                    ? getScoreColor(healthScore.rating)
-                    : theme.colors.border,
-                },
-              ]}
-            >
-              {healthScore.hasData ? (
-                <>
-                  <Text
-                    style={[
-                      styles.scoreNumber,
-                      { color: getScoreColor(healthScore.rating) },
-                    ]}
-                  >
-                    {healthScore.totalScore}
-                  </Text>
-                  <Text style={styles.scoreLabel}>/ 100</Text>
-                </>
-              ) : (
-                <Text
-                  style={[
-                    styles.scoreNumber,
-                    { color: theme.colors.text.tertiary, fontSize: 32 },
-                  ]}
+              {spendingInsights.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.insightsScrollContent}
+                  decelerationRate="fast"
+                  snapToInterval={scale(240) + theme.spacing.m}
                 >
-                  --
-                </Text>
+                  {spendingInsights.slice(0, 5).map((insight, index) => {
+                    const severityColor =
+                      SpendingInsightsService.getSeverityColor(
+                        insight.severity,
+                        theme
+                      );
+                    const gradientColors: [string, string] =
+                      insight.severity === "warning"
+                        ? ["#FEF3C7", "#FDE68A"]
+                        : insight.severity === "success"
+                        ? ["#D1FAE5", "#A7F3D0"]
+                        : ["#EEF2FF", "#E0E7FF"];
+                    const darkGradientColors: [string, string] =
+                      insight.severity === "warning"
+                        ? ["#FACC1530", "#CA8A0430"] // Warning: translucent yellow/amber
+                        : insight.severity === "success"
+                        ? ["#22C55E30", "#16A34A30"] // Success: translucent green
+                        : ["#6366F130", "#4F46E530"]; // Info: translucent indigo
+
+                    return (
+                      <TouchableOpacity
+                        key={insight.id}
+                        style={styles.insightCardWrapper}
+                        activeOpacity={0.9}
+                        onPress={() => handleInsightPress(insight)}
+                      >
+                        <LinearGradient
+                          colors={isDark ? darkGradientColors : gradientColors}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.insightCard}
+                        >
+                          {/* Severity Indicator */}
+                          <View
+                            style={[
+                              styles.insightSeverityDot,
+                              { backgroundColor: severityColor },
+                            ]}
+                          />
+
+                          {/* Icon with Background */}
+                          <View
+                            style={[
+                              styles.insightIconContainer,
+                              {
+                                backgroundColor: "rgba(255,255,255,0.95)",
+                              },
+                            ]}
+                          >
+                            <Ionicons
+                              name={insight.icon as any}
+                              size={20}
+                              color={severityColor}
+                            />
+                          </View>
+
+                          {/* Content */}
+                          <Text
+                            style={[
+                              styles.insightTitle,
+                              isDark && { color: "#FFFFFF" },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {insight.title}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.insightDescription,
+                              isDark && { color: "rgba(255,255,255,0.8)" },
+                            ]}
+                            numberOfLines={3}
+                          >
+                            {insight.description}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <View style={styles.insightsEmptyState}>
+                  <View style={styles.insightsEmptyIcon}>
+                    <Ionicons
+                      name="sparkles"
+                      size={32}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.insightsEmptyTitle}>
+                    Belum Ada Insight
+                  </Text>
+                  <Text style={styles.insightsEmptyText}>
+                    Tambahkan lebih banyak transaksi untuk mendapatkan analisis
+                    pengeluaran cerdas.
+                  </Text>
+                </View>
               )}
             </View>
-            {!healthScore.hasData && (
-              <Text
-                style={{
-                  marginTop: 12,
-                  color: theme.colors.text.secondary,
-                  textAlign: "center",
-                }}
-              >
-                Tambahkan kartu dan transaksi untuk melihat skor kesehatan
-                kredit Anda.
-              </Text>
-            )}
-          </View>
 
-          {healthScore.hasData && (
-            <>
-              {/* Breakdown */}
-              <Text style={styles.breakdownTitle}>Rincian Skor</Text>
-
-              {/* Penggunaan Limit */}
-              <View style={styles.breakdownItem}>
-                <View style={styles.breakdownHeader}>
-                  <Text style={styles.breakdownLabel}>Penggunaan Limit</Text>
-                  <Text style={styles.breakdownScore}>
-                    {healthScore.breakdown.creditUtilization.score}/40
+            {/* Credit Health Score */}
+            <View style={styles.card}>
+              <View style={styles.healthScoreHeader}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  <Text style={[styles.cardTitle, { marginBottom: 0 }]}>
+                    All Credit Health Score
                   </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${
-                          (healthScore.breakdown.creditUtilization.score / 40) *
-                          100
-                        }%`,
-                        backgroundColor: getScoreColor(
-                          healthScore.breakdown.creditUtilization.rating
-                        ),
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.breakdownDetail}>
-                  {healthScore.breakdown.creditUtilization.percentage.toFixed(
-                    1
-                  )}
-                  % dari limit terpakai
-                </Text>
-              </View>
-
-              {/* Riwayat Pembayaran */}
-              <View style={styles.breakdownItem}>
-                <View style={styles.breakdownHeader}>
-                  <Text style={styles.breakdownLabel}>Riwayat Pembayaran</Text>
-                  <Text style={styles.breakdownScore}>
-                    {healthScore.breakdown.paymentHistory.score}/30
-                  </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${
-                          (healthScore.breakdown.paymentHistory.score / 30) *
-                          100
-                        }%`,
-                        backgroundColor: getScoreColor(
-                          healthScore.breakdown.paymentHistory.rating
-                        ),
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.breakdownDetail}>
-                  {healthScore.breakdown.paymentHistory.lateCount === 0
-                    ? "Selalu tepat waktu ✓"
-                    : `${healthScore.breakdown.paymentHistory.lateCount}x terlambat`}
-                </Text>
-              </View>
-
-              {/* Disiplin Budget */}
-              <View style={styles.breakdownItem}>
-                <View style={styles.breakdownHeader}>
-                  <Text style={styles.breakdownLabel}>Disiplin Budget</Text>
-                  <Text style={styles.breakdownScore}>
-                    {healthScore.breakdown.spendingDiscipline.score}/20
-                  </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${
-                          (healthScore.breakdown.spendingDiscipline.score /
-                            20) *
-                          100
-                        }%`,
-                        backgroundColor: getScoreColor(
-                          healthScore.breakdown.spendingDiscipline.rating
-                        ),
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.breakdownDetail}>
-                  {healthScore.breakdown.spendingDiscipline.budgetUsage > 0
-                    ? `${healthScore.breakdown.spendingDiscipline.budgetUsage.toFixed(
-                        0
-                      )}% dari budget`
-                    : "Belum ada budget"}
-                </Text>
-              </View>
-
-              {/* Trend */}
-              <View style={styles.breakdownItem}>
-                <View style={styles.breakdownHeader}>
-                  <Text style={styles.breakdownLabel}>Trend (3 Bulan)</Text>
-                  <Text style={styles.breakdownScore}>
-                    {healthScore.breakdown.trend.score}/10
-                  </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${
-                          (healthScore.breakdown.trend.score / 10) * 100
-                        }%`,
-                        backgroundColor:
-                          healthScore.breakdown.trend.direction === "improving"
-                            ? "#10B981"
-                            : healthScore.breakdown.trend.direction ===
-                              "declining"
-                            ? "#EF4444"
-                            : "#6B7280",
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.breakdownDetail}>
-                  Spending{" "}
-                  {healthScore.breakdown.trend.direction === "improving"
-                    ? "menurun ✓"
-                    : healthScore.breakdown.trend.direction === "declining"
-                    ? "meningkat ↑"
-                    : "stabil"}
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
-
-        {/* Weekly Trend */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tren 7 Hari Terakhir</Text>
-          <View style={styles.chartBars}>
-            {weeklyTrend.map((item, index) => (
-              <View key={index} style={styles.barColumn}>
-                <Text style={styles.barValue}>
-                  {item.amount > 0 ? formatCompactCurrency(item.amount) : "-"}
-                </Text>
-                <View style={styles.barWrapper}>
-                  <View
-                    style={[
-                      styles.bar,
-                      {
-                        height:
-                          item.amount > 0
-                            ? `${Math.max(
-                                (item.amount / maxTrendValue) * 100,
-                                8
-                              )}%`
-                            : 4,
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.barLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Category Breakdown */}
-        {categoryData.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Kategori Pengeluaran</Text>
-            <View
-              style={{ alignItems: "center", marginBottom: theme.spacing.m }}
-            >
-              <PieChart
-                data={categoryData}
-                width={width - 80}
-                height={180}
-                chartConfig={chartConfig}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="50"
-                hasLegend={false}
-                absolute
-              />
-            </View>
-            <View style={styles.legendList}>
-              {categoryData.slice(0, 5).map((item, index) => (
-                <View key={index} style={styles.legendRow}>
-                  <View style={styles.legendLeft}>
-                    <View
-                      style={[
-                        styles.legendDot,
-                        { backgroundColor: item.color },
-                      ]}
+                  <TouchableOpacity
+                    onPress={showHealthScoreInfo}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={18}
+                      color={theme.colors.text.secondary}
                     />
-                    <Text style={styles.legendName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.legendRight}>
-                    <Text style={styles.legendAmount}>
-                      {formatCompactCurrency(item.population)}
-                    </Text>
-                    <Text style={styles.legendPercent}>
-                      {item.percentage.toFixed(0)}%
-                    </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
-              ))}
-            </View>
-          </View>
-        )}
+              </View>
 
-        {/* Monthly Spending Trend */}
-        {monthlyTrend.some((m) => m.amount > 0) && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Tren Pengeluaran 6 Bulan</Text>
-            <View style={{ paddingRight: 8 }}>
-              <LineChart
-                data={{
-                  labels: monthlyTrend.map((m) => m.label),
-                  datasets: [
+              {/* Score Circle */}
+              <View style={styles.scoreContainer}>
+                <View
+                  style={[
+                    styles.scoreCircle,
                     {
-                      data: monthlyTrend.map((m) => m.amount || 0),
-                      strokeWidth: 2,
+                      borderColor: healthScore.hasData
+                        ? getScoreColor(healthScore.rating)
+                        : theme.colors.border,
                     },
-                  ],
-                }}
-                width={width - 48}
-                height={180}
-                chartConfig={{
-                  ...chartConfig,
-                  backgroundGradientFrom: theme.colors.surface,
-                  backgroundGradientTo: theme.colors.surface,
-                  propsForLabels: {
-                    fontSize: 10,
-                  },
-                }}
-                bezier
-                style={{
-                  borderRadius: theme.borderRadius.m,
-                }}
-                withInnerLines={false}
-                withOuterLines={false}
-                formatYLabel={(value) => {
-                  const num = parseFloat(value);
-                  const absNum = Math.abs(num);
-                  const sign = num < 0 ? "-" : "";
-                  if (absNum >= 1000000000)
-                    return `${sign}Rp ${(absNum / 1000000000).toFixed(1)} M`;
-                  if (absNum >= 1000000)
-                    return `${sign}Rp ${(absNum / 1000000).toFixed(0)} Jt`;
-                  if (absNum >= 1000)
-                    return `${sign}Rp ${(absNum / 1000).toFixed(0)} Rb`;
-                  return `${sign}Rp ${absNum}`;
-                }}
-              />
-            </View>
-            <View style={styles.trendSummary}>
-              <View style={styles.trendItem}>
-                <Text style={styles.trendLabel}>Tertinggi</Text>
-                <Text style={styles.trendValue}>
-                  {formatCompactCurrency(
-                    Math.max(...monthlyTrend.map((m) => m.amount))
-                  )}
-                </Text>
-              </View>
-              <View style={styles.trendItem}>
-                <Text style={styles.trendLabel}>Rata-rata</Text>
-                <Text style={styles.trendValue}>
-                  {formatCompactCurrency(
-                    monthlyTrend.reduce((sum, m) => sum + m.amount, 0) / 6
-                  )}
-                </Text>
-              </View>
-              <View style={styles.trendItem}>
-                <Text style={styles.trendLabel}>Terendah</Text>
-                <Text style={styles.trendValue}>
-                  {formatCompactCurrency(
-                    Math.min(
-                      ...monthlyTrend
-                        .filter((m) => m.amount > 0)
-                        .map((m) => m.amount)
-                    ) || 0
-                  )}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Budget per Kategori */}
-        {categoryBudgets.length > 0 && (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Budget Kategori</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("CategoryBudget" as never)}
-              >
-                <Text style={styles.seeAllText}>Kelola</Text>
-              </TouchableOpacity>
-            </View>
-            {categoryBudgets.slice(0, 5).map((budget) => {
-              // Calculate current month spending for this category
-              const now = new Date();
-              const currentMonthSpending = transactions
-                .filter((t) => {
-                  const tDate = new Date(t.date);
-                  return (
-                    t.category === budget.category &&
-                    tDate.getMonth() === now.getMonth() &&
-                    tDate.getFullYear() === now.getFullYear()
-                  );
-                })
-                .reduce((sum, t) => sum + t.amount, 0);
-
-              const percentage =
-                budget.budget > 0
-                  ? (currentMonthSpending / budget.budget) * 100
-                  : 0;
-              const isOverThreshold = percentage >= budget.alertThreshold;
-              const isOverBudget = percentage >= 100;
-
-              return (
-                <View key={budget.category} style={styles.budgetItem}>
-                  <View style={styles.budgetHeader}>
-                    <Text style={styles.budgetCategory}>{budget.category}</Text>
+                  ]}
+                >
+                  {healthScore.hasData ? (
+                    <>
+                      <Text
+                        style={[
+                          styles.scoreNumber,
+                          { color: getScoreColor(healthScore.rating) },
+                        ]}
+                      >
+                        {healthScore.totalScore}
+                      </Text>
+                      <Text style={styles.scoreLabel}>/ 100</Text>
+                    </>
+                  ) : (
                     <Text
                       style={[
-                        styles.budgetPercentage,
-                        isOverBudget && { color: theme.colors.status.error },
-                        isOverThreshold &&
-                          !isOverBudget && {
-                            color: theme.colors.status.warning,
-                          },
+                        styles.scoreNumber,
+                        { color: theme.colors.text.tertiary, fontSize: 32 },
                       ]}
                     >
-                      {percentage.toFixed(0)}%
+                      --
                     </Text>
-                  </View>
-                  <View style={styles.budgetProgressBg}>
-                    <View
-                      style={[
-                        styles.budgetProgressFill,
-                        {
-                          width: `${Math.min(percentage, 100)}%`,
-                          backgroundColor: isOverBudget
-                            ? theme.colors.status.error
-                            : isOverThreshold
-                            ? theme.colors.status.warning
-                            : theme.colors.primary,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <View style={styles.budgetDetails}>
-                    <Text style={styles.budgetSpent}>
-                      {formatCompactCurrency(currentMonthSpending)}
-                    </Text>
-                    <Text style={styles.budgetLimit}>
-                      dari {formatCompactCurrency(budget.budget)}
-                    </Text>
-                  </View>
+                  )}
                 </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Card Usage */}
-        {cardSpendingData.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Penggunaan Kartu</Text>
-            {cardSpendingData.slice(0, 4).map((item) => (
-              <View key={item.card.id} style={styles.cardUsageItem}>
-                <View style={styles.cardUsageHeader}>
-                  <View style={styles.cardNameRow}>
-                    <View
-                      style={[
-                        styles.cardDot,
-                        {
-                          backgroundColor:
-                            item.card.colorTheme || theme.colors.primary,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.cardUsageName} numberOfLines={1}>
-                      {item.card.alias}
-                    </Text>
-                  </View>
-                  <Text style={styles.cardUsageSpending}>
-                    {formatCompactCurrency(item.spending)}
+                {!healthScore.hasData && (
+                  <Text
+                    style={{
+                      marginTop: 12,
+                      color: theme.colors.text.secondary,
+                      textAlign: "center",
+                    }}
+                  >
+                    Tambahkan kartu dan transaksi untuk melihat skor kesehatan
+                    kredit Anda.
                   </Text>
-                </View>
-                <View style={styles.usageBarBg}>
-                  <View
-                    style={[
-                      styles.usageBarFill,
-                      {
-                        width: `${Math.min(item.usagePercent, 100)}%`,
-                        backgroundColor:
-                          item.usagePercent > 80
-                            ? theme.colors.status.error
-                            : item.usagePercent > 50
-                            ? theme.colors.status.warning
-                            : theme.colors.primary,
-                      },
-                    ]}
+                )}
+              </View>
+
+              {healthScore.hasData && (
+                <>
+                  {/* Breakdown */}
+                  <Text style={styles.breakdownTitle}>Rincian Skor</Text>
+
+                  {/* Penggunaan Limit */}
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownHeader}>
+                      <Text style={styles.breakdownLabel}>
+                        Penggunaan Limit
+                      </Text>
+                      <Text style={styles.breakdownScore}>
+                        {healthScore.breakdown.creditUtilization.score}/40
+                      </Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${
+                              (healthScore.breakdown.creditUtilization.score /
+                                40) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              healthScore.breakdown.creditUtilization.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownDetail}>
+                      {healthScore.breakdown.creditUtilization.percentage.toFixed(
+                        1
+                      )}
+                      % dari limit terpakai
+                    </Text>
+                  </View>
+
+                  {/* Riwayat Pembayaran */}
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownHeader}>
+                      <Text style={styles.breakdownLabel}>
+                        Riwayat Pembayaran
+                      </Text>
+                      <Text style={styles.breakdownScore}>
+                        {healthScore.breakdown.paymentHistory.score}/30
+                      </Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${
+                              (healthScore.breakdown.paymentHistory.score /
+                                30) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              healthScore.breakdown.paymentHistory.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownDetail}>
+                      {healthScore.breakdown.paymentHistory.lateCount === 0
+                        ? "Selalu tepat waktu ✓"
+                        : `${healthScore.breakdown.paymentHistory.lateCount}x terlambat`}
+                    </Text>
+                  </View>
+
+                  {/* Disiplin Budget */}
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownHeader}>
+                      <Text style={styles.breakdownLabel}>Disiplin Budget</Text>
+                      <Text style={styles.breakdownScore}>
+                        {healthScore.breakdown.spendingDiscipline.score}/20
+                      </Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${
+                              (healthScore.breakdown.spendingDiscipline.score /
+                                20) *
+                              100
+                            }%`,
+                            backgroundColor: getScoreColor(
+                              healthScore.breakdown.spendingDiscipline.rating
+                            ),
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownDetail}>
+                      {healthScore.breakdown.spendingDiscipline.budgetUsage > 0
+                        ? `${healthScore.breakdown.spendingDiscipline.budgetUsage.toFixed(
+                            0
+                          )}% dari budget`
+                        : "Belum ada budget"}
+                    </Text>
+                  </View>
+
+                  {/* Trend */}
+                  <View style={styles.breakdownItem}>
+                    <View style={styles.breakdownHeader}>
+                      <Text style={styles.breakdownLabel}>Trend (3 Bulan)</Text>
+                      <Text style={styles.breakdownScore}>
+                        {healthScore.breakdown.trend.score}/10
+                      </Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${
+                              (healthScore.breakdown.trend.score / 10) * 100
+                            }%`,
+                            backgroundColor:
+                              healthScore.breakdown.trend.direction ===
+                              "improving"
+                                ? "#10B981"
+                                : healthScore.breakdown.trend.direction ===
+                                  "declining"
+                                ? "#EF4444"
+                                : "#6B7280",
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownDetail}>
+                      Spending{" "}
+                      {healthScore.breakdown.trend.direction === "improving"
+                        ? "menurun ✓"
+                        : healthScore.breakdown.trend.direction === "declining"
+                        ? "meningkat ↑"
+                        : "stabil"}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Weekly Trend */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Tren 7 Hari Terakhir</Text>
+              <View style={styles.chartBars}>
+                {weeklyTrend.map((item, index) => (
+                  <View key={index} style={styles.barColumn}>
+                    <Text style={styles.barValue}>
+                      {item.amount > 0
+                        ? formatCompactCurrency(item.amount)
+                        : "-"}
+                    </Text>
+                    <View style={styles.barWrapper}>
+                      <View
+                        style={[
+                          styles.bar,
+                          {
+                            height:
+                              item.amount > 0
+                                ? `${Math.max(
+                                    (item.amount / maxTrendValue) * 100,
+                                    8
+                                  )}%`
+                                : 4,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.barLabel}>{item.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Category Breakdown */}
+            {categoryData.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Kategori Pengeluaran</Text>
+                <View
+                  style={{
+                    alignItems: "center",
+                    marginBottom: theme.spacing.m,
+                  }}
+                >
+                  <PieChart
+                    data={categoryData}
+                    width={width - 80}
+                    height={180}
+                    chartConfig={chartConfig}
+                    accessor="population"
+                    backgroundColor="transparent"
+                    paddingLeft="50"
+                    hasLegend={false}
+                    absolute
                   />
                 </View>
-                <View style={styles.usageInfoContainer}>
-                  <View>
-                    <Text style={styles.usageLabel}>Sisa Limit</Text>
-                    <Text style={styles.usageValue}>
-                      {formatCurrency(
-                        item.remainingLimit,
-                        Number.MAX_SAFE_INTEGER
+                <View style={styles.legendList}>
+                  {categoryData.slice(0, 5).map((item, index) => (
+                    <View key={index} style={styles.legendRow}>
+                      <View style={styles.legendLeft}>
+                        <View
+                          style={[
+                            styles.legendDot,
+                            { backgroundColor: item.color },
+                          ]}
+                        />
+                        <Text style={styles.legendName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                      </View>
+                      <View style={styles.legendRight}>
+                        <Text style={styles.legendAmount}>
+                          {formatCompactCurrency(item.population)}
+                        </Text>
+                        <Text style={styles.legendPercent}>
+                          {item.percentage.toFixed(0)}%
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Monthly Spending Trend */}
+            {monthlyTrend.some((m) => m.amount > 0) && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Tren Pengeluaran 6 Bulan</Text>
+                <View style={{ paddingRight: 8 }}>
+                  <LineChart
+                    data={{
+                      labels: monthlyTrend.map((m) => m.label),
+                      datasets: [
+                        {
+                          data: monthlyTrend.map((m) => m.amount || 0),
+                          strokeWidth: 2,
+                        },
+                      ],
+                    }}
+                    width={width - 48}
+                    height={180}
+                    chartConfig={{
+                      ...chartConfig,
+                      backgroundGradientFrom: theme.colors.surface,
+                      backgroundGradientTo: theme.colors.surface,
+                      propsForLabels: {
+                        fontSize: 10,
+                      },
+                    }}
+                    bezier
+                    style={{
+                      borderRadius: theme.borderRadius.m,
+                    }}
+                    withInnerLines={false}
+                    withOuterLines={false}
+                    formatYLabel={(value) => {
+                      const num = parseFloat(value);
+                      const absNum = Math.abs(num);
+                      const sign = num < 0 ? "-" : "";
+                      if (absNum >= 1000000000)
+                        return `${sign}Rp ${(absNum / 1000000000).toFixed(
+                          1
+                        )} M`;
+                      if (absNum >= 1000000)
+                        return `${sign}Rp ${(absNum / 1000000).toFixed(0)} Jt`;
+                      if (absNum >= 1000)
+                        return `${sign}Rp ${(absNum / 1000).toFixed(0)} Rb`;
+                      return `${sign}Rp ${absNum}`;
+                    }}
+                  />
+                </View>
+                <View style={styles.trendSummary}>
+                  <View style={styles.trendItem}>
+                    <Text style={styles.trendLabel}>Tertinggi</Text>
+                    <Text style={styles.trendValue}>
+                      {formatCompactCurrency(
+                        Math.max(...monthlyTrend.map((m) => m.amount))
                       )}
                     </Text>
                   </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.usageLabel}>Total Transaksi</Text>
-                    <Text style={styles.usageValue}>
-                      {item.txCount} transaksi
+                  <View style={styles.trendItem}>
+                    <Text style={styles.trendLabel}>Rata-rata</Text>
+                    <Text style={styles.trendValue}>
+                      {formatCompactCurrency(
+                        monthlyTrend.reduce((sum, m) => sum + m.amount, 0) / 6
+                      )}
+                    </Text>
+                  </View>
+                  <View style={styles.trendItem}>
+                    <Text style={styles.trendLabel}>Terendah</Text>
+                    <Text style={styles.trendValue}>
+                      {formatCompactCurrency(
+                        Math.min(
+                          ...monthlyTrend
+                            .filter((m) => m.amount > 0)
+                            .map((m) => m.amount)
+                        ) || 0
+                      )}
                     </Text>
                   </View>
                 </View>
               </View>
-            ))}
-          </View>
-        )}
+            )}
 
-        {/* Empty State */}
-        {categoryData.length === 0 && cardSpendingData.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="pie-chart-outline"
-              size={48}
-              color={theme.colors.text.tertiary}
-            />
-            <Text style={styles.emptyTitle}>Belum Ada Data</Text>
-            <Text style={styles.emptyDesc}>
-              Tidak ada transaksi di periode ini
-            </Text>
-          </View>
-        )}
+            {/* Budget per Kategori */}
+            {categoryBudgets.length > 0 && (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Budget Kategori</Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("CategoryBudget" as never)
+                    }
+                  >
+                    <Text style={styles.seeAllText}>Kelola</Text>
+                  </TouchableOpacity>
+                </View>
+                {categoryBudgets.slice(0, 5).map((budget) => {
+                  // Calculate current month spending for this category
+                  const now = new Date();
+                  const currentMonthSpending = transactions
+                    .filter((t) => {
+                      const tDate = new Date(t.date);
+                      return (
+                        t.category === budget.category &&
+                        tDate.getMonth() === now.getMonth() &&
+                        tDate.getFullYear() === now.getFullYear()
+                      );
+                    })
+                    .reduce((sum, t) => sum + t.amount, 0);
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+                  const percentage =
+                    budget.budget > 0
+                      ? (currentMonthSpending / budget.budget) * 100
+                      : 0;
+                  const isOverThreshold = percentage >= budget.alertThreshold;
+                  const isOverBudget = percentage >= 100;
+
+                  return (
+                    <View key={budget.category} style={styles.budgetItem}>
+                      <View style={styles.budgetHeader}>
+                        <Text style={styles.budgetCategory}>
+                          {budget.category}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.budgetPercentage,
+                            isOverBudget && {
+                              color: theme.colors.status.error,
+                            },
+                            isOverThreshold &&
+                              !isOverBudget && {
+                                color: theme.colors.status.warning,
+                              },
+                          ]}
+                        >
+                          {percentage.toFixed(0)}%
+                        </Text>
+                      </View>
+                      <View style={styles.budgetProgressBg}>
+                        <View
+                          style={[
+                            styles.budgetProgressFill,
+                            {
+                              width: `${Math.min(percentage, 100)}%`,
+                              backgroundColor: isOverBudget
+                                ? theme.colors.status.error
+                                : isOverThreshold
+                                ? theme.colors.status.warning
+                                : theme.colors.primary,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.budgetDetails}>
+                        <Text style={styles.budgetSpent}>
+                          {formatCompactCurrency(currentMonthSpending)}
+                        </Text>
+                        <Text style={styles.budgetLimit}>
+                          dari {formatCompactCurrency(budget.budget)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Card Usage */}
+            {cardSpendingData.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Penggunaan Kartu</Text>
+                {cardSpendingData.slice(0, 4).map((item) => (
+                  <View key={item.card.id} style={styles.cardUsageItem}>
+                    <View style={styles.cardUsageHeader}>
+                      <View style={styles.cardNameRow}>
+                        <View
+                          style={[
+                            styles.cardDot,
+                            {
+                              backgroundColor:
+                                item.card.colorTheme || theme.colors.primary,
+                            },
+                          ]}
+                        />
+                        <Text style={styles.cardUsageName} numberOfLines={1}>
+                          {item.card.alias}
+                        </Text>
+                      </View>
+                      <Text style={styles.cardUsageSpending}>
+                        {formatCompactCurrency(item.spending)}
+                      </Text>
+                    </View>
+                    <View style={styles.usageBarBg}>
+                      <View
+                        style={[
+                          styles.usageBarFill,
+                          {
+                            width: `${Math.min(item.usagePercent, 100)}%`,
+                            backgroundColor:
+                              item.usagePercent > 80
+                                ? theme.colors.status.error
+                                : item.usagePercent > 50
+                                ? theme.colors.status.warning
+                                : theme.colors.primary,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <View style={styles.usageInfoContainer}>
+                      <View>
+                        <Text style={styles.usageLabel}>Sisa Limit</Text>
+                        <Text style={styles.usageValue}>
+                          {formatCurrency(
+                            item.remainingLimit,
+                            Number.MAX_SAFE_INTEGER
+                          )}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={styles.usageLabel}>Total Transaksi</Text>
+                        <Text style={styles.usageValue}>
+                          {item.txCount} transaksi
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Empty State */}
+            {categoryData.length === 0 && cardSpendingData.length === 0 && (
+              <View style={styles.emptyState}>
+                <Ionicons
+                  name="pie-chart-outline"
+                  size={48}
+                  color={theme.colors.text.tertiary}
+                />
+                <Text style={styles.emptyTitle}>Belum Ada Data</Text>
+                <Text style={styles.emptyDesc}>
+                  Tidak ada transaksi di periode ini
+                </Text>
+              </View>
+            )}
+
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 };
@@ -1692,5 +1748,48 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text.secondary,
       textAlign: "center",
       lineHeight: 18,
+    },
+    lockedContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: scale(40),
+    },
+    lockedIconContainer: {
+      width: scale(100),
+      height: scale(100),
+      borderRadius: scale(50),
+      backgroundColor: theme.colors.primary + "15",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: scale(24),
+    },
+    lockedTitle: {
+      fontSize: moderateScale(22),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: scale(12),
+      textAlign: "center",
+    },
+    lockedDescription: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      lineHeight: moderateScale(22),
+      marginBottom: scale(32),
+    },
+    upgradeButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: scale(28),
+      paddingVertical: scale(14),
+      borderRadius: scale(25),
+      gap: scale(8),
+    },
+    upgradeButtonText: {
+      fontSize: moderateScale(15),
+      fontWeight: "600",
+      color: "#FFF",
     },
   });

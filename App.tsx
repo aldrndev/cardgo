@@ -6,6 +6,7 @@ import { AppNavigator } from "./src/navigation/AppNavigator";
 import { CardsProvider } from "./src/context/CardsContext";
 import { LimitIncreaseProvider } from "./src/context/LimitIncreaseContext";
 import { ThemeProvider } from "./src/context/ThemeContext";
+import { PremiumProvider } from "./src/context/PremiumContext";
 import { registerForPushNotificationsAsync } from "./src/utils/notifications";
 import { NavigationContainer } from "@react-navigation/native";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
@@ -96,15 +97,17 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <CardsProvider>
-        <LimitIncreaseProvider>
-          <AuthProvider>
-            <SafeAreaProvider>
-              <AppContent />
-            </SafeAreaProvider>
-          </AuthProvider>
-        </LimitIncreaseProvider>
-      </CardsProvider>
+      <PremiumProvider>
+        <CardsProvider>
+          <LimitIncreaseProvider>
+            <AuthProvider>
+              <SafeAreaProvider>
+                <AppContent />
+              </SafeAreaProvider>
+            </AuthProvider>
+          </LimitIncreaseProvider>
+        </CardsProvider>
+      </PremiumProvider>
     </ThemeProvider>
   );
 }

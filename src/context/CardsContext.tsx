@@ -189,6 +189,14 @@ export const CardsProvider = ({ children }: { children: ReactNode }) => {
         storedTransactions,
         cardsWithResetStatus
       );
+
+      // Schedule grouped notifications (one notification per date group)
+      // Also load limit increase records for status reminders
+      const limitRecords = await storage.getLimitIncreaseRecords();
+      await NotificationService.rescheduleAllGroupedNotifications(
+        cardsWithResetStatus,
+        limitRecords
+      );
     } catch (error) {
       console.error("Error loading cards:", error);
     } finally {

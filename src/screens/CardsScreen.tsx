@@ -14,12 +14,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useTheme, Theme } from "../context/ThemeContext";
+import { usePremium } from "../context/PremiumContext";
 import { formatCurrency } from "../utils/formatters";
 import { moderateScale, scale } from "../utils/responsive";
 import { useCards } from "../context/CardsContext";
 import { RootStackParamList } from "../navigation/types";
 import { CreditCard } from "../components/CreditCard";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+import { FeatureLockedModal } from "../components/FeatureLockedModal";
 import { Ionicons } from "@expo/vector-icons";
 
 type CardsScreenNavigationProp = StackNavigationProp<
@@ -36,8 +38,10 @@ export const CardsScreen = () => {
   const navigation = useNavigation<CardsScreenNavigationProp>();
   const { cards } = useCards();
   const { theme } = useTheme();
+  const { canAddCard } = usePremium();
   const scrollX = useRef(new Animated.Value(0)).current;
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -248,7 +252,25 @@ export const CardsScreen = () => {
 
       {/* FAB for Adding Card */}
       <FloatingActionButton
-        onPress={() => navigation.navigate("AddEditCard", {})}
+        onPress={() => {
+          if (!canAddCard(activeCards.length)) {
+            setShowPaywall(true);
+          } else {
+            navigation.navigate("AddEditCard", {});
+          }
+        }}
+      />
+
+      {/* Premium Paywall Modal */}
+      <FeatureLockedModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onUpgrade={() => {
+          setShowPaywall(false);
+          navigation.navigate("Paywall");
+        }}
+        featureName="Batas Kartu Tercapai"
+        featureDescription={`Versi gratis dibatasi maksimal 3 kartu. Upgrade ke Premium untuk menambahkan kartu tanpa batas.`}
       />
     </SafeAreaView>
   );

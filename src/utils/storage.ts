@@ -198,16 +198,16 @@ export const storage = {
         ? JSON.parse(jsonValue)
         : {
             payment: true,
-            limitIncrease: true,
-            annualFee: true,
+            limitIncrease: false, // Premium feature - default off
+            annualFee: false, // Premium feature - default off
             applicationStatus: true,
           };
     } catch (e) {
       console.error("Failed to fetch notification prefs", e);
       return {
         payment: true,
-        limitIncrease: true,
-        annualFee: true,
+        limitIncrease: false, // Premium feature - default off
+        annualFee: false, // Premium feature - default off
         applicationStatus: true,
       };
     }
@@ -325,6 +325,61 @@ export const storage = {
       );
     } catch (e) {
       console.error("Failed to set notification status", e);
+    }
+  },
+
+  // Premium State
+  async savePremiumState(state: {
+    isPremium: boolean;
+    subscriptionType: string;
+    purchaseDate?: string;
+    expiryDate?: string;
+    isTrialActive: boolean;
+    trialEndDate?: string;
+  }): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(state);
+      await AsyncStorage.setItem("@card_go_premium_state", jsonValue);
+    } catch (e) {
+      console.error("Failed to save premium state", e);
+    }
+  },
+
+  async getPremiumState(): Promise<{
+    isPremium: boolean;
+    subscriptionType: string;
+    purchaseDate?: string;
+    expiryDate?: string;
+    isTrialActive: boolean;
+    trialEndDate?: string;
+  } | null> {
+    try {
+      const jsonValue = await AsyncStorage.getItem("@card_go_premium_state");
+      return jsonValue != null ? JSON.parse(jsonValue) : null;
+    } catch (e) {
+      console.error("Failed to get premium state", e);
+      return null;
+    }
+  },
+
+  // Ad Cooldown (to prevent showing ads too frequently)
+  async getLastAdShown(): Promise<number> {
+    try {
+      const value = await AsyncStorage.getItem("@card_go_last_ad_shown");
+      return value ? parseInt(value, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
+  },
+
+  async setLastAdShown(timestamp: number): Promise<void> {
+    try {
+      await AsyncStorage.setItem(
+        "@card_go_last_ad_shown",
+        timestamp.toString()
+      );
+    } catch (e) {
+      console.error("Failed to set last ad shown", e);
     }
   },
 };

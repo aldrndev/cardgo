@@ -16,6 +16,9 @@ import { useTheme, Theme, ACCENT_COLORS } from "../context/ThemeContext";
 import { moderateScale, scale } from "../utils/responsive";
 import { storage } from "../utils/storage";
 import { CATEGORIES } from "../utils/categorizer";
+import { usePremium } from "../context/PremiumContext";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../navigation/types";
 
 // Available icons for custom categories
 const CATEGORY_ICONS = [
@@ -51,12 +54,14 @@ interface CustomCategory {
 }
 
 export const CustomizationScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { theme, isDark, accentColor, setAccentColor } = useTheme();
+  const { canCustomizeTheme } = usePremium();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
 
+  // ALL HOOKS MUST BE BEFORE ANY CONDITIONAL RETURNS
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>(
     []
   );
@@ -72,6 +77,45 @@ export const CustomizationScreen = () => {
     const categories = await storage.getCustomCategories();
     setCustomCategories(categories || []);
   };
+
+  // Premium check - show locked state for free users
+  if (!canCustomizeTheme()) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={moderateScale(24)}
+              color={theme.colors.text.primary}
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Kustomisasi</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.lockedContainer}>
+          <View style={styles.lockedIconContainer}>
+            <Ionicons name="diamond" size={48} color={theme.colors.primary} />
+          </View>
+          <Text style={styles.lockedTitle}>Kustomisasi Premium</Text>
+          <Text style={styles.lockedDescription}>
+            Personalisasi warna aksen dan buat kategori transaksi kustom.
+            Upgrade ke Premium untuk membuka fitur ini.
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate("Paywall")}
+          >
+            <Ionicons name="diamond" size={18} color="#FFF" />
+            <Text style={styles.upgradeButtonText}>Upgrade ke Premium</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
@@ -141,7 +185,7 @@ export const CustomizationScreen = () => {
       <ScrollView style={styles.content}>
         {/* Accent Color Section - MOVED TO TOP */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Warna Aksen</Text>
+          <Text style={styles.sectionTitle}>Warna Tema Aplikasi</Text>
           <Text style={styles.sectionDescription}>
             Pilih warna tema sesuai selera kamu
           </Text>
@@ -522,5 +566,48 @@ const getStyles = (theme: Theme) =>
     confirmButtonText: {
       ...theme.typography.button,
       color: "#FFFFFF",
+    },
+    lockedContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: scale(40),
+    },
+    lockedIconContainer: {
+      width: scale(100),
+      height: scale(100),
+      borderRadius: scale(50),
+      backgroundColor: theme.colors.primary + "15",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: scale(24),
+    },
+    lockedTitle: {
+      fontSize: moderateScale(22),
+      fontWeight: "700",
+      color: theme.colors.text.primary,
+      marginBottom: scale(12),
+      textAlign: "center",
+    },
+    lockedDescription: {
+      fontSize: moderateScale(14),
+      color: theme.colors.text.secondary,
+      textAlign: "center",
+      lineHeight: moderateScale(22),
+      marginBottom: scale(32),
+    },
+    upgradeButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: scale(28),
+      paddingVertical: scale(14),
+      borderRadius: scale(25),
+      gap: scale(8),
+    },
+    upgradeButtonText: {
+      fontSize: moderateScale(15),
+      fontWeight: "600",
+      color: "#FFF",
     },
   });

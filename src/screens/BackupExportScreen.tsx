@@ -33,6 +33,8 @@ import {
 import { Switch } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect } from "react";
+import { usePremium } from "../context/PremiumContext";
+import { FeatureLockedModal } from "../components/FeatureLockedModal";
 
 export const BackupExportScreen = () => {
   const navigation = useNavigation();
@@ -40,6 +42,14 @@ export const BackupExportScreen = () => {
     useCards();
   const { records: limitRecords, getRecordsByCardId } = useLimitIncrease();
   const { theme, isDark } = useTheme();
+  const { canExport, canBackup, isPremium } = usePremium();
+
+  // Premium modal state
+  const [showPaywall, setShowPaywall] = React.useState(false);
+  const [paywallFeature, setPaywallFeature] = React.useState<{
+    name: string;
+    desc: string;
+  }>({ name: "", desc: "" });
 
   // Dynamic styles based on theme
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -148,6 +158,15 @@ export const BackupExportScreen = () => {
   }, []);
 
   const handleToggleAutoBackup = async (value: boolean) => {
+    // Only premium users can enable auto backup
+    if (value && !canBackup()) {
+      setPaywallFeature({
+        name: "Auto Backup",
+        desc: "Fitur auto backup tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     setAutoBackupEnabled(value);
     await AutoBackupService.setEnabled(value);
   };
@@ -167,6 +186,14 @@ export const BackupExportScreen = () => {
 
   // Create JSON backup - Full backup with all user data
   const handleJsonBackup = async () => {
+    if (!canBackup()) {
+      setPaywallFeature({
+        name: "Backup & Restore",
+        desc: "Fitur backup data tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     setIsExporting(true);
     setExportType("json");
     try {
@@ -253,6 +280,14 @@ export const BackupExportScreen = () => {
 
   // Create CSV export for transactions
   const handleTransactionsCsv = async () => {
+    if (!canExport()) {
+      setPaywallFeature({
+        name: "Export CSV",
+        desc: "Fitur export data ke CSV tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     setIsExporting(true);
     setExportType("transactions");
     try {
@@ -302,6 +337,14 @@ export const BackupExportScreen = () => {
 
   // Create CSV export for cards summary
   const handleCardsSummary = async () => {
+    if (!canExport()) {
+      setPaywallFeature({
+        name: "Export Ringkasan Kartu",
+        desc: "Fitur export data ke CSV tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     setIsExporting(true);
     setExportType("cards");
     try {
@@ -340,6 +383,14 @@ export const BackupExportScreen = () => {
 
   // Create monthly report
   const handleMonthlyReport = async () => {
+    if (!canExport()) {
+      setPaywallFeature({
+        name: "Laporan Bulanan",
+        desc: "Fitur laporan bulanan tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     setIsExporting(true);
     setExportType("monthly");
     try {
@@ -435,6 +486,14 @@ export const BackupExportScreen = () => {
 
   // Restore from backup - Full restore with all user data
   const handleRestore = async () => {
+    if (!canBackup()) {
+      setPaywallFeature({
+        name: "Restore Backup",
+        desc: "Fitur restore data tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "application/json",
@@ -563,6 +622,14 @@ export const BackupExportScreen = () => {
 
   // Handle inline custom export
   const handleInlineExport = async () => {
+    if (!canExport()) {
+      setPaywallFeature({
+        name: "Export Kustom",
+        desc: "Fitur export kustom tersedia untuk pengguna Premium.",
+      });
+      setShowPaywall(true);
+      return;
+    }
     setIsExporting(true);
     setExportType("custom");
 
@@ -1644,7 +1711,18 @@ export const BackupExportScreen = () => {
 
           <TouchableOpacity
             style={[styles.exportButton, { borderBottomWidth: 0 }]}
-            onPress={() => setShowCustomExport(!showCustomExport)}
+            onPress={() => {
+              // Gate custom export from free users
+              if (!showCustomExport && !canExport()) {
+                setPaywallFeature({
+                  name: "Laporan Kustom",
+                  desc: "Fitur export kustom tersedia untuk pengguna Premium.",
+                });
+                setShowPaywall(true);
+                return;
+              }
+              setShowCustomExport(!showCustomExport);
+            }}
           >
             <View style={[styles.exportIcon, { backgroundColor: "#EC489915" }]}>
               <Ionicons name="options-outline" size={24} color="#EC4899" />
@@ -1707,7 +1785,7 @@ export const BackupExportScreen = () => {
               {datePreset === "custom" && (
                 <View style={styles.customDateSection}>
                   {/* Start Date (Dari) */}
-                  <Text style={styles.dateInputLabel}>Dari:</Text>
+                  <Text style={styles.inlineLabel}>Dari:</Text>
                   <View style={styles.dateInputRow}>
                     <View style={styles.dateInputColumn}>
                       <Text style={styles.dateInputHeader}>Hari</Text>
@@ -1752,7 +1830,7 @@ export const BackupExportScreen = () => {
                   </View>
 
                   {/* End Date (Sampai) */}
-                  <Text style={[styles.dateInputLabel, { marginTop: 12 }]}>
+                  <Text style={[styles.inlineLabel, { marginTop: 12 }]}>
                     Sampai:
                   </Text>
                   <View style={styles.dateInputRow}>
@@ -1800,132 +1878,152 @@ export const BackupExportScreen = () => {
                 </View>
               )}
 
-              {/* Card Selection */}
+              {/* Card Selection - Always visible chips */}
               <Text style={[styles.inlineLabel, { marginTop: 16 }]}>
                 Kartu:
               </Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggleChip,
-                  selectAllCards && styles.toggleChipActive,
-                  { alignSelf: "flex-start", marginBottom: 8 },
-                ]}
-                onPress={() => {
-                  setSelectAllCards(!selectAllCards);
-                  if (!selectAllCards) setSelectedCardIds([]);
-                }}
+              <Text style={styles.helperText}>
+                Tap untuk pilih, geser untuk lainnya
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipScrollContainer}
+                contentContainerStyle={styles.chipScrollContent}
               >
-                <Ionicons
-                  name={selectAllCards ? "checkbox" : "square-outline"}
-                  size={18}
-                  color={
-                    selectAllCards
-                      ? theme.colors.primary
-                      : theme.colors.text.tertiary
-                  }
-                />
-                <Text style={styles.toggleText}>Semua Kartu</Text>
-              </TouchableOpacity>
-
-              {!selectAllCards && (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.presetScroll}
+                {/* All Cards chip */}
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectAllCards && styles.filterChipActive,
+                  ]}
+                  onPress={() => {
+                    setSelectAllCards(true);
+                    setSelectedCardIds([]);
+                  }}
                 >
-                  {cards.map((card) => (
-                    <TouchableOpacity
-                      key={card.id}
-                      style={[
-                        styles.selectionChip,
-                        selectedCardIds.includes(card.id) &&
-                          styles.selectionChipActive,
-                      ]}
-                      onPress={() => {
-                        setSelectedCardIds((prev) =>
-                          prev.includes(card.id)
-                            ? prev.filter((id) => id !== card.id)
-                            : [...prev, card.id]
-                        );
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.selectionChipText,
-                          selectedCardIds.includes(card.id) &&
-                            styles.selectionChipTextActive,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {card.alias.toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      selectAllCards && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Semua
+                  </Text>
+                </TouchableOpacity>
 
-              {/* Category Selection */}
-              <Text style={[styles.inlineLabel, { marginTop: 24 }]}>
+                {/* Individual card chips */}
+                {cards
+                  .filter((c) => !c.isArchived)
+                  .map((card) => {
+                    const isSelected =
+                      !selectAllCards && selectedCardIds.includes(card.id);
+                    return (
+                      <TouchableOpacity
+                        key={card.id}
+                        style={[
+                          styles.filterChip,
+                          isSelected && styles.filterChipActive,
+                        ]}
+                        onPress={() => {
+                          if (selectAllCards) {
+                            // Switch from "all" to this specific card
+                            setSelectAllCards(false);
+                            setSelectedCardIds([card.id]);
+                          } else {
+                            // Toggle this card in selection
+                            setSelectedCardIds((prev) =>
+                              prev.includes(card.id)
+                                ? prev.filter((id) => id !== card.id)
+                                : [...prev, card.id]
+                            );
+                          }
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            isSelected && styles.filterChipTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {card.alias}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </ScrollView>
+
+              {/* Category Selection - Always visible chips */}
+              <Text style={[styles.inlineLabel, { marginTop: 20 }]}>
                 Kategori:
               </Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggleChip,
-                  selectAllCategories && styles.toggleChipActive,
-                  { alignSelf: "flex-start", marginBottom: 8 },
-                ]}
-                onPress={() => {
-                  setSelectAllCategories(!selectAllCategories);
-                  if (!selectAllCategories) setSelectedCategories([]);
-                }}
+              <Text style={styles.helperText}>
+                Tap untuk pilih, geser untuk lainnya
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipScrollContainer}
+                contentContainerStyle={styles.chipScrollContent}
               >
-                <Ionicons
-                  name={selectAllCategories ? "checkbox" : "square-outline"}
-                  size={18}
-                  color={
-                    selectAllCategories
-                      ? theme.colors.primary
-                      : theme.colors.text.tertiary
-                  }
-                />
-                <Text style={styles.toggleText}>Semua Kategori</Text>
-              </TouchableOpacity>
-
-              {!selectAllCategories && (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.presetScroll}
+                {/* All Categories chip */}
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectAllCategories && styles.filterChipActive,
+                  ]}
+                  onPress={() => {
+                    setSelectAllCategories(true);
+                    setSelectedCategories([]);
+                  }}
                 >
-                  {allCategories.map((cat) => (
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      selectAllCategories && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Semua
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Individual category chips */}
+                {allCategories.map((cat) => {
+                  const isSelected =
+                    !selectAllCategories && selectedCategories.includes(cat);
+                  return (
                     <TouchableOpacity
                       key={cat}
                       style={[
-                        styles.selectionChip,
-                        selectedCategories.includes(cat) &&
-                          styles.selectionChipActive,
+                        styles.filterChip,
+                        isSelected && styles.filterChipActive,
                       ]}
                       onPress={() => {
-                        setSelectedCategories((prev) =>
-                          prev.includes(cat)
-                            ? prev.filter((c) => c !== cat)
-                            : [...prev, cat]
-                        );
+                        if (selectAllCategories) {
+                          setSelectAllCategories(false);
+                          setSelectedCategories([cat]);
+                        } else {
+                          setSelectedCategories((prev) =>
+                            prev.includes(cat)
+                              ? prev.filter((c) => c !== cat)
+                              : [...prev, cat]
+                          );
+                        }
                       }}
                     >
                       <Text
                         style={[
-                          styles.selectionChipText,
-                          selectedCategories.includes(cat) &&
-                            styles.selectionChipTextActive,
+                          styles.filterChipText,
+                          isSelected && styles.filterChipTextActive,
                         ]}
                       >
                         {cat}
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
+                  );
+                })}
+              </ScrollView>
 
               {/* Format Selection */}
               <Text style={[styles.inlineLabel, { marginTop: 24 }]}>
@@ -1953,109 +2051,104 @@ export const BackupExportScreen = () => {
                 ))}
               </View>
 
-              {/* Data Type Toggles */}
+              {/* Data Type Selection - Horizontal Chips */}
               <Text style={[styles.inlineLabel, { marginTop: 24 }]}>
                 Data yang Di-export:
               </Text>
-              <View style={styles.toggleRow}>
+              <Text style={styles.helperText}>
+                Tap untuk pilih, geser untuk lainnya
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipScrollContainer}
+                contentContainerStyle={styles.chipScrollContent}
+              >
                 <TouchableOpacity
                   style={[
-                    styles.toggleChip,
-                    includeTransactions && styles.toggleChipActive,
+                    styles.filterChip,
+                    includeTransactions && styles.filterChipActive,
                   ]}
                   onPress={() => setIncludeTransactions(!includeTransactions)}
                 >
-                  <Ionicons
-                    name={includeTransactions ? "checkbox" : "square-outline"}
-                    size={18}
-                    color={
-                      includeTransactions
-                        ? theme.colors.primary
-                        : theme.colors.text.tertiary
-                    }
-                  />
-                  <Text style={styles.toggleText}>Transaksi</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      includeTransactions && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Transaksi
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
-                    styles.toggleChip,
-                    includeCards && styles.toggleChipActive,
+                    styles.filterChip,
+                    includeCards && styles.filterChipActive,
                   ]}
                   onPress={() => setIncludeCards(!includeCards)}
                 >
-                  <Ionicons
-                    name={includeCards ? "checkbox" : "square-outline"}
-                    size={18}
-                    color={
-                      includeCards
-                        ? theme.colors.primary
-                        : theme.colors.text.tertiary
-                    }
-                  />
-                  <Text style={styles.toggleText}>Kartu</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      includeCards && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Kartu
+                  </Text>
                 </TouchableOpacity>
-              </View>
 
-              <View style={styles.toggleRow}>
                 <TouchableOpacity
                   style={[
-                    styles.toggleChip,
-                    includeSubscriptions && styles.toggleChipActive,
+                    styles.filterChip,
+                    includeSubscriptions && styles.filterChipActive,
                   ]}
                   onPress={() => setIncludeSubscriptions(!includeSubscriptions)}
                 >
-                  <Ionicons
-                    name={includeSubscriptions ? "checkbox" : "square-outline"}
-                    size={18}
-                    color={
-                      includeSubscriptions
-                        ? theme.colors.primary
-                        : theme.colors.text.tertiary
-                    }
-                  />
-                  <Text style={styles.toggleText}>Langganan</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      includeSubscriptions && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Langganan
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
-                    styles.toggleChip,
-                    includeInstallments && styles.toggleChipActive,
+                    styles.filterChip,
+                    includeInstallments && styles.filterChipActive,
                   ]}
                   onPress={() => setIncludeInstallments(!includeInstallments)}
                 >
-                  <Ionicons
-                    name={includeInstallments ? "checkbox" : "square-outline"}
-                    size={18}
-                    color={
-                      includeInstallments
-                        ? theme.colors.primary
-                        : theme.colors.text.tertiary
-                    }
-                  />
-                  <Text style={styles.toggleText}>Cicilan</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      includeInstallments && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Cicilan
+                  </Text>
                 </TouchableOpacity>
-              </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.toggleChip,
-                  includePayments && styles.toggleChipActive,
-                  { alignSelf: "flex-start" },
-                ]}
-                onPress={() => setIncludePayments(!includePayments)}
-              >
-                <Ionicons
-                  name={includePayments ? "checkbox" : "square-outline"}
-                  size={18}
-                  color={
-                    includePayments
-                      ? theme.colors.primary
-                      : theme.colors.text.tertiary
-                  }
-                />
-                <Text style={styles.toggleText}>Riwayat Bayar</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    includePayments && styles.filterChipActive,
+                  ]}
+                  onPress={() => setIncludePayments(!includePayments)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      includePayments && styles.filterChipTextActive,
+                    ]}
+                  >
+                    Riwayat Bayar
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
 
               {/* Export Button */}
               <TouchableOpacity
@@ -2095,6 +2188,18 @@ export const BackupExportScreen = () => {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Premium Paywall Modal */}
+      <FeatureLockedModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onUpgrade={() => {
+          setShowPaywall(false);
+          (navigation as any).navigate("Paywall");
+        }}
+        featureName={paywallFeature.name}
+        featureDescription={paywallFeature.desc}
+      />
     </SafeAreaView>
   );
 };
@@ -2429,5 +2534,56 @@ const getStyles = (theme: Theme) =>
       ...theme.typography.body,
       fontWeight: "600",
       color: theme.colors.primary,
+    },
+    premiumBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    premiumBadgeText: {
+      fontSize: 9,
+      fontWeight: "700",
+      color: "#FFF",
+      marginLeft: 2,
+    },
+    chipScrollContainer: {
+      marginTop: 8,
+    },
+    chipScrollContent: {
+      paddingRight: 16,
+      gap: 8,
+      flexDirection: "row",
+    },
+    filterChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      marginRight: 8,
+    },
+    filterChipActive: {
+      backgroundColor: theme.colors.primary + "15",
+      borderColor: theme.colors.primary,
+    },
+    filterChipText: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: theme.colors.text.secondary,
+    },
+    filterChipTextActive: {
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+    helperText: {
+      fontSize: moderateScale(10),
+      color: theme.colors.text.tertiary,
+      marginTop: moderateScale(2),
+      marginBottom: moderateScale(4),
+      fontStyle: "italic",
     },
   });
